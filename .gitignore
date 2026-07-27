@@ -1,4 +1,28 @@
-node_modules/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Generated output files（排班方案生成器输出）
+generated_*.json
+*_方案.json
+
+# Data pipeline output（数据管道输出，用户自己运行生成）
+基建技能一览_全干员.txt
+skills_parsed.txt
+cells_clean.txt
+
+# User's own operator roster（用户的干员练度表，含个人游戏数据）
+干员练度表.txt
+
+# OS
 .DS_Store
 Thumbs.db
 *.log
+
+# IDE
+.vscode/
+.idea/

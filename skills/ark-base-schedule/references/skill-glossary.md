@@ -166,7 +166,6 @@
 
 ```bash
 # 列出所有你拥有的、在某设施有技能的干员
-cd /d/workspace/PRTS
 grep -E "TRUE" 干员练度表.txt | awk -F'\t' '{print $1}' > /tmp/owned.txt
 # 贸易站
 grep -f /tmp/owned.txt skills_parsed.txt | grep "|贸易站|" | sort
