@@ -1,0 +1,74 @@
+{
+  "title": "342 纯赚钱三班倒（全满级最优方案）",
+  "description": "342布局：3贸易全赚钱，4制造全赤金，2发电站。全满级E2，宿舍全5级。森蚺中枢+Lancet-2→视为4发电。菲亚梅塔充电但书/可露希尔/清流。基建内4杜林、4莱茵、4精英于不同设施。",
+  "plans": [
+    {
+      "name": "08:00-20:00 A班（12小时）",
+      "description": "贸易1：巫恋低语135%+龙舌兰+绮良(赤金线翻倍) = 等效124%贸易+33%赤金。贸易2：图耶(生产线)+但书违约乘区 = 纸面95%等效260%。贸易3：鸿雪(4杜林生产线)+可露希尔(特别订单) = 纸面70%等效100%贸易+35.8%赤金。\n制造1：槐琥放大+阿罗玛渐增+砾35% = 117%。制造2：清流3贸易60%+温蒂4发电60%+冬时归零30% = 165%。制造3：引星棘刺+苍苔金属工艺联动 = 79%。制造4：多萝西+娜斯提莱茵联动 = 75%。",
+      "period": [["08:00", "20:00"]],
+      "drones": {"enable": true, "room": "manufacture", "index": 3, "rule": "all", "order": "pre"},
+      "rooms": {
+        "control": [{"operators": ["森蚺", "八幡海铃", "维什戴尔", "诗怀雅", "斩业星熊"]}],
+        "trading": [
+          {"operators": ["巫恋", "龙舌兰", "绮良"], "sort": true, "product": "LMD"},
+          {"operators": ["图耶", "但书"], "sort": true, "product": "LMD"},
+          {"operators": ["鸿雪", "可露希尔"], "sort": true, "product": "LMD"}
+        ],
+        "manufacture": [
+          {"operators": ["槐琥", "阿罗玛", "砾"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["清流", "温蒂", "冬时"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["引星棘刺", "苍苔"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["多萝西", "娜斯提"], "sort": true, "product": "Pure Gold"}
+        ],
+        "power": [{"operators": ["承曦格雷伊"]}, {"operators": ["Lancet-2"]}],
+        "meeting": [{"operators": ["陈", "伊内丝"], "autofill": true, "sort": false}],
+        "hire": [{"operators": ["斥罪"]}]
+      }
+    },
+    {
+      "name": "20:00-02:00 B班（6小时）",
+      "period": [["20:00", "02:00"]],
+      "drones": {"enable": true, "room": "manufacture", "index": 3, "rule": "all", "order": "pre"},
+      "rooms": {
+        "control": [{"operators": ["森蚺", "焰狐龙梓兰", "阿米娅", "Mon3tr", "薇薇安娜"]}],
+        "trading": [
+          {"operators": ["巫恋", "龙舌兰", "绮良"], "sort": true, "product": "LMD"},
+          {"operators": ["图耶", "但书"], "sort": true, "product": "LMD"},
+          {"operators": ["鸿雪", "可露希尔"], "sort": true, "product": "LMD"}
+        ],
+        "manufacture": [
+          {"operators": ["槐琥", "阿罗玛", "砾"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["清流", "温蒂", "冬时"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["野鬃", "灰毫"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["泡泡", "火神"], "sort": true, "product": "Pure Gold"}
+        ],
+        "power": [{"operators": ["承曦格雷伊"]}, {"operators": ["Lancet-2"]}],
+        "meeting": [{"operators": ["陈", "伊内丝"], "autofill": true, "sort": false}],
+        "hire": [{"operators": ["斥罪"]}]
+      }
+    },
+    {
+      "name": "02:00-08:00 C班（6小时）",
+      "description": "独立链路：叙拉古(贝洛内+伺夜)、格拉斯哥帮(推进之王+摩根)、深海猎人(斯卡蒂+幽灵鲨+乌尔比安+安哲拉)配合中枢歌蕾蒂娅。莱茵系(多萝西+娜斯提+清流)复用。",
+      "period": [["02:00", "08:00"]],
+      "drones": {"enable": true, "room": "manufacture", "index": 3, "rule": "all", "order": "pre"},
+      "rooms": {
+        "control": [{"operators": ["诗怀雅", "斩业星熊", "歌蕾蒂娅", "八幡海铃", "戴菲恩"]}],
+        "trading": [
+          {"operators": ["贝洛内", "吉星", "可露希尔"], "sort": true, "product": "LMD"},
+          {"operators": ["伺夜", "但书"], "sort": true, "product": "LMD"},
+          {"operators": ["推进之王", "摩根"], "sort": true, "product": "LMD"}
+        ],
+        "manufacture": [
+          {"operators": ["苍苔", "引星棘刺", "夜烟"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["多萝西", "娜斯提", "清流"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["斯卡蒂", "幽灵鲨"], "sort": true, "product": "Pure Gold"},
+          {"operators": ["乌尔比安", "安哲拉"], "sort": true, "product": "Pure Gold"}
+        ],
+        "power": [{"operators": ["烛煌"]}, {"operators": ["缪尔赛思"]}],
+        "meeting": [{"operators": ["陈", "伊内丝"], "autofill": true, "sort": false}],
+        "hire": [{"operators": ["凯尔希·思衡托"]}]
+      }
+    }
+  ]
+}
