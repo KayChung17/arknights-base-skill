@@ -1,0 +1,42 @@
+Validation report for arknights-base-skill 0.6.1
+Date: 2026-07-28
+
+Package structure
+- Skill entry validation: 2 passed
+- JSON parse validation: passed
+- Python compile validation: passed
+
+Roster-scoped skill data
+- Raw source SHA-256: 79b8341126b08ca2306c88e3801f544778fe7b031277da267c86be2a817957a0
+- Source operators: 228
+- Source skills: 483
+- Canonical operators: 248
+- Canonical skills: 506
+- Import warnings: 0
+- User-owned roster coverage: 228 / 228
+
+Automated tests
+- Schedule / solver tests: 23 passed
+- Data update tests: 3 passed
+- Guide baseline and non-uniform intervals: passed
+- Model-authored candidate workflow: passed
+- Room enumeration + MILP + simulation workflow: passed
+
+Full-roster 342 smoke solve
+- Goal: gold_origin
+- Online times: 08:00, 14:00, 20:00
+- Max daily operator work: 18h
+- Kept room combinations: 2141
+- MILP variables: 10705
+- MILP constraints: 13374
+- Returned alternatives: 3
+- Solver scope: best_found_within_truncated_candidate_library
+- Simulated pure gold: 79.85 units/day
+- Simulated orundum shards: 36.12 units/day
+- Simulated orundum: 399.00/day
+- Simulated battle record EXP: 13340.00/day
+- Orundum-shard inventory delta: -3.78 (floor -4)
+- Candidate validation: passed
+
+Scope note
+The room combination library is truncated for several high-cardinality rooms. The package therefore reports best_found_within_truncated_candidate_library and does not claim actual global optimality.

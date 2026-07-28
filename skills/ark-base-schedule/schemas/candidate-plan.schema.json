@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KayChung17/arknights-base-skill/schemas/candidate-plan.schema.json",
+  "title": "Arknights model-authored candidate plan",
+  "type": "object",
+  "required": ["plan_id", "plan_status", "layout", "goal", "decision", "facility_configuration"],
+  "properties": {
+    "schema_version": {"enum": [3, 4]},
+    "plan_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string"},
+    "plan_status": {"enum": ["candidate", "final"]},
+    "layout": {"enum": ["243", "252", "153", "333", "342"]},
+    "goal": {"enum": ["all_gold", "all_origin", "max_origin", "gold_record", "gold_origin"]},
+    "cross_shift_reuse_policy": {"enum": ["forbidden", "allowed_with_warning", "allowed"]},
+    "decision": {
+      "type": "object",
+      "required": ["strategy", "rationale", "tradeoffs"],
+      "properties": {
+        "strategy": {"type": "string", "minLength": 1},
+        "rationale": {"type": "array", "items": {"type": "string"}},
+        "tradeoffs": {"type": "array", "items": {"type": "string"}},
+        "external_evidence_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "properties": {
+        "reference_id": {"type": "string"},
+        "comparison": {"type": "object"},
+        "deviations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "facility_configuration": {
+      "type": "object",
+      "required": ["rooms"],
+      "properties": {
+        "rooms": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": ["facility_id", "level", "product_id"],
+            "properties": {
+              "facility_id": {"enum": ["trading_post", "factory", "power_plant", "control_center", "office", "dormitory"]},
+              "level": {"type": "integer", "minimum": 1, "maximum": 5},
+              "product_id": {"type": "string"},
+              "capacity": {"type": "integer", "minimum": 1, "maximum": 5}
+            }
+          }
+        },
+        "dormitories": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "operation_nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["time"],
+        "properties": {
+          "time": {"type": "string"},
+          "label": {"type": "string"},
+          "actions": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "segments": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/segment"}
+    },
+    "shifts": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "兼容 0.4.x 的旧字段；0.5.0 新方案使用 segments。",
+      "additionalProperties": {"$ref": "#/$defs/segment"}
+    },
+    "recovery_plan": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["time", "type", "targets"],
+            "properties": {
+              "time": {"type": "string"},
+              "type": {"enum": ["fiammetta_full_restore", "dormitory_recovery", "manual_override"]},
+              "targets": {"type": "array", "items": {"type": "string"}},
+              "verified": {"type": "boolean"}
+            }
+          }
+        },
+        "repeating_day_verified": {"type": "boolean"}
+      }
+    },
+    "external_skill_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["operator", "facility_id", "source_id", "verified"],
+        "properties": {
+          "operator": {"type": "string"},
+          "facility_id": {"type": "string"},
+          "product_ids": {"type": "array", "items": {"type": "string"}},
+          "source_id": {"type": "string"},
+          "verified": {"const": true}
+        }
+      }
+    },
+    "economy_projection": {
+      "type": "object",
+      "properties": {
+        "source": {"enum": ["script", "verified_guide", "manual_estimate"]},
+        "daily": {"type": "object"},
+        "costs": {"type": "object"},
+        "inventory_delta": {"type": "object"},
+        "warehouse_overflow_checked": {"type": "boolean"},
+        "drone_policy": {"type": "string"}
+      }
+    },
+    "assumptions": {"type": "object"}
+  },
+  "$defs": {
+    "operator": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {
+          "type": "object",
+          "required": ["name"],
+          "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "elite": {"type": "integer", "minimum": 0, "maximum": 2},
+            "morale": {"type": ["number", "null"]}
+          }
+        }
+      ]
+    },
+    "room_assignment": {
+      "type": "object",
+      "properties": {
+        "facility_id": {"type": "string"},
+        "product_id": {"type": "string"},
+        "operators": {"type": "array", "items": {"$ref": "#/$defs/operator"}}
+      },
+      "required": ["operators"]
+    },
+    "segment": {
+      "type": "object",
+      "required": ["start", "end", "hours", "rooms"],
+      "properties": {
+        "name": {"type": "string"},
+        "start": {"type": "string"},
+        "end": {"type": "string"},
+        "hours": {"type": "number", "exclusiveMinimum": 0},
+        "rooms": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/room_assignment"}
+        }
+      }
+    }
+  }
+}

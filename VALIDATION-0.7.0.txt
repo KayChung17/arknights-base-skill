@@ -1,0 +1,57 @@
+Arknights Base Skill 0.7.0 Validation
+Date: 2026-07-28
+
+Repository validation
+- Skill entry validation: passed (2 skills)
+- Structured operator data: passed (248 canonical operators)
+- Owned roster import: passed (228 operators, 483 source skills, 0 warnings)
+- JSON parsing: passed
+- Python compilation: passed
+- Schedule/layout/drone tests: 35 passed
+- Skill-data update tests: 3 passed
+- End-to-end combination + MILP + drone simulation smoke test: passed
+
+0.7.0 regression coverage
+- Drone holding capacity source is cleared-base progression, fully cleared value 235.
+- Power-plant count/level is separated from drone carrying capacity.
+- 252-output power budget: 540 supply, 540 consumption, 0 spare.
+- Representative one-power layouts are rejected under maxed right-side facilities and four level-1 dormitories.
+- Empty factories/trading posts produce no output.
+- Empty power plants do not receive the occupied-plant +5% recovery bonus.
+- Candidate preselection retains source-shard specialists even when LMD input costs reduce their weighted individual scores.
+- Orundum/LMD layout product search excludes battle records.
+
+Owned-roster representative layout search
+Objective:
+- Maximize orundum.
+- No battle-record factories.
+- Orundum-shard and pure-gold daily balance >= 0.
+- Preferred LMD balance >= 0; accepted recommendation floor = -1000 LMD/day.
+- Operation nodes 08:00, 14:00, 20:00.
+- Maximum operator work = 18 hours/day.
+- Closed repeating-day drone inventory.
+
+Best found representative profile:
+- Layout: 252-output.
+- Trading post levels: 3/3.
+- Factory levels: 3/3/2/2/1.
+- Power plants: 3/3.
+- Dormitories: 1/1/1/1.
+- Products: 1 orundum-order TP, 1 LMD-order TP, 1 source-shard factory, 4 pure-gold factories.
+
+Revalidated recommended candidate:
+- Orundum: 312.6/day.
+- Gross LMD: 50,775.681/day.
+- Source-shard LMD cost: 50,976/day.
+- Net LMD: -200.319/day.
+- Source shards: 31.86 produced, 31.26 consumed, +0.60/day.
+- Pure gold: 107.00 produced, 101.551 consumed, +5.449/day.
+- Orirock cubes consumed: 63.72/day.
+- Drones: 345 recovered, 345 used, 0 wasted.
+- Drone inventory: repeating-day closed and below capacity at every node.
+- Warehouse overflow: none in the revalidated simulation.
+
+Optimality scope
+- best_found_within_truncated_candidate_library
+- Coarse layout profiles and refined selected-layout search use different candidate-library sizes.
+- Product switching inside a day, exact dormitory bed assignment/ambience, and random order paths are not exhaustively optimized.

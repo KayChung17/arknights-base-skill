@@ -1,0 +1,27 @@
+Validation report for arknights-base-skill 0.6.0
+Date: 2026-07-28
+Python: 3.13.5
+SciPy: 1.17.0
+openpyxl: 3.1.5
+
+Checks completed:
+- 2 Skill entry files validated
+- 45 operator records validated
+- JSON parsing completed
+- 22 schedule/solver tests passed
+- 2 data-update tests passed
+- guide baseline and non-equal operation intervals passed
+- legacy model-candidate workflow passed
+- room enumeration, MILP, and simulation integration passed
+- README smoke run completed with 680 room combinations, 3400 binary variables, 4270 constraints, and 3 alternatives
+
+Solver backend tested: scipy.optimize.milp (HiGHS)
+
+Raw validation output:
+Skill 校验通过：2 个
+数据校验通过：45 名干员
+JSON 文件解析通过
+攻略基线与非等长操作区间通过
+模型候选处理链路通过
+混合枚举、MILP与复算链路通过
+全部校验通过

@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "sample_type": "full_roster_342_drone_closed_loop_summary",
+  "scope": {
+    "roster_owned_operator_count": 228,
+    "combination_library_kept_count": 1769,
+    "candidate_library_complete": false,
+    "optimality_claim": "best_found_within_truncated_candidate_library"
+  },
+  "model": {
+    "schema_version": 2,
+    "model_type": "mixed_binary_integer_continuous_milp",
+    "backend": "scipy.optimize.milp_highs",
+    "built_at": "2026-07-28T02:34:02+00:00",
+    "variable_count": 8881,
+    "assignment_variable_count": 5307,
+    "continuity_variable_count": 3538,
+    "drone_allocation_variable_count": 30,
+    "drone_inventory_variable_count": 3,
+    "constraint_count": 11176,
+    "constraint_summary": {
+      "continuity_lower": 3538,
+      "continuity_upper_left": 3538,
+      "continuity_upper_right": 3538,
+      "daily_work_hours": 123,
+      "drone_allocation_link": 30,
+      "drone_inventory_flow": 3,
+      "drone_use_available_at_node": 3,
+      "one_combination": 33,
+      "operator_exclusivity": 369,
+      "orundum_shard_balance_including_drones": 1
+    },
+    "objective_weights": {
+      "lmd_trade_work": 35.0,
+      "orundum": 8.0,
+      "orundum_shard": 80.0,
+      "pure_gold": 20.0,
+      "battle_record_exp": 0.006,
+      "drone_recovery": 4.0,
+      "hr_network": 0.5,
+      "base_management": 2.0,
+      "fixed_lmd": 0.002,
+      "continuity": 0.5
+    },
+    "solver_settings": {
+      "max_daily_work_hours": 18,
+      "require_resource_balance": true,
+      "rest_recovery_per_hour": 0,
+      "minimum_orundum_shard_balance": -4,
+      "resource_balance_safety_factor": 1.0,
+      "repeat_day_continuity": false,
+      "allocate_drones": true,
+      "drone_repeating_day_balance": true,
+      "drone_capacity": 235.0,
+      "initial_drone_stock": 235.0,
+      "max_drone_use_per_node": 235.0,
+      "drone_target_products": [
+        "lmd_order",
+        "orundum_order",
+        "pure_gold",
+        "orundum_shard",
+        "battle_record"
+      ]
+    },
+    "drone_model": {
+      "base_recovery_drones_per_hour": 10.0,
+      "acceleration_minutes_per_drone": 3.0,
+      "occupied_power_plant_base_bonus_pct": 5.0,
+      "repeating_day_balance": true
+    },
+    "search_completeness": {
+      "all_rooms_untruncated": false,
+      "truncated_rooms": [
+        "trading_post_1",
+        "trading_post_2",
+        "factory_1",
+        "factory_2",
+        "factory_3",
+        "factory_4",
+        "control_center"
+      ]
+    }
+  },
+  "simulation": {
+    "aggregate_metrics": {
+      "base_management": 27.479999999999997,
+      "pure_gold": 80.49999999677999,
+      "orundum_shard": 53.61,
+      "battle_record_units": 13.419999998658,
+      "battle_record_exp": 13419.999999998658,
+      "hr_network": 34.5,
+      "lmd_trade_work": 97.00775999999999,
+      "orundum": 547.8,
+      "orundum_shard_consumption": 54.78,
+      "lmd_cost": 27600.0,
+      "orirock_cube_consumption": 34.5,
+      "drone_recovery": 345.0,
+      "drone_used": 345.0,
+      "drone_waste": 0.0
+    },
+    "natural_metrics": {
+      "base_management": 27.479999999999997,
+      "pure_gold": 80.49999999677999,
+      "orundum_shard": 36.36,
+      "battle_record_units": 13.419999998658,
+      "battle_record_exp": 13419.999999998658,
+      "hr_network": 34.5,
+      "lmd_trade_work": 97.00775999999999,
+      "orundum": 547.8,
+      "orundum_shard_consumption": 54.78
+    },
+    "drone_metrics": {
+      "orundum_shard": 17.25,
+      "lmd_cost": 27600.0,
+      "orirock_cube_consumption": 34.5
+    },
+    "orundum_shard_balance": -1.1700000000000017,
+    "drone_plan": {
+      "enabled": true,
+      "capacity": 235.0,
+      "repeating_day_balance": true,
+      "base_recovery_minutes_per_drone": 6.0,
+      "acceleration_minutes_per_drone": 3.0,
+      "total_recovered": 345.0,
+      "total_used": 345.0,
+      "total_wasted": 0.0,
+      "feasible": true,
+      "timeline": [
+        {
+          "segment_id": "segment_1",
+          "start": "08:00",
+          "end": "14:00",
+          "hours": 6.0,
+          "start_inventory": 174.0,
+          "used_at_start": 110.0,
+          "power_plant_total_bonus_pct": 40.0,
+          "recovered_during_segment": 84.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 148.0
+        },
+        {
+          "segment_id": "segment_2",
+          "start": "14:00",
+          "end": "20:00",
+          "hours": 6.0,
+          "start_inventory": 148.0,
+          "used_at_start": 0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 87.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 235.0
+        },
+        {
+          "segment_id": "segment_3",
+          "start": "20:00",
+          "end": "08:00",
+          "hours": 12.0,
+          "start_inventory": 235.0,
+          "used_at_start": 235.0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 174.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 174.0
+        }
+      ],
+      "allocations": [
+        {
+          "segment_id": "segment_1",
+          "operation_time": "08:00",
+          "room_id": "factory_3",
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "combination_id": "combo_ca6ba2f0e959",
+          "drones": 110.0,
+          "base_minutes_removed": 330.0,
+          "metrics_per_drone": {
+            "orundum_shard": 0.05,
+            "lmd_cost": 80.0,
+            "orirock_cube_consumption": 0.1
+          },
+          "metrics": {
+            "orundum_shard": 5.5,
+            "lmd_cost": 8800.0,
+            "orirock_cube_consumption": 11.0
+          },
+          "collection_assumption": "节点内加速后立即收取，可重复操作，不占用跨节点仓库容量"
+        },
+        {
+          "segment_id": "segment_3",
+          "operation_time": "20:00",
+          "room_id": "factory_3",
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "combination_id": "combo_51a82479c691",
+          "drones": 235.0,
+          "base_minutes_removed": 705.0,
+          "metrics_per_drone": {
+            "orundum_shard": 0.05,
+            "lmd_cost": 80.0,
+            "orirock_cube_consumption": 0.1
+          },
+          "metrics": {
+            "orundum_shard": 11.75,
+            "lmd_cost": 18800.0,
+            "orirock_cube_consumption": 23.5
+          },
+          "collection_assumption": "节点内加速后立即收取，可重复操作，不占用跨节点仓库容量"
+        }
+      ]
+    },
+    "warnings": [
+      "源石碎片经济流为负：-1.17"
+    ]
+  }
+}

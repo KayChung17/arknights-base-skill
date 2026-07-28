@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "name": "但书",
+      "elite": 2,
+      "facility": "trading_post",
+      "skill_name": "违约体验·β",
+      "description": "示例描述",
+      "base_bonus_pct": 0,
+      "tags": [
+        "multiplier_1_556"
+      ],
+      "products": [
+        "lmd_order"
+      ]
+    },
+    {
+      "name": "清流",
+      "elite": 1,
+      "facility": "factory",
+      "skill_name": "水文循环",
+      "description": "示例描述",
+      "base_bonus_pct": 0,
+      "tags": [
+        "qingliu_per_trading_post"
+      ],
+      "products": [
+        "pure_gold"
+      ]
+    }
+  ],
+  "warnings": []
+}

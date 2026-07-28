@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "report_type": "owned_roster_layout_optimization",
+  "generated_at": "2026-07-28",
+  "drone_capacity_correction": {
+    "capacity": 235,
+    "capacity_source": "cleared_base_areas",
+    "depends_on_power_plant_count_or_level": false,
+    "power_plant_effects": [
+      "electricity_supply",
+      "staffed_drone_recovery_bonus"
+    ]
+  },
+  "objective": {
+    "primary": "orundum",
+    "constraints": {
+      "battle_record_factories": 0,
+      "orundum_shard_balance_min": 0,
+      "pure_gold_balance_min": 0,
+      "preferred_net_lmd_min": 0,
+      "accepted_slight_loss_net_lmd_min": -1000,
+      "max_daily_work_hours": 18,
+      "operation_nodes": [
+        "08:00",
+        "14:00",
+        "20:00"
+      ]
+    }
+  },
+  "coarse_layout_comparison": [
+    {
+      "layout": "252",
+      "profile_id": "252-output",
+      "orundum_per_day": 194.7,
+      "net_lmd_per_day": 3810.6371681415912,
+      "orundum_shard_balance": 1.6500000000000021,
+      "pure_gold_balance": 3.444725661050825,
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 1,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 4
+      }
+    },
+    {
+      "layout": "333",
+      "profile_id": "333-max",
+      "orundum_per_day": 176.8,
+      "net_lmd_per_day": 1561.5621238938074,
+      "orundum_shard_balance": 1.0399999999999991,
+      "pure_gold_balance": 2.336889083026392,
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 2,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 2
+      }
+    },
+    {
+      "layout": "342",
+      "profile_id": "342-output",
+      "orundum_per_day": 173.20000000000002,
+      "net_lmd_per_day": 3238.3199999999997,
+      "orundum_shard_balance": 1.3999999999999986,
+      "pure_gold_balance": 2.0912666641170006,
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 2,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 3
+      }
+    },
+    {
+      "layout": "243",
+      "profile_id": "243-max",
+      "orundum_per_day": 168.3,
+      "net_lmd_per_day": 2430.2877876106177,
+      "orundum_shard_balance": 0.870000000000001,
+      "pure_gold_balance": 2.613437755642771,
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 1,
+        "orundum_shard_factories": 2,
+        "pure_gold_factories": 2
+      }
+    },
+    {
+      "layout": "432",
+      "profile_id": "432-output",
+      "orundum_per_day": 166.5,
+      "net_lmd_per_day": 1377.3999999999978,
+      "orundum_shard_balance": 1.0500000000000043,
+      "pure_gold_balance": 5.404333331729006,
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 3,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 2
+      }
+    },
+    {
+      "layout": "423",
+      "profile_id": "423-max",
+      "orundum_per_day": 157.8,
+      "net_lmd_per_day": 1020.4162831858375,
+      "orundum_shard_balance": 0.8399999999999999,
+      "pure_gold_balance": 2.4198607648463195,
+      "product_split": {
+        "orundum_trading_posts": 2,
+        "lmd_trading_posts": 2,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 1
+      }
+    },
+    {
+      "layout": "522",
+      "profile_id": "522-output",
+      "orundum_per_day": 141.2,
+      "net_lmd_per_day": 1117.0800000000017,
+      "orundum_shard_balance": 1.7199999999999989,
+      "pure_gold_balance": 1.5481999981283394,
+      "product_split": {
+        "orundum_trading_posts": 2,
+        "lmd_trading_posts": 3,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 1
+      }
+    }
+  ],
+  "selected_layout": {
+    "layout": "252",
+    "profile_id": "252-output",
+    "trading_levels": [
+      3,
+      3
+    ],
+    "factory_levels": [
+      3,
+      3,
+      2,
+      2,
+      1
+    ],
+    "power_plant_levels": [
+      3,
+      3
+    ],
+    "dormitory_levels": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "product_split": {
+      "orundum_trading_posts": 1,
+      "lmd_trading_posts": 1,
+      "orundum_shard_factories": 1,
+      "pure_gold_factories": 4
+    },
+    "reason": "one level-3 orundum TP, one level-3 LMD TP, one level-3 shard factory, four gold factories; extra factory outweighs the third power plant for this roster and objective"
+  },
+  "recommended_policy": {
+    "name": "orundum_priority_slight_lmd_loss",
+    "orundum_per_day": 312.59999999999997,
+    "gross_lmd_per_day": 50775.68141592922,
+    "shard_lmd_cost_per_day": 50976.0,
+    "net_lmd_per_day": -200.31858407078107,
+    "orundum_shard_produced": 31.86,
+    "orundum_shard_consumed": 31.259999999999998,
+    "orundum_shard_balance": 0.6000000000000014,
+    "pure_gold_produced": 106.99999999572002,
+    "pure_gold_consumed": 101.55136283185843,
+    "pure_gold_balance": 5.448637163861591,
+    "drones_recovered": 345.0,
+    "drones_used": 345.0,
+    "drones_wasted": 0.0,
+    "orirock_cube_consumption": 63.72,
+    "plan_file": "252_floor_1000_plan.json",
+    "revalidated_simulation_file": "252_best_candidate_revalidated_simulation.json"
+  },
+  "alternatives": [
+    {
+      "name": "strict_lmd_balance",
+      "orundum_per_day": 295.3,
+      "net_lmd_per_day": 2716.973451327438,
+      "orundum_shard_balance": 0.28000000000000114,
+      "pure_gold_balance": 2.4240530936951217
+    },
+    {
+      "name": "more_orundum_larger_lmd_loss",
+      "orundum_per_day": 321.59999999999997,
+      "net_lmd_per_day": -1736.318584070781,
+      "orundum_shard_balance": 0.6600000000000037,
+      "pure_gold_balance": 1.1986371640315667
+    }
+  ],
+  "optimality_scope": "best_found_within_truncated_candidate_library",
+  "limitations": [
+    "coarse comparison and refined selected layout use different candidate-library sizes; ranking is robust in the searched profiles but does not prove every level permutation globally optimal",
+    "daily products are fixed; product switching inside a day is not searched",
+    "dormitory bed assignment and exact ambience recovery are not yet integer variables",
+    "random LMD order sequences use expected values"
+  ]
+}

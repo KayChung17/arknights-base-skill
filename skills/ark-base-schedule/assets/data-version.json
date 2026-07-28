@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "source_type": "sanitized_community_structured_snapshot",
+  "source_file": null,
+  "retrieved_at": "2026-07-27",
+  "data_version": "2026-07-27-sanitized-community-snapshot",
+  "canonical_operator_count": 248,
+  "canonical_skill_count": 506,
+  "personal_roster_state_removed": true,
+  "notes": "The public repository excludes the original owned-roster export and removes source account levels, elite states and source line numbers. The snapshot is not a complete game database."
+}

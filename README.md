@@ -1,190 +1,183 @@
-<div align="center">
+# 明日方舟基建排班优化器
 
-# Arknights Base Schedule 🏭
+面向中文用户的明日方舟基建布局、排班、无人机与培养决策工具。仓库将单房间组合枚举、全局混合整数规划、逐区间模拟和大模型解释组合为一条可审计、可复现的求解链路。
 
-> 明日方舟基建排班设计指南与自动化工具
+当前版本：**1.0.0** · [发布说明](RELEASE_NOTES-1.0.0.md)
 
-生成最优排班方案 · 计算等效效率 · 管理干员技能数据
+> 本项目是非官方社区工具。游戏名称、角色名称与相关素材权利归其权利人所有。内置数据是版本化快照，不保证覆盖游戏中的全部干员或未来更新。
 
-![license](https://img.shields.io/badge/license-MIT-blue)
+## 能解决什么问题
 
-</div>
+- 根据自己的干员池和练度安排贸易站、制造站、发电站与控制中枢。
+- 比较 252、342、333 等布局，也可以搜索自定义房间等级配置。
+- 以合成玉、龙门币、赤金、经验、低操作量或自定义权重为目标。
+- 把无人机恢复、持有上限、节点分配、资源成本和重复日库存闭环纳入模型。
+- 检查同一时间重复进驻、工时、仓库封顶、赤金与碎片收支、龙门币下限和心情风险。
+- 比较当前练度、基建技能全解锁上限和定向培养方案。
+- 输出结构化 JSON、中文 Markdown 报告、审计结果和可复现清单。
+- 将攻略模板作为比较基线，不把模板限制成唯一搜索空间。
 
----
+## 方法概览
 
-## 它能做什么
-
-| 场景 | 一句话 | 怎么做 |
-|------|--------|--------|
-| **我要最优排班** | 给干员列表 + 赚钱/搓玉目标 → 拿到排班表 | [排班生成器](#-生成完整排班方案) |
-| **这个组合效率多少** | 输入几个干员 → 看到五层效率明细 | [效率计算器](#1-计算干员组合效率) |
-| **验证方案对不对** | 已有排班 → 检查冲突 + 算每个房间效率 | [方案校验](#3-验证排班方案) |
-| **更新干员技能数据** | 从一图流抓最新数据 → 更新本地表 | [数据管道](skills/update-ark-skills/) |
-
----
-
-## 📦 目录
-
-| 目录 | 说明 |
-|------|------|
-| [ark-base-schedule](skills/ark-base-schedule/) | 排班设计指南 + 效率计算器 + 排班生成器 |
-| [update-ark-skills](skills/update-ark-skills/) | 从一图流抓取基建技能数据，更新本地干员表 |
-
-## 🚀 快速开始
-
-### 1. 准备干员练度表
-
-创建一个 tab 分隔的 `干员练度表.txt`：
-
-```
-干员名称  是否已招募  星级  等级  精英化等级  潜能  信赖
-但书      TRUE        5     90    2          6     200
-龙舌兰    TRUE        5     90    2          6     200
-鸿雪      TRUE        6     90    2          6     200
+```text
+用户配置、干员表、基建状态
+        ↓
+房间等级与产品配置搜索
+        ↓
+单房间合法组合枚举
+        ↓
+全局 MILP 分配干员、区间和无人机
+        ↓
+逐区间复算全局联动、仓库、经济和心情
+        ↓
+硬约束审计、攻略对比、中文报告
 ```
 
-样本数据位于 `skills/ark-base-schedule/samples/sample_干员练度表.txt`。
+MILP 使用 SciPy HiGHS。模型会区分“代理目标在候选库内达到求解界限”和“最终模拟产出”；常规结果只称为“当前搜索设置中的最高分候选”。
 
-### 2. 计算干员组合效率
+## 安装
 
-进入技能目录：
+需要 Python 3.10 及以上版本。
 
 ```bash
-cd skills/ark-base-schedule
+python -m pip install "scipy>=1.11" "openpyxl>=3.1"
 ```
+
+克隆仓库后先运行环境检查：
 
 ```bash
-# 贸易站组合
-python scripts/efficiency_calculator.py 贸易站 "龙舌兰,巫恋,但书"
-
-# 制造站组合（指定产品类型）
-python scripts/efficiency_calculator.py 制造站 "清流,温蒂,冬时" 贵金属
-
-# 查看内置技能数据库（44 名干员）
-python scripts/efficiency_calculator.py --list-skills
+python arkbase.py doctor
 ```
 
-### 3. 生成完整排班方案
+## 三分钟开始
+
+复制示例配置和干员表：
 
 ```bash
-# 三班倒纯赚钱（自动推荐最优布局）
-python scripts/schedule_generator.py --roster 干员练度表.txt --goal 纯赚钱 --shifts 3
-
-# 全力搓玉，指定 252 布局，输出 JSON
-python scripts/schedule_generator.py --roster 干员练度表.txt --goal 全力搓玉 --shifts 3 --layout 252 --output 搓玉方案.json
-
-# 支持的目标：纯赚钱 / 纯搓玉 / 全力搓玉 / 赚钱+经验书 / 赚钱+搓玉
-# 支持 2 班或 3 班换班
+cp examples/roster.example.tsv roster.tsv
+cp examples/configs/合成玉优先_布局搜索.json project.json
 ```
 
-### 4. 验证排班方案
+修改 `project.json` 中的 `roster`、上线时间、龙门币下限和基建状态，然后运行：
 
 ```bash
-python scripts/efficiency_calculator.py --check 搓玉方案.json
+python arkbase.py run project.json \
+  --output-dir output/my-project
 ```
 
-### 5. 试用样本数据
+输出目录包含：
 
-不用准备干员表，直接用仓库自带的样本体验：
+```text
+result.json           完整结构化结果
+report.md             中文摘要与排班报告
+audit.json            硬约束和最优性措辞审计
+coverage.json         干员与技能结构化覆盖报告
+summary.json          文件位置与运行状态
+config.resolved.json  本次使用的配置副本
+```
+
+配置字段见 [配置说明](docs/配置说明.md)。
+
+## 常用模式
+
+### 1. 搜索最适合自己的布局
+
+```json
+{
+  "schema_version": 1,
+  "mode": "layout_search",
+  "roster": "roster.xlsx",
+  "objective": {
+    "online_times": ["08:00", "14:00", "20:00"],
+    "minimum_net_lmd_per_day": -10000,
+    "minimum_orundum_shard_balance": 0,
+    "minimum_pure_gold_balance": 0,
+    "max_daily_work_hours": 18
+  },
+  "profiles": {
+    "mode": "representative",
+    "ids": ["252-output", "342-output", "333-max", "243-max"]
+  }
+}
+```
+
+`representative` 适合日常使用。`level_grid` 会枚举选定布局的房间等级多重集，并明确记录求解前是否截断 profile。
+
+### 2. 搜索值得培养的基建干员
+
+将 `mode` 改为 `upgrade_search`，并设置：
+
+```json
+"upgrades": {"marginal_limit": 5}
+```
+
+工具会比较当前练度、全部已拥有干员的基建技能上限和定向最低解锁。`marginal_limit` 会对前 N 项培养执行留一法复算，处理孑、冬时等非单调或不可逆技能时更可靠。
+
+### 3. 固定布局只求排班
+
+使用 `mode: fixed_schedule` 和 `layout: "342"`。也可以直接提供 `facility_configuration`，逐房间指定等级和产品。
+
+## 命令入口
 
 ```bash
-# 计算赤金生产线组合效率
-python scripts/efficiency_calculator.py 贸易站 "鸿雪,图耶,绮良"
+# 完整项目流程
+python arkbase.py run project.json
 
-# 生成样本排班
-python scripts/schedule_generator.py --roster samples/sample_干员练度表.txt --goal 纯赚钱 --shifts 3
+# 环境与数据诊断
+python arkbase.py doctor
 
-# 校验已有样本方案
-python scripts/efficiency_calculator.py --check samples/sample_342方案.json
+# 审计已有结果
+python arkbase.py audit result.json --output audit.json
+
+# 重新生成中文报告
+python arkbase.py report result.json --output report.md
+
+# 检查自己的干员池数据覆盖
+python arkbase.py coverage --roster roster.xlsx --output coverage.json
 ```
 
----
+底层脚本仍可独立调用，详见 `skills/ark-base-schedule/SKILL.md` 与 `references/script-contracts.md`。
 
-## 📋 输出示例
+## 数据与隐私
 
-运行 `python scripts/schedule_generator.py --roster 干员练度表.txt --goal 纯赚钱 --shifts 3` 的终端输出：
+- 干员表只在本地读取，不会上传。
+- `output/`、常见用户 roster 文件和本地缓存默认被 `.gitignore` 排除。
+- 内置 `operator-skills.json` 是经过脱敏的版本化社区快照，不包含来源账号的拥有状态、练度或原始导出文件，也不代表游戏完整数据库。导入器回归使用独立的最小合成样例。
+- 未结构化或来源不明的技能不会获得猜测数值。
 
-```
-================================================================================
-  243 纯赚钱 三班倒排班方案
-  布局: 243  目标: 纯赚钱
-================================================================================
+## 结果可信度
 
-── A班 (08:00-20:00) ──
-  目标产品: 赤金
-  贸易站#1: 但书                  ← 核心贸易×1.556乘算
-  贸易站#2: 龙舌兰                ← 独立收益+500
-  贸易站#3: 巫恋                  ← 低语清空替代
-  制造站#1: 清流 + 温蒂 + 冬时    ← 等效120%（冬时归零）
-  制造站#2: 娜斯提 + 多萝西       ← 莱茵科技联动
-  制造站#3: 砾 + 苍苔 + 引星棘刺  ← 金属工艺
-  制造站#4: 斯卡蒂 + 幽灵鲨       ← 深海猎人
-  控制中枢: 森蚺
+结果会使用以下范围声明：
 
-── B班 (20:00-02:00) ──
-  贸易站#1~#3: 复用A班             ← 核心干员连续工作
-  制造站:   换第二梯队组合
+- `proxy_optimal_within_complete_candidate_library`：候选库未截断，代理 MILP 达到声明 gap。
+- `best_found_within_truncated_candidate_library`：房间组合或外层 profile 发生截断。
+- `actual_simulation_global_optimality_proven: false`：最终模拟包含代理模型尚未完全表示的机制。
 
-── C班 (02:00-08:00) ──
-  贸易站#1: 伺夜 + 贝洛内          ← 叙拉古独立链路
-  贸易站#2: 推进之王               ← 格拉斯哥帮
-  控制中枢: 歌蕾蒂娅               ← 激活深海猎人
+只有候选库完整、代理目标与最终模拟目标一致、随机订单和所有全局机制均已进入模型时，才能声明实际全局最优。当前正常输出不会这样声明。
 
-干员出勤统计:
-  但书: A班 (08:00-20:00), B班 (20:00-02:00)
-  龙舌兰: A班 (08:00-20:00), B班 (20:00-02:00)
-  清流: A班 (08:00-20:00), B班 (20:00-02:00), C班 (02:00-08:00)
-  ...
+## 仓库结构
+
+```text
+skills/ark-base-schedule/      排班与优化 Skill
+skills/update-ark-skills/      技能数据导入与维护 Skill
+examples/                      示例 roster、配置和自定义 profile
+docs/                          中文文档
+scripts/validate-all.sh        完整校验
+scripts/build-release.sh       发布包构建
 ```
 
----
+## 测试
 
-## 🧠 排班目标说明
-
-| 目标 | 生产链路 | 推荐布局 | 适用场景 |
-|------|----------|----------|----------|
-| **纯赚钱** | 赤金 → 龙门币 | 243 | 缺龙门币，全力赚钱 |
-| **纯搓玉** | 源石碎片 → 合成玉 | 252 | 囤合成玉等新卡池 |
-| **全力搓玉** | 最大化源石产出 | 252 | 极致搓玉，建议 2 贸易 |
-| **赚钱+经验书** | 赤金 + 作战记录 | 243 | 均衡发展，兼顾经验和钱 |
-| **赚钱+搓玉** | 赤金 + 源石碎片 | 243 | 部分赤金换钱，部分做源石 |
-
----
-
-## 🧩 仓库结构
-
+```bash
+bash scripts/validate-all.sh
 ```
-├── README.md
-├── LICENSE                        
-├── CONTRIBUTING.md                
-├── CHANGELOG.md
-├── .gitignore
-├── scripts/
-│   └── validate-all.sh            ← 批量校验技能完整性
-├── templates/
-│   └── skill-template/            ← 新技能脚手架
-│       ├── README.md
-│       └── CHANGELOG.md
-└── skills/
-    ├── ark-base-schedule/         ← ★ 主技能：排班设计
-    │   ├── README.md              ← 技能使用说明
-    │   ├── schedule-guide.md      ← 排班设计主指南（理论 + 流程）
-    │   ├── schedule-checklist.md  ← 完整性校验表
-    │   ├── scripts/
-    │   │   ├── efficiency_calculator.py   ← 五层效率计算器
-    │   │   └── schedule_generator.py      ← 排班方案生成器
-    │   ├── samples/               ← 样本数据，直接可跑
-    │   │   ├── sample_干员练度表.txt
-    │   │   ├── sample_skills_parsed.txt
-    │   │   └── sample_342方案.json
-    │   └── references/            ← 深度参考
-    │       ├── error-log.md
-    │       ├── skill-glossary.md
-    │       └── sources.md
-    └── update-ark-skills/         ← 技能数据更新
-        ├── README.md
-        ├── scripts/
-        │   ├── parse_skills.py
-        │   └── build_final_all.py
-        └── samples/
-```
+
+测试覆盖技能数据、组合枚举、MILP、无人机闭环、布局等级搜索、培养留一法基础逻辑、结果审计、中文报告和项目化运行入口。
+
+## 参与贡献
+
+参见 [贡献指南](CONTRIBUTING.md)、[实际问题复盘](docs/实际问题复盘.md)、[数据维护](docs/数据维护.md) 和 [发布检查清单](docs/发布检查清单.md)。提交新机制时必须附来源、适用版本、单位、作用范围和回归测试。
+
+## 许可证
+
+代码采用 MIT License。游戏数据与名称不因本仓库许可证而改变其原有权利归属，详见 [NOTICE](NOTICE.md)。

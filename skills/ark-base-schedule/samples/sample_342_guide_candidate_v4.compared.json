@@ -1,0 +1,375 @@
+{
+  "schema_version": 4,
+  "plan_id": "sample-guide-342-candidate",
+  "title": "342 攻略结构候选示例",
+  "plan_status": "candidate",
+  "layout": "342",
+  "goal": "gold_origin",
+  "cross_shift_reuse_policy": "allowed",
+  "decision": {
+    "strategy": "先还原攻略结构，再按 roster 替换具体组合",
+    "rationale": [
+      "示例仅展示 0.5.0 数据结构，不提供未核验的具体干员排班"
+    ],
+    "tradeoffs": [
+      "房间尚未分配干员，因此只能作为 candidate"
+    ],
+    "external_evidence_ids": [
+      "user-guide-342-image"
+    ]
+  },
+  "baseline": {
+    "reference_id": "guide_342_orundum_3_login",
+    "deviations": [
+      "基线恢复目标尚未全部验证: ['但书', '清流']"
+    ],
+    "comparison": {
+      "comparison_type": "guide_baseline_comparison",
+      "baseline_id": "guide_342_orundum_3_login",
+      "baseline_source": {
+        "source_type": "user_provided_guide_image",
+        "title": "搓玉342-3队列",
+        "retrieved_at": "2026-07-27",
+        "verification": "structure_extracted_from_user_image",
+        "notes": "仓库仅保存结构化摘要，不再分发原图。具体干员组合需要按当前版本攻略与用户 roster 再核验。"
+      },
+      "structural_match_ratio": 0.833333,
+      "checks": {
+        "layout": {
+          "expected": "342",
+          "actual": "342",
+          "matched": true
+        },
+        "facility_room_signatures": {
+          "expected": {
+            "control_center|5|base_management": 1,
+            "factory|2|battle_record": 1,
+            "factory|2|orundum_shard": 1,
+            "factory|3|pure_gold": 2,
+            "office|3|hr_network": 1,
+            "power_plant|3|drone_recovery": 2,
+            "trading_post|1|orundum_order": 1,
+            "trading_post|3|lmd_order": 2
+          },
+          "actual": {
+            "control_center|5|base_management": 1,
+            "factory|2|battle_record": 1,
+            "factory|2|orundum_shard": 1,
+            "factory|3|pure_gold": 2,
+            "office|3|hr_network": 1,
+            "power_plant|3|drone_recovery": 2,
+            "trading_post|1|orundum_order": 1,
+            "trading_post|3|lmd_order": 2
+          },
+          "matched": true
+        },
+        "online_count": {
+          "expected": 3,
+          "actual": 3,
+          "matched": true
+        },
+        "segment_hours": {
+          "expected": [
+            6.0,
+            6.0,
+            12.0
+          ],
+          "actual": [
+            6.0,
+            6.0,
+            12.0
+          ],
+          "matched": true
+        },
+        "priority_recovery_targets": {
+          "expected": [
+            "但书",
+            "清流"
+          ],
+          "verified": [],
+          "matched": false
+        },
+        "economy_projection_present": {
+          "expected": true,
+          "actual": true,
+          "matched": true
+        },
+        "economy_delta": {
+          "lmd_orders": {
+            "baseline": 47000,
+            "actual": 47000,
+            "delta": 0
+          },
+          "pure_gold": {
+            "baseline": 44000,
+            "actual": 44000,
+            "delta": 0
+          },
+          "pure_gold_drone_equivalent": {
+            "baseline": 9400,
+            "actual": 9400,
+            "delta": 0
+          },
+          "orundum": {
+            "baseline": 535,
+            "actual": 535,
+            "delta": 0
+          },
+          "battle_record_exp": {
+            "baseline": 14000,
+            "actual": 14000,
+            "delta": 0
+          }
+        }
+      },
+      "generated_deviations": [
+        "基线恢复目标尚未全部验证: ['但书', '清流']"
+      ],
+      "requires_model_explanation": true,
+      "rule": "结构差异由脚本列出，是否接受差异由模型结合用户 roster、当前攻略和用户偏好决定。"
+    }
+  },
+  "facility_configuration": {
+    "rooms": {
+      "trading_post_1": {
+        "facility_id": "trading_post",
+        "level": 3,
+        "product_id": "lmd_order"
+      },
+      "trading_post_2": {
+        "facility_id": "trading_post",
+        "level": 3,
+        "product_id": "lmd_order"
+      },
+      "trading_post_3": {
+        "facility_id": "trading_post",
+        "level": 1,
+        "product_id": "orundum_order"
+      },
+      "factory_1": {
+        "facility_id": "factory",
+        "level": 3,
+        "product_id": "pure_gold"
+      },
+      "factory_2": {
+        "facility_id": "factory",
+        "level": 3,
+        "product_id": "pure_gold"
+      },
+      "factory_3": {
+        "facility_id": "factory",
+        "level": 2,
+        "product_id": "orundum_shard"
+      },
+      "factory_4": {
+        "facility_id": "factory",
+        "level": 2,
+        "product_id": "battle_record"
+      },
+      "power_plant_1": {
+        "facility_id": "power_plant",
+        "level": 3,
+        "product_id": "drone_recovery"
+      },
+      "power_plant_2": {
+        "facility_id": "power_plant",
+        "level": 3,
+        "product_id": "drone_recovery"
+      },
+      "control_center": {
+        "facility_id": "control_center",
+        "level": 5,
+        "product_id": "base_management"
+      },
+      "office": {
+        "facility_id": "office",
+        "level": 3,
+        "product_id": "hr_network"
+      }
+    },
+    "dormitories": [
+      {
+        "room_id": "dormitory_1",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_2",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_3",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_4",
+        "level": 1
+      }
+    ]
+  },
+  "operation_nodes": [
+    {
+      "time": "08:00",
+      "label": "第1次上线"
+    },
+    {
+      "time": "14:00",
+      "label": "第2次上线"
+    },
+    {
+      "time": "20:00",
+      "label": "第3次上线"
+    }
+  ],
+  "segments": {
+    "segment_1": {
+      "name": "区间1",
+      "start": "08:00",
+      "end": "14:00",
+      "hours": 6,
+      "rooms": {
+        "trading_post_1": {
+          "operators": []
+        },
+        "trading_post_2": {
+          "operators": []
+        },
+        "trading_post_3": {
+          "operators": []
+        },
+        "factory_1": {
+          "operators": []
+        },
+        "factory_2": {
+          "operators": []
+        },
+        "factory_3": {
+          "operators": []
+        },
+        "factory_4": {
+          "operators": []
+        },
+        "power_plant_1": {
+          "operators": []
+        },
+        "power_plant_2": {
+          "operators": []
+        },
+        "control_center": {
+          "operators": []
+        },
+        "office": {
+          "operators": []
+        }
+      }
+    },
+    "segment_2": {
+      "name": "区间2",
+      "start": "14:00",
+      "end": "20:00",
+      "hours": 6,
+      "rooms": {
+        "trading_post_1": {
+          "operators": []
+        },
+        "trading_post_2": {
+          "operators": []
+        },
+        "trading_post_3": {
+          "operators": []
+        },
+        "factory_1": {
+          "operators": []
+        },
+        "factory_2": {
+          "operators": []
+        },
+        "factory_3": {
+          "operators": []
+        },
+        "factory_4": {
+          "operators": []
+        },
+        "power_plant_1": {
+          "operators": []
+        },
+        "power_plant_2": {
+          "operators": []
+        },
+        "control_center": {
+          "operators": []
+        },
+        "office": {
+          "operators": []
+        }
+      }
+    },
+    "segment_3": {
+      "name": "区间3",
+      "start": "20:00",
+      "end": "08:00",
+      "hours": 12,
+      "rooms": {
+        "trading_post_1": {
+          "operators": []
+        },
+        "trading_post_2": {
+          "operators": []
+        },
+        "trading_post_3": {
+          "operators": []
+        },
+        "factory_1": {
+          "operators": []
+        },
+        "factory_2": {
+          "operators": []
+        },
+        "factory_3": {
+          "operators": []
+        },
+        "factory_4": {
+          "operators": []
+        },
+        "power_plant_1": {
+          "operators": []
+        },
+        "power_plant_2": {
+          "operators": []
+        },
+        "control_center": {
+          "operators": []
+        },
+        "office": {
+          "operators": []
+        }
+      }
+    }
+  },
+  "external_skill_evidence": [],
+  "recovery_plan": {
+    "events": [],
+    "repeating_day_verified": false
+  },
+  "economy_projection": {
+    "source": "verified_guide",
+    "daily": {
+      "lmd_orders_lmd": 47000,
+      "pure_gold_lmd_equivalent": 44000,
+      "pure_gold_drone_lmd_equivalent": 9400,
+      "orundum": 535,
+      "battle_record_exp": 14000
+    },
+    "costs": {
+      "orirock_cube": 100,
+      "lmd": 80000
+    },
+    "inventory_delta": {
+      "orundum_shard": -4
+    },
+    "warehouse_overflow_checked": true,
+    "drone_policy": "示例沿用攻略基线，实际使用前重新核对"
+  },
+  "assumptions": {
+    "repeating_daily": true
+  }
+}

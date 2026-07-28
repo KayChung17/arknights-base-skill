@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "templates": {
+    "guide_342_orundum_3_login": {
+      "display_name": "342 赚钱与搓玉三次上线攻略基线",
+      "goal": "gold_origin",
+      "layout": "342",
+      "status": "community_guide_baseline",
+      "source": {
+        "source_type": "user_provided_guide_image",
+        "title": "搓玉342-3队列",
+        "retrieved_at": "2026-07-27",
+        "verification": "structure_extracted_from_user_image",
+        "notes": "仓库仅保存结构化摘要，不再分发原图。具体干员组合需要按当前版本攻略与用户 roster 再核验。"
+      },
+      "facility_configuration": {
+        "rooms": {
+          "trading_post_1": {
+            "facility_id": "trading_post",
+            "level": 3,
+            "product_id": "lmd_order"
+          },
+          "trading_post_2": {
+            "facility_id": "trading_post",
+            "level": 3,
+            "product_id": "orundum_order"
+          },
+          "trading_post_3": {
+            "facility_id": "trading_post",
+            "level": 1,
+            "product_id": "lmd_order"
+          },
+          "factory_1": {
+            "facility_id": "factory",
+            "level": 3,
+            "product_id": "pure_gold"
+          },
+          "factory_2": {
+            "facility_id": "factory",
+            "level": 3,
+            "product_id": "pure_gold"
+          },
+          "factory_3": {
+            "facility_id": "factory",
+            "level": 2,
+            "product_id": "orundum_shard"
+          },
+          "factory_4": {
+            "facility_id": "factory",
+            "level": 2,
+            "product_id": "battle_record"
+          },
+          "power_plant_1": {
+            "facility_id": "power_plant",
+            "level": 3,
+            "product_id": "drone_recovery"
+          },
+          "power_plant_2": {
+            "facility_id": "power_plant",
+            "level": 3,
+            "product_id": "drone_recovery"
+          },
+          "control_center": {
+            "facility_id": "control_center",
+            "level": 5,
+            "product_id": "base_management"
+          },
+          "office": {
+            "facility_id": "office",
+            "level": 3,
+            "product_id": "hr_network"
+          }
+        },
+        "dormitories": [
+          {
+            "room_id": "dormitory_1",
+            "level": 1
+          },
+          {
+            "room_id": "dormitory_2",
+            "level": 1
+          },
+          {
+            "room_id": "dormitory_3",
+            "level": 1
+          },
+          {
+            "room_id": "dormitory_4",
+            "level": 1
+          }
+        ]
+      },
+      "operation_model": {
+        "online_count": 3,
+        "default_online_times": [
+          "08:00",
+          "14:00",
+          "20:00"
+        ],
+        "segment_hours": [
+          6,
+          6,
+          12
+        ],
+        "room_rotation_guidance": {
+          "queue_1": [
+            12
+          ],
+          "queue_2": [
+            12,
+            6
+          ],
+          "queue_3": [
+            12,
+            6
+          ]
+        },
+        "principle": "上线次数定义可操作节点，房间人员可以跨相邻区间连续工作，不能机械拆成三个等长班次。"
+      },
+      "recovery_requirements": {
+        "fiammetta_priority_targets": [
+          "但书",
+          "清流"
+        ],
+        "requires_recovery_plan": true,
+        "requires_repeating_day_check": true,
+        "notes": "核心组合允许重复使用，前提是宿舍、菲亚梅塔和下一周期心情时间线可验证。"
+      },
+      "economy_baseline": {
+        "approximate": true,
+        "daily": {
+          "lmd_orders_lmd": 47000,
+          "pure_gold_lmd_equivalent": 44000,
+          "pure_gold_drone_lmd_equivalent": 9400,
+          "orundum": 535,
+          "battle_record_exp": 14000
+        },
+        "costs": {
+          "orirock_cube": 100,
+          "lmd": 80000,
+          "orundum_shard_inventory_delta": -4
+        },
+        "drone_alternatives": {
+          "lmd_orders": 14000,
+          "pure_gold": 6700,
+          "battle_record_exp": 5300
+        },
+        "notes": "数值来自用户提供攻略图的预估栏，只作为基准比较，不替代当前版本实测。"
+      },
+      "required_final_checks": [
+        "current_guide_verified",
+        "facility_levels_match",
+        "all_production_operator_skills_verified",
+        "room_specific_rotation_verified",
+        "morale_and_recovery_timeline_verified",
+        "warehouse_overflow_checked",
+        "economy_projection_complete",
+        "baseline_deviations_explained"
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+[project]
+name = "arknights-base-skill"
+version = "1.0.0"
+description = "中文明日方舟基建布局、排班、无人机、经济与培养优化仓库"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "scipy>=1.11",
+  "openpyxl>=3.1"
+]
+license = {file = "LICENSE"}
+authors = [{name = "KayChung17 and contributors"}]
+keywords = ["Arknights", "明日方舟", "基建", "MILP", "optimization", "skill"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+
+[project.urls]
+Homepage = "https://github.com/KayChung17/arknights-base-skill"
+Issues = "https://github.com/KayChung17/arknights-base-skill/issues"
+
+[tool.unittest]
+start-directory = "skills/ark-base-schedule/tests"

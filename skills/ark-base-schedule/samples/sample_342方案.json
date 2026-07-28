@@ -1,74 +1,1947 @@
 {
-  "title": "342 纯赚钱三班倒（全满级最优方案）",
-  "description": "342布局：3贸易全赚钱，4制造全赤金，2发电站。全满级E2，宿舍全5级。森蚺中枢+Lancet-2→视为4发电。菲亚梅塔充电但书/可露希尔/清流。基建内4杜林、4莱茵、4精英于不同设施。",
-  "plans": [
-    {
-      "name": "08:00-20:00 A班（12小时）",
-      "description": "贸易1：巫恋低语135%+龙舌兰+绮良(赤金线翻倍) = 等效124%贸易+33%赤金。贸易2：图耶(生产线)+但书违约乘区 = 纸面95%等效260%。贸易3：鸿雪(4杜林生产线)+可露希尔(特别订单) = 纸面70%等效100%贸易+35.8%赤金。\n制造1：槐琥放大+阿罗玛渐增+砾35% = 117%。制造2：清流3贸易60%+温蒂4发电60%+冬时归零30% = 165%。制造3：引星棘刺+苍苔金属工艺联动 = 79%。制造4：多萝西+娜斯提莱茵联动 = 75%。",
-      "period": [["08:00", "20:00"]],
-      "drones": {"enable": true, "room": "manufacture", "index": 3, "rule": "all", "order": "pre"},
+  "schema_version": 3,
+  "plan_id": "fallback-342-all_gold-2shift",
+  "title": "342 纯赚钱 2班备用候选",
+  "name": "342 纯赚钱 2班备用候选",
+  "layout": "342",
+  "goal": "all_gold",
+  "goal_display_name": "纯赚钱",
+  "shifts_per_day": 2,
+  "data_version": "2026-07-27-reviewed",
+  "cross_shift_reuse_policy": "allowed_with_warning",
+  "decision": {
+    "strategy": "确定性备用基线",
+    "rationale": [
+      "按单房间组合评分和复用惩罚生成可审计基准候选"
+    ],
+    "tradeoffs": [
+      "逐房间贪心分配没有同时搜索完整日排班空间"
+    ],
+    "external_evidence_ids": []
+  },
+  "generator": {
+    "role": "fallback_candidate_source",
+    "method": "greedy_room_combination_ranking",
+    "global_optimality_proven": false,
+    "final_decision_owner": "language_model",
+    "strict_rotation": false,
+    "cross_shift_reuse_policy": "allowed_with_warning"
+  },
+  "assumptions": {
+    "global_counter_scope": "owned recruited roster",
+    "morale_simulation": "basic coverage checks only",
+    "fixed_order_value_kept_separate": true,
+    "schedule_scope": "single-day snapshot"
+  },
+  "factory_product_allocation": [
+    "pure_gold",
+    "pure_gold",
+    "pure_gold",
+    "pure_gold"
+  ],
+  "shifts": {
+    "A班 (08:00-20:00)": {
+      "name": "A班",
+      "start": "08:00",
+      "end": "20:00",
+      "hours": 12,
       "rooms": {
-        "control": [{"operators": ["森蚺", "八幡海铃", "维什戴尔", "诗怀雅", "斩业星熊"]}],
-        "trading": [
-          {"operators": ["巫恋", "龙舌兰", "绮良"], "sort": true, "product": "LMD"},
-          {"operators": ["图耶", "但书"], "sort": true, "product": "LMD"},
-          {"operators": ["鸿雪", "可露希尔"], "sort": true, "product": "LMD"}
-        ],
-        "manufacture": [
-          {"operators": ["槐琥", "阿罗玛", "砾"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["清流", "温蒂", "冬时"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["引星棘刺", "苍苔"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["多萝西", "娜斯提"], "sort": true, "product": "Pure Gold"}
-        ],
-        "power": [{"operators": ["承曦格雷伊"]}, {"operators": ["Lancet-2"]}],
-        "meeting": [{"operators": ["陈", "伊内丝"], "autofill": true, "sort": false}],
-        "hire": [{"operators": ["斥罪"]}]
+        "贸易站#1": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "但书",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "雪雉",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 295.64,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": [
+            "巫恋类替换技能仅替换直接订单效率层，设施与全局联动层继续保留。"
+          ]
+        },
+        "贸易站#2": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "空爆",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "伺夜",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 130.0,
+          "fixed_order_value_lmd_per_trigger": 500,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "贸易站#3": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "慕斯",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 115.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "制造站#1": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 135.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "制造站#2": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "泡普卡",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 90.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "制造站#3": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "斯卡蒂",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "斑点",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 85.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "制造站#4": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "幽灵鲨",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "野鬃",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "灰毫",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 75.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "发电站#1": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "缪尔赛思",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 12.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "发电站#2": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "正义骑士号",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 0.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "red_pine_power"
+          ],
+          "calculation_warnings": []
+        },
+        "控制中枢": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "八幡海铃",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "鸿雪",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "贝洛内",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "gladiia_abyssal_activation",
+            "glasgow_center",
+            "siracusa_center"
+          ],
+          "calculation_warnings": []
+        }
       }
     },
-    {
-      "name": "20:00-02:00 B班（6小时）",
-      "period": [["20:00", "02:00"]],
-      "drones": {"enable": true, "room": "manufacture", "index": 3, "rule": "all", "order": "pre"},
+    "B班 (20:00-08:00)": {
+      "name": "B班",
+      "start": "20:00",
+      "end": "08:00",
+      "hours": 12,
       "rooms": {
-        "control": [{"operators": ["森蚺", "焰狐龙梓兰", "阿米娅", "Mon3tr", "薇薇安娜"]}],
-        "trading": [
-          {"operators": ["巫恋", "龙舌兰", "绮良"], "sort": true, "product": "LMD"},
-          {"operators": ["图耶", "但书"], "sort": true, "product": "LMD"},
-          {"operators": ["鸿雪", "可露希尔"], "sort": true, "product": "LMD"}
-        ],
-        "manufacture": [
-          {"operators": ["槐琥", "阿罗玛", "砾"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["清流", "温蒂", "冬时"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["野鬃", "灰毫"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["泡泡", "火神"], "sort": true, "product": "Pure Gold"}
-        ],
-        "power": [{"operators": ["承曦格雷伊"]}, {"operators": ["Lancet-2"]}],
-        "meeting": [{"operators": ["陈", "伊内丝"], "autofill": true, "sort": false}],
-        "hire": [{"operators": ["斥罪"]}]
-      }
-    },
-    {
-      "name": "02:00-08:00 C班（6小时）",
-      "description": "独立链路：叙拉古(贝洛内+伺夜)、格拉斯哥帮(推进之王+摩根)、深海猎人(斯卡蒂+幽灵鲨+乌尔比安+安哲拉)配合中枢歌蕾蒂娅。莱茵系(多萝西+娜斯提+清流)复用。",
-      "period": [["02:00", "08:00"]],
-      "drones": {"enable": true, "room": "manufacture", "index": 3, "rule": "all", "order": "pre"},
-      "rooms": {
-        "control": [{"operators": ["诗怀雅", "斩业星熊", "歌蕾蒂娅", "八幡海铃", "戴菲恩"]}],
-        "trading": [
-          {"operators": ["贝洛内", "吉星", "可露希尔"], "sort": true, "product": "LMD"},
-          {"operators": ["伺夜", "但书"], "sort": true, "product": "LMD"},
-          {"operators": ["推进之王", "摩根"], "sort": true, "product": "LMD"}
-        ],
-        "manufacture": [
-          {"operators": ["苍苔", "引星棘刺", "夜烟"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["多萝西", "娜斯提", "清流"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["斯卡蒂", "幽灵鲨"], "sort": true, "product": "Pure Gold"},
-          {"operators": ["乌尔比安", "安哲拉"], "sort": true, "product": "Pure Gold"}
-        ],
-        "power": [{"operators": ["烛煌"]}, {"operators": ["缪尔赛思"]}],
-        "meeting": [{"operators": ["陈", "伊内丝"], "autofill": true, "sort": false}],
-        "hire": [{"operators": ["凯尔希·思衡托"]}]
+        "贸易站#1": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "但书",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "雪雉",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 295.64,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": [
+            "巫恋类替换技能仅替换直接订单效率层，设施与全局联动层继续保留。"
+          ]
+        },
+        "贸易站#2": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "空爆",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "伺夜",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 130.0,
+          "fixed_order_value_lmd_per_trigger": 500,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "贸易站#3": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "图耶",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "绮良",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "玫兰莎",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 90.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "制造站#1": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "冬时",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 130.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "dongshi_reset"
+          ],
+          "calculation_warnings": [
+            "冬时类技能仅替换直接生产力层，设施与全局联动层继续保留。"
+          ]
+        },
+        "制造站#2": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "乌尔比安",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "安哲拉",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 85.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "制造站#3": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "娜斯提",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "多萝西",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 72.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "制造站#4": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "温米",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "芬",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "泡普卡",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 80.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "发电站#1": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "缪尔赛思",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 12.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "calculation_warnings": []
+        },
+        "发电站#2": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "正义骑士号",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 0.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "red_pine_power"
+          ],
+          "calculation_warnings": []
+        },
+        "控制中枢": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "八幡海铃",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "鸿雪",
+              "elite": 2,
+              "morale": 24.0
+            },
+            {
+              "name": "野鬃",
+              "elite": 2,
+              "morale": 24.0
+            }
+          ],
+          "estimated_efficiency_bonus_pct": 0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "gladiia_abyssal_activation",
+            "glasgow_center",
+            "siracusa_center"
+          ],
+          "calculation_warnings": []
+        }
       }
     }
-  ]
+  },
+  "generation_warnings": [],
+  "operator_usage_count": {
+    "乌尔比安": 1,
+    "伺夜": 2,
+    "但书": 2,
+    "八幡海铃": 2,
+    "冬时": 1,
+    "图耶": 1,
+    "多萝西": 1,
+    "夜烟": 1,
+    "娜斯提": 1,
+    "安哲拉": 1,
+    "巫恋": 2,
+    "幽灵鲨": 1,
+    "慕斯": 1,
+    "戴菲恩": 2,
+    "拜松": 1,
+    "斑点": 1,
+    "斯卡蒂": 1,
+    "月见夜": 1,
+    "森蚺": 2,
+    "歌蕾蒂娅": 2,
+    "正义骑士号": 2,
+    "泡普卡": 2,
+    "清流": 2,
+    "温米": 2,
+    "温蒂": 2,
+    "灰毫": 1,
+    "玫兰莎": 1,
+    "砾": 2,
+    "空爆": 2,
+    "绮良": 1,
+    "缪尔赛思": 2,
+    "芬": 1,
+    "贝洛内": 1,
+    "野鬃": 2,
+    "雪雉": 2,
+    "鸿雪": 2,
+    "龙舌兰": 2
+  },
+  "validation": {
+    "errors": [],
+    "warnings": [
+      "[A班 (08:00-20:00)] 控制中枢: 贝洛内@E2 没有已知的 control_center/base_management 适配技能",
+      "[A班 (08:00-20:00)] 控制中枢: 鸿雪@E2 没有已知的 control_center/base_management 适配技能",
+      "[B班 (20:00-08:00)] 控制中枢: 野鬃@E2 没有已知的 control_center/base_management 适配技能",
+      "[B班 (20:00-08:00)] 控制中枢: 鸿雪@E2 没有已知的 control_center/base_management 适配技能",
+      "伺夜 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "但书 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "八幡海铃 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "巫恋 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "戴菲恩 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "森蚺 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "歌蕾蒂娅 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "正义骑士号 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "泡普卡 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "清流 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "温米 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "温蒂 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "砾 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "空爆 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "缪尔赛思 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "野鬃 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "雪雉 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "鸿雪 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)",
+      "龙舌兰 跨班次复用: A班 (08:00-20:00)、B班 (20:00-08:00)"
+    ],
+    "room_results": {
+      "A班 (08:00-20:00)/贸易站#1": {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "operators": [
+          {
+            "name": "但书",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "巫恋",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "雪雉",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [
+          "巫恋类替换技能仅替换直接订单效率层，设施与全局联动层继续保留。"
+        ],
+        "operator_details": [
+          {
+            "name": "但书",
+            "elite": 2,
+            "notes": [
+              "估算乘算 ×1.556"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "巫恋",
+            "elite": 2,
+            "notes": [
+              "直接订单效率替换为 +65%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "雪雉",
+            "elite": 2,
+            "notes": [],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 65.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 10.0,
+          "amplifier_bonus_pct": 75.0,
+          "multiplier": 1.556
+        },
+        "paper_bonus_pct": 150.0,
+        "estimated_efficiency_bonus_pct": 233.4,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [],
+        "production_lines": 0
+      },
+      "A班 (08:00-20:00)/贸易站#2": {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "operators": [
+          {
+            "name": "龙舌兰",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "空爆",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "伺夜",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "龙舌兰",
+            "elite": 2,
+            "notes": [
+              "直接效率 +30%；独立订单价值 +500 龙门币/触发"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "空爆",
+            "elite": 2,
+            "notes": [
+              "直接效率 +35%"
+            ],
+            "direct_bonus_pct": 35.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "伺夜",
+            "elite": 2,
+            "notes": [
+              "直接效率 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 95.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 15.0,
+          "amplifier_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 110.0,
+        "estimated_efficiency_bonus_pct": 110.0,
+        "fixed_order_value_lmd_per_trigger": 500,
+        "special_flags": [],
+        "production_lines": 0
+      },
+      "A班 (08:00-20:00)/贸易站#3": {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "operators": [
+          {
+            "name": "月见夜",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "慕斯",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "拜松",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "月见夜",
+            "elite": 2,
+            "notes": [
+              "直接效率 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "慕斯",
+            "elite": 2,
+            "notes": [
+              "直接效率 +25%"
+            ],
+            "direct_bonus_pct": 25.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "拜松",
+            "elite": 2,
+            "notes": [
+              "直接效率 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 85.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 10.0,
+          "amplifier_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 95.0,
+        "estimated_efficiency_bonus_pct": 95.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [],
+        "production_lines": 0
+      },
+      "A班 (08:00-20:00)/制造站#1": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "清流",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "森蚺",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "砾",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "清流",
+            "elite": 2,
+            "notes": [
+              "3 个贸易站 ×20% = +60%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 60.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "森蚺",
+            "elite": 2,
+            "notes": [
+              "2 个发电站 ×20% = +40%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 40.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "砾",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +35%"
+            ],
+            "direct_bonus_pct": 35.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 35.0,
+          "facility_bonus_pct": 100.0,
+          "global_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 135.0,
+        "estimated_efficiency_bonus_pct": 135.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "A班 (08:00-20:00)/制造站#2": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "温蒂",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "温米",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "泡普卡",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "温蒂",
+            "elite": 2,
+            "notes": [
+              "2 个发电站 ×15% = +30%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 30.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "温米",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "泡普卡",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 60.0,
+          "facility_bonus_pct": 30.0,
+          "global_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 90.0,
+        "estimated_efficiency_bonus_pct": 90.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "A班 (08:00-20:00)/制造站#3": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "斯卡蒂",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "斑点",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "夜烟",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "斯卡蒂",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +25%"
+            ],
+            "direct_bonus_pct": 25.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "斑点",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "夜烟",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 85.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 85.0,
+        "estimated_efficiency_bonus_pct": 85.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "A班 (08:00-20:00)/制造站#4": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "幽灵鲨",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "野鬃",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "灰毫",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "幽灵鲨",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +25%"
+            ],
+            "direct_bonus_pct": 25.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "野鬃",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +25%"
+            ],
+            "direct_bonus_pct": 25.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "灰毫",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +25%"
+            ],
+            "direct_bonus_pct": 25.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 75.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 75.0,
+        "estimated_efficiency_bonus_pct": 75.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "A班 (08:00-20:00)/发电站#1": {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "operators": [
+          {
+            "name": "缪尔赛思",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "缪尔赛思",
+            "elite": 2,
+            "notes": [
+              "莱茵生命全局计数：无人机恢复 +6%"
+            ]
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 6.0,
+          "facility_bonus_pct": 0,
+          "global_bonus_pct": 0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 6.0,
+        "estimated_efficiency_bonus_pct": 6.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "A班 (08:00-20:00)/发电站#2": {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "operators": [
+          {
+            "name": "正义骑士号",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "正义骑士号",
+            "elite": 2,
+            "notes": [
+              "红松骑士团能源联动已记录"
+            ]
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 0.0,
+          "facility_bonus_pct": 0,
+          "global_bonus_pct": 0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 0.0,
+        "estimated_efficiency_bonus_pct": 0.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [
+          "red_pine_power"
+        ]
+      },
+      "A班 (08:00-20:00)/控制中枢": {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "operators": [
+          {
+            "name": "歌蕾蒂娅",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "戴菲恩",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "八幡海铃",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "鸿雪",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "贝洛内",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "歌蕾蒂娅",
+            "elite": 2,
+            "notes": [
+              "激活深海猎人基建联动；模型记录激活状态。"
+            ]
+          },
+          {
+            "name": "戴菲恩",
+            "elite": 2,
+            "notes": [
+              "按外部设施中的格拉斯哥帮成员提供贸易站加成。"
+            ]
+          },
+          {
+            "name": "八幡海铃",
+            "elite": 2,
+            "notes": [
+              "按贸易站中的叙拉古干员提供全贸易站加成。"
+            ]
+          },
+          {
+            "name": "鸿雪",
+            "elite": 2,
+            "notes": []
+          },
+          {
+            "name": "贝洛内",
+            "elite": 2,
+            "notes": []
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 0,
+          "facility_bonus_pct": 0,
+          "global_bonus_pct": 0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 0,
+        "estimated_efficiency_bonus_pct": 0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [
+          "gladiia_abyssal_activation",
+          "glasgow_center",
+          "siracusa_center"
+        ]
+      },
+      "B班 (20:00-08:00)/贸易站#1": {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "operators": [
+          {
+            "name": "但书",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "巫恋",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "雪雉",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [
+          "巫恋类替换技能仅替换直接订单效率层，设施与全局联动层继续保留。"
+        ],
+        "operator_details": [
+          {
+            "name": "但书",
+            "elite": 2,
+            "notes": [
+              "估算乘算 ×1.556"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "巫恋",
+            "elite": 2,
+            "notes": [
+              "直接订单效率替换为 +65%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "雪雉",
+            "elite": 2,
+            "notes": [],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 65.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 10.0,
+          "amplifier_bonus_pct": 75.0,
+          "multiplier": 1.556
+        },
+        "paper_bonus_pct": 150.0,
+        "estimated_efficiency_bonus_pct": 233.4,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [],
+        "production_lines": 0
+      },
+      "B班 (20:00-08:00)/贸易站#2": {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "operators": [
+          {
+            "name": "龙舌兰",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "空爆",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "伺夜",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "龙舌兰",
+            "elite": 2,
+            "notes": [
+              "直接效率 +30%；独立订单价值 +500 龙门币/触发"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "空爆",
+            "elite": 2,
+            "notes": [
+              "直接效率 +35%"
+            ],
+            "direct_bonus_pct": 35.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "伺夜",
+            "elite": 2,
+            "notes": [
+              "直接效率 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 95.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 15.0,
+          "amplifier_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 110.0,
+        "estimated_efficiency_bonus_pct": 110.0,
+        "fixed_order_value_lmd_per_trigger": 500,
+        "special_flags": [],
+        "production_lines": 0
+      },
+      "B班 (20:00-08:00)/贸易站#3": {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "operators": [
+          {
+            "name": "图耶",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "绮良",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "玫兰莎",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "图耶",
+            "elite": 2,
+            "notes": [
+              "基础 +5%；生产线附加 +0%"
+            ],
+            "direct_bonus_pct": 5.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "绮良",
+            "elite": 2,
+            "notes": [
+              "基础 +5%；虚拟生产线已计入"
+            ],
+            "direct_bonus_pct": 5.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "玫兰莎",
+            "elite": 2,
+            "notes": [
+              "直接效率 +20%"
+            ],
+            "direct_bonus_pct": 20.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 30.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 10.0,
+          "amplifier_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 40.0,
+        "estimated_efficiency_bonus_pct": 40.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [],
+        "production_lines": 0
+      },
+      "B班 (20:00-08:00)/制造站#1": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "清流",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "森蚺",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "冬时",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [
+          "冬时类技能仅替换直接生产力层，设施与全局联动层继续保留。"
+        ],
+        "operator_details": [
+          {
+            "name": "清流",
+            "elite": 2,
+            "notes": [
+              "3 个贸易站 ×20% = +60%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 60.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "森蚺",
+            "elite": 2,
+            "notes": [
+              "2 个发电站 ×20% = +40%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 40.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "冬时",
+            "elite": 2,
+            "notes": [
+              "直接生产力替换为站内 3 人 ×10% = +30%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 30,
+          "facility_bonus_pct": 100.0,
+          "global_bonus_pct": 0.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 130.0,
+        "estimated_efficiency_bonus_pct": 130.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [
+          "dongshi_reset"
+        ]
+      },
+      "B班 (20:00-08:00)/制造站#2": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "乌尔比安",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "安哲拉",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "砾",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "乌尔比安",
+            "elite": 2,
+            "notes": [
+              "控制中枢深海猎人联动估算：+5%",
+              "直接生产力 +20%"
+            ],
+            "direct_bonus_pct": 20.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 5.0
+          },
+          {
+            "name": "安哲拉",
+            "elite": 2,
+            "notes": [
+              "控制中枢深海猎人联动估算：+5%",
+              "直接生产力 +20%"
+            ],
+            "direct_bonus_pct": 20.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 5.0
+          },
+          {
+            "name": "砾",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +35%"
+            ],
+            "direct_bonus_pct": 35.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 75.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 10.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 85.0,
+        "estimated_efficiency_bonus_pct": 85.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "B班 (20:00-08:00)/制造站#3": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "温蒂",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "娜斯提",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "多萝西",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "温蒂",
+            "elite": 2,
+            "notes": [
+              "2 个发电站 ×15% = +30%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 30.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "娜斯提",
+            "elite": 2,
+            "notes": [
+              "莱茵生命全局计数：+12%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 12.0
+          },
+          {
+            "name": "多萝西",
+            "elite": 2,
+            "notes": [
+              "同站莱茵生命 3 人：+30%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 30.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 0.0,
+          "facility_bonus_pct": 30.0,
+          "global_bonus_pct": 42.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 72.0,
+        "estimated_efficiency_bonus_pct": 72.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "B班 (20:00-08:00)/制造站#4": {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "operators": [
+          {
+            "name": "温米",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "芬",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "泡普卡",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "温米",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          },
+          {
+            "name": "芬",
+            "elite": 2,
+            "notes": [
+              "同站 A1 成员 2 人：+20%"
+            ],
+            "direct_bonus_pct": 0.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 20.0
+          },
+          {
+            "name": "泡普卡",
+            "elite": 2,
+            "notes": [
+              "直接生产力 +30%"
+            ],
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 0.0
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 60.0,
+          "facility_bonus_pct": 0.0,
+          "global_bonus_pct": 20.0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 80.0,
+        "estimated_efficiency_bonus_pct": 80.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "B班 (20:00-08:00)/发电站#1": {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "operators": [
+          {
+            "name": "缪尔赛思",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "缪尔赛思",
+            "elite": 2,
+            "notes": [
+              "莱茵生命全局计数：无人机恢复 +12%"
+            ]
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 12.0,
+          "facility_bonus_pct": 0,
+          "global_bonus_pct": 0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 12.0,
+        "estimated_efficiency_bonus_pct": 12.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": []
+      },
+      "B班 (20:00-08:00)/发电站#2": {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "operators": [
+          {
+            "name": "正义骑士号",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "正义骑士号",
+            "elite": 2,
+            "notes": [
+              "红松骑士团能源联动已记录"
+            ]
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 0.0,
+          "facility_bonus_pct": 0,
+          "global_bonus_pct": 0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 0.0,
+        "estimated_efficiency_bonus_pct": 0.0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [
+          "red_pine_power"
+        ]
+      },
+      "B班 (20:00-08:00)/控制中枢": {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "operators": [
+          {
+            "name": "歌蕾蒂娅",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "戴菲恩",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "八幡海铃",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "鸿雪",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          },
+          {
+            "name": "野鬃",
+            "elite": 2,
+            "recruited": true,
+            "morale": 24.0
+          }
+        ],
+        "unknown_operators": [],
+        "data_version": "2026-07-27-reviewed",
+        "model": "rule_based_estimate",
+        "warnings": [],
+        "operator_details": [
+          {
+            "name": "歌蕾蒂娅",
+            "elite": 2,
+            "notes": [
+              "激活深海猎人基建联动；模型记录激活状态。"
+            ]
+          },
+          {
+            "name": "戴菲恩",
+            "elite": 2,
+            "notes": [
+              "按外部设施中的格拉斯哥帮成员提供贸易站加成。"
+            ]
+          },
+          {
+            "name": "八幡海铃",
+            "elite": 2,
+            "notes": [
+              "按贸易站中的叙拉古干员提供全贸易站加成。"
+            ]
+          },
+          {
+            "name": "鸿雪",
+            "elite": 2,
+            "notes": []
+          },
+          {
+            "name": "野鬃",
+            "elite": 2,
+            "notes": []
+          }
+        ],
+        "layers": {
+          "direct_bonus_pct": 0,
+          "facility_bonus_pct": 0,
+          "global_bonus_pct": 0,
+          "multiplier": 1.0
+        },
+        "paper_bonus_pct": 0,
+        "estimated_efficiency_bonus_pct": 0,
+        "fixed_order_value_lmd_per_trigger": 0,
+        "special_flags": [
+          "gladiia_abyssal_activation",
+          "glasgow_center",
+          "siracusa_center"
+        ]
+      }
+    },
+    "valid": true
+  }
 }

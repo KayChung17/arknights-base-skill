@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "sample_type": "full_roster_hybrid_solver_summary",
+  "data_version": "2026-07-27-owned-roster-228",
+  "input": {
+    "owned_operator_count": 228,
+    "layout": "342",
+    "goal": "gold_origin",
+    "online_times": [
+      "08:00",
+      "14:00",
+      "20:00"
+    ],
+    "max_daily_work_hours": 18,
+    "minimum_orundum_shard_balance": -4
+  },
+  "combination_library": {
+    "combination_count": 2141,
+    "truncated_rooms": [
+      "trading_post_1",
+      "trading_post_2",
+      "factory_1",
+      "factory_2",
+      "factory_3",
+      "factory_4",
+      "control_center"
+    ],
+    "room_counts": {
+      "trading_post_1": {
+        "enumerated": 2024,
+        "kept": 300,
+        "truncated": true
+      },
+      "trading_post_2": {
+        "enumerated": 2024,
+        "kept": 300,
+        "truncated": true
+      },
+      "trading_post_3": {
+        "enumerated": 41,
+        "kept": 41,
+        "truncated": false
+      },
+      "factory_1": {
+        "enumerated": 2024,
+        "kept": 300,
+        "truncated": true
+      },
+      "factory_2": {
+        "enumerated": 2024,
+        "kept": 300,
+        "truncated": true
+      },
+      "factory_3": {
+        "enumerated": 276,
+        "kept": 276,
+        "truncated": true
+      },
+      "factory_4": {
+        "enumerated": 276,
+        "kept": 276,
+        "truncated": true
+      },
+      "power_plant_1": {
+        "enumerated": 14,
+        "kept": 14,
+        "truncated": false
+      },
+      "power_plant_2": {
+        "enumerated": 14,
+        "kept": 14,
+        "truncated": false
+      },
+      "control_center": {
+        "enumerated": 42504,
+        "kept": 300,
+        "truncated": true
+      },
+      "office": {
+        "enumerated": 20,
+        "kept": 20,
+        "truncated": false
+      }
+    }
+  },
+  "model": {
+    "backend": "scipy.optimize.milp_highs",
+    "variable_count": 10705,
+    "constraint_count": 13374,
+    "mip_rel_gap": 0.0015202339536453733
+  },
+  "result": {
+    "optimality_claim": "best_found_within_truncated_candidate_library",
+    "actual_simulation_global_optimality_proven": false,
+    "actual_objective_score": 11607.840799936112,
+    "aggregate_metrics": {
+      "base_management": 27.240000000000002,
+      "pure_gold": 79.849999996806,
+      "orundum_shard": 36.120000000000005,
+      "battle_record_units": 13.339999998665999,
+      "battle_record_exp": 13339.999999998665,
+      "hr_network": 33.599999999999994,
+      "drone_recovery": 56.099999999999994,
+      "lmd_trade_work": 101.41488000000001,
+      "orundum": 398.99999999999994,
+      "orundum_shard_consumption": 39.9
+    },
+    "orundum_shard_balance": -3.779999999999994,
+    "warnings": [
+      "源石碎片经济流为负：-3.78，需要库存或无人机补充"
+    ]
+  }
+}

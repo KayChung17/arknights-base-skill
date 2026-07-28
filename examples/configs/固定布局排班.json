@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "project_name": "固定342排班示例",
+  "mode": "fixed_schedule",
+  "roster": "../roster.example.tsv",
+  "output_dir": "../../output/demo-fixed",
+  "layout": "342",
+  "objective": {
+    "goal": "赚钱+搓玉",
+    "online_times": ["08:00", "14:00", "20:00"],
+    "max_daily_work_hours": 18
+  },
+  "base_state": {
+    "drone_capacity": 235,
+    "initial_drone_stock": 235
+  },
+  "search": {
+    "top_k": 40,
+    "operator_pool_size": 14,
+    "top_solutions": 3,
+    "time_limit_seconds": 30,
+    "max_proxy_attempts": 12
+  },
+  "preferences": {
+    "priority": "balanced",
+    "solver": {
+      "require_resource_balance": true,
+      "allocate_drones": true,
+      "drone_repeating_day_balance": true
+    }
+  }
+}

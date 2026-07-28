@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Arknights model decision context",
+  "type": "object",
+  "required": [
+    "packet_type",
+    "data_version",
+    "objective",
+    "facility_configuration",
+    "operation_nodes",
+    "segment_template",
+    "hard_rules",
+    "model_decision_requirements",
+    "roster",
+    "capabilities"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "packet_type": {"const": "model_decision_context"},
+    "data_version": {"type": ["string", "null"]},
+    "objective": {
+      "type": "object",
+      "required": ["goal_id", "layout", "online_count", "online_times", "products", "preferences"]
+    },
+    "baseline": {"type": ["object", "null"]},
+    "facility_configuration": {"type": "object"},
+    "operation_nodes": {"type": "array", "minItems": 1},
+    "segment_template": {"type": "object", "minProperties": 1},
+    "hard_rules": {"type": "object"},
+    "model_decision_requirements": {"type": "object"},
+    "roster": {"type": "array"},
+    "roster_summary": {"type": "object"},
+    "capabilities": {"type": "object"},
+    "external_evidence": {"type": "array"},
+    "instructions_for_model": {"type": "array", "items": {"type": "string"}}
+  }
+}

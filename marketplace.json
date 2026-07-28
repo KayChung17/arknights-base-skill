@@ -1,25 +1,16 @@
 {
-  "$schema": "https://raw.githubusercontent.com/YOUR_USER/arknights-base-skill/main/marketplace-schema.json",
+  "$schema": "https://raw.githubusercontent.com/KayChung17/arknights-base-skill/main/marketplace.schema.json",
   "name": "arknights-base-skill",
-  "description": "Arknights base schedule design guides and operator skill data tools",
+  "version": "1.0.0",
+  "repository": "https://github.com/KayChung17/arknights-base-skill",
   "skills": [
     {
       "name": "ark-base-schedule",
-      "path": "skills/ark-base-schedule",
-      "description": "Design optimal base schedules using equivalent efficiency calculation across 7 core circuit lines",
-      "icon": "⚙️",
-      "maturity": "stable",
-      "version": "2.0.0",
-      "keywords": ["base schedule", "efficiency", "trading post", "manufacturing", "arknights"]
+      "path": "skills/ark-base-schedule"
     },
     {
       "name": "update-ark-skills",
-      "path": "skills/update-ark-skills",
-      "description": "Scrape latest base skills from yituliu.cn and refresh local operator skill database",
-      "icon": "📥",
-      "maturity": "stable",
-      "version": "2.0.0",
-      "keywords": ["update skills", "fetch data", "operator skills", "sync"]
+      "path": "skills/update-ark-skills"
     }
   ]
 }

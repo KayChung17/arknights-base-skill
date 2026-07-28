@@ -1,0 +1,164 @@
+{
+  "comparison_type": "advisory_script_ranking",
+  "weights": {
+    "efficiency": 0.2,
+    "coverage": 0.15,
+    "stability": 0.1,
+    "rotation_diversity": 0.35,
+    "warning_cleanliness": 0.2
+  },
+  "ranking": [
+    {
+      "plan_id": "candidate-rotation-safe",
+      "title": "低跨班复用候选",
+      "valid": true,
+      "advisory_score": 67.981,
+      "components": {
+        "efficiency": 0.0,
+        "coverage": 0.865385,
+        "stability": 0.0,
+        "rotation_diversity": 1.0,
+        "warning_cleanliness": 1.0
+      },
+      "metrics": {
+        "coverage_ratio": 0.865385,
+        "occupied_slots": 45,
+        "total_slots": 52,
+        "total_assignments": 45,
+        "unique_operators": 45,
+        "cross_shift_reuse_operator_count": 0,
+        "cross_shift_reuse": {},
+        "assignment_change_count": 45,
+        "assignment_stability_ratio": 0.0,
+        "weighted_efficiency_points": 515.7,
+        "average_room_efficiency_bonus_pct": 51.57,
+        "weighted_fixed_order_lmd_per_trigger": 250.0,
+        "weighted_efficiency_points_by_facility": {
+          "control_center": 0.0,
+          "factory": 268.5,
+          "power_plant": 3.0,
+          "trading_post": 244.2
+        },
+        "morale_issue_count": 0,
+        "unknown_or_unverified_operators": [],
+        "validation_error_count": 0,
+        "validation_warning_count": 9
+      },
+      "advisory_rank": 1
+    },
+    {
+      "plan_id": "candidate-efficiency",
+      "title": "效率优先候选",
+      "valid": true,
+      "advisory_score": 35.0,
+      "components": {
+        "efficiency": 1.0,
+        "coverage": 1.0,
+        "stability": 0.0,
+        "rotation_diversity": 0.0,
+        "warning_cleanliness": 0.0
+      },
+      "metrics": {
+        "coverage_ratio": 1.0,
+        "occupied_slots": 52,
+        "total_slots": 52,
+        "total_assignments": 52,
+        "unique_operators": 35,
+        "cross_shift_reuse_operator_count": 17,
+        "cross_shift_reuse": {
+          "但书": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "巫恋": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "雪雉": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "龙舌兰": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "清流": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "温蒂": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "森蚺": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "野鬃": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "泡普卡": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "砾": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "缪尔赛思": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "正义骑士号": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "鸿雪": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "歌蕾蒂娅": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "戴菲恩": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "八幡海铃": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ],
+          "贝洛内": [
+            "A班 (08:00-20:00)",
+            "B班 (20:00-08:00)"
+          ]
+        },
+        "assignment_change_count": 26,
+        "assignment_stability_ratio": 0.0,
+        "weighted_efficiency_points": 724.4,
+        "average_room_efficiency_bonus_pct": 72.44,
+        "weighted_fixed_order_lmd_per_trigger": 250.0,
+        "weighted_efficiency_points_by_facility": {
+          "control_center": 0.0,
+          "factory": 382.5,
+          "power_plant": 6.0,
+          "trading_post": 335.9
+        },
+        "morale_issue_count": 0,
+        "unknown_or_unverified_operators": [],
+        "validation_error_count": 0,
+        "validation_warning_count": 23
+      },
+      "advisory_rank": 2
+    }
+  ],
+  "decision_owner": "language_model_with_user_preferences",
+  "selection_rule": "模型应结合用户目标、外部证据和候选方案的定性取舍作出最终选择；可以选择非第一名方案，并说明与用户偏好的对应关系。",
+  "limits": [
+    "无效方案始终排在有效方案之后。",
+    "分数只在本次候选集合内归一化，不适合跨批次比较。",
+    "参考排序没有证明全局最优。"
+  ]
+}

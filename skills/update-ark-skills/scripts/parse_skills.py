@@ -1,114 +1,189 @@
 #!/usr/bin/env python3
-"""
-parse_skills.py — 解析 cells_clean.txt 基建技能数据
+# -*- coding: utf-8 -*-
+"""Parse raw or delimited Arknights base-skill text into normalized JSON/pipe data.
 
-输入格式:
-    cells_clean.txt，每4~5行一组（干员名、精等级、设施、技能名、技能描述）
-    但有时精等级行会前移，导致干员名缺失（4行一组，干员名继承上一组）
+Accepted inputs:
+1. Pipe/TSV rows containing operator, elite, facility, skill name, description.
+2. Loose text blocks where a header line contains operator/elite/facility and
+   the following line contains a skill name and description.
 
-输出格式:
-    skills_parsed.txt，管道分隔: 干员名|精等级|设施|技能名|技能描述
-
-策略:
-    以技能描述行（匹配指定正则）为锚点，向前取3~4个字段作为一组。
+The parser preserves unrecognized rows in the warnings output instead of
+silently dropping them.
 """
 
+from __future__ import annotations
+
+import argparse
+import json
 import re
-import sys
+from pathlib import Path
 
-# 技能描述行必须以此正则开头
-DESC_PATTERN = re.compile(r'^(进驻|当与|宿舍|如果)')
-# 最短描述长度：用于过滤"宿舍"设施字段（2字符）而非真正的描述行
-MIN_DESC_LEN = 5
+FACILITY_ALIASES = {
+    "贸易站": "trading_post",
+    "制造站": "factory",
+    "发电站": "power_plant",
+    "控制中枢": "control_center",
+    "宿舍": "dormitory",
+    "会客室": "reception_room",
+    "办公室": "office",
+    "训练室": "training_room",
+}
 
-INPUT_FILE = 'cells_clean.txt'
-OUTPUT_FILE = 'skills_parsed.txt'
-# 文件头占5行（干员, 解锁, 设施, 技能, 描述）
-NUM_HEADER_LINES = 5
+ELITE_RE = re.compile(r"\bE?([012])\b", re.IGNORECASE)
 
 
-def main():
-    # 1. 读取所有行
-    try:
-        with open(INPUT_FILE, 'r', encoding='utf-8') as f:
-            lines = [line.rstrip('\n\r') for line in f]
-    except FileNotFoundError:
-        print(f"错误: 未找到 {INPUT_FILE}", file=sys.stderr)
-        sys.exit(1)
+def normalize_elite(value: str) -> int:
+    match = ELITE_RE.search(value.strip())
+    return int(match.group(1)) if match else 0
 
-    if not lines:
-        print("错误: 文件为空", file=sys.stderr)
-        sys.exit(1)
 
-    # 2. 定位所有技能描述行
-    desc_indices = []
-    for i, line in enumerate(lines):
-        if i < NUM_HEADER_LINES:
+def detect_facility(text: str) -> str:
+    for label, facility_id in FACILITY_ALIASES.items():
+        if label in text:
+            return facility_id
+    return ""
+
+
+def parse_delimited(lines: list[str]) -> list[dict]:
+    records = []
+    for line_no, line in enumerate(lines, 1):
+        if not line.strip() or line.lstrip().startswith("#"):
             continue
-        if len(line) >= MIN_DESC_LEN and DESC_PATTERN.match(line):
-            desc_indices.append(i)
+        delimiter = "|" if "|" in line else "\t" if "\t" in line else None
+        if not delimiter:
+            continue
+        parts = [part.strip() for part in line.split(delimiter)]
+        if len(parts) < 5:
+            continue
+        if parts[0] in {"干员名", "干员名称", "operator", "name"}:
+            continue
+        name, elite, facility, skill_name = parts[:4]
+        description = delimiter.join(parts[4:]).strip()
+        facility_id = FACILITY_ALIASES.get(facility, facility)
+        if not name or not skill_name or not description:
+            continue
+        records.append({
+            "name": name,
+            "elite": normalize_elite(elite),
+            "facility": facility_id,
+            "skill_name": skill_name,
+            "description": description,
+            "base_bonus_pct": 0,
+            "tags": [],
+            "products": [],
+            "source_line": line_no,
+        })
+    return records
 
-    if not desc_indices:
-        print("错误: 未找到匹配的技能描述行", file=sys.stderr)
-        sys.exit(1)
 
-    print(f"共找到 {len(desc_indices)} 个技能描述行")
+def parse_loose_blocks(lines: list[str]) -> tuple[list[dict], list[str]]:
+    records = []
+    warnings = []
+    current_name = ""
+    current_elite = 0
+    current_facility = ""
 
-    # 3. 以描述行为锚点，向前取字段
-    results = []
-    last_op = ''
-    prev_desc_idx = NUM_HEADER_LINES - 1  # 初始为头尾边界
+    for line_no, raw in enumerate(lines, 1):
+        line = re.sub(r"\s+", " ", raw).strip()
+        if not line:
+            continue
 
-    for desc_idx in desc_indices:
-        field_start = prev_desc_idx + 1
-        fields = lines[field_start:desc_idx]
+        facility = detect_facility(line)
+        elite_match = ELITE_RE.search(line)
+        # Header patterns such as: 但书 E2 贸易站
+        if facility and elite_match:
+            before_facility = line.split(next(label for label in FACILITY_ALIASES if label in line), 1)[0]
+            name = re.sub(r"\bE?[012]\b", "", before_facility, flags=re.IGNORECASE).strip(" -|：:")
+            if name:
+                current_name = name.split()[-1]
+                current_elite = normalize_elite(elite_match.group(0))
+                current_facility = facility
+                continue
 
-        if len(fields) == 4:
-            # 完整组: [干员名, 精等级, 设施, 技能名]
-            op, elite, fac, name = fields
-            last_op = op
-        elif len(fields) == 3:
-            # 缺干员名组: [精等级, 设施, 技能名]，干员名继承上行
-            elite, fac, name = fields
-            op = last_op
-        else:
-            # 异常情况: 记录警告并跳过
-            print(
-                f"警告: 描述行 #{desc_idx + 1} 前有 {len(fields)} 个字段 "
-                f"(期望3或4) — 跳过",
-                file=sys.stderr,
+        # Skill rows: 技能名 | 描述, 技能名：描述, or two-space separated.
+        if current_name and current_facility:
+            if "|" in line:
+                parts = [part.strip() for part in line.split("|", 1)]
+            elif "：" in line:
+                parts = [part.strip() for part in line.split("：", 1)]
+            elif ":" in line:
+                parts = [part.strip() for part in line.split(":", 1)]
+            else:
+                parts = re.split(r"\s{2,}", raw.strip(), maxsplit=1)
+                parts = [part.strip() for part in parts]
+            if len(parts) == 2 and all(parts):
+                records.append({
+                    "name": current_name,
+                    "elite": current_elite,
+                    "facility": current_facility,
+                    "skill_name": parts[0],
+                    "description": parts[1],
+                    "base_bonus_pct": 0,
+                    "tags": [],
+                    "products": [],
+                    "source_line": line_no,
+                })
+                continue
+
+        warnings.append(f"第 {line_no} 行未解析: {line[:120]}")
+    return records, warnings
+
+
+def deduplicate(records: list[dict]) -> list[dict]:
+    seen = set()
+    result = []
+    for record in records:
+        key = (
+            record["name"],
+            record["elite"],
+            record["facility"],
+            record["skill_name"],
+            record["description"],
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(record)
+    return result
+
+
+def write_output(path: Path, records: list[dict], warnings: list[str], output_format: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if output_format == "json":
+        payload = {
+            "schema_version": 1,
+            "records": records,
+            "warnings": warnings,
+        }
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        lines = ["干员名|精等级|设施|技能名|技能描述"]
+        for item in records:
+            lines.append(
+                f"{item['name']}|E{item['elite']}|{item['facility']}|"
+                f"{item['skill_name']}|{item['description']}"
             )
-            # 尝试用偏移法(规则4)恢复: 自 prev_desc_idx 后逐个偏移重试
-            recovered = False
-            for offset in range(1, min(5, len(lines) - desc_idx)):
-                candidate_start = prev_desc_idx + 1 + offset
-                if candidate_start >= desc_idx:
-                    break
-                sub_fields = lines[candidate_start:desc_idx]
-                if len(sub_fields) == 4:
-                    op, elite, fac, name = sub_fields
-                    last_op = op
-                    recovered = True
-                    break
-                elif len(sub_fields) == 3:
-                    elite, fac, name = sub_fields
-                    op = last_op
-                    recovered = True
-                    break
-            if not recovered:
-                continue  # 跳过此组
-
-        results.append(f"{op}|{elite}|{fac}|{name}|{lines[desc_idx]}")
-        prev_desc_idx = desc_idx
-
-    # 4. 写入输出文件
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-        for line in results:
-            f.write(line + '\n')
-
-    print(f"成功解析 {len(results)} 个技能")
-    print(f"输出文件: {OUTPUT_FILE}")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-if __name__ == '__main__':
-    main()
+def main() -> int:
+    parser = argparse.ArgumentParser(description="解析明日方舟基建技能文本")
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--format", choices=["json", "pipe"], default="json")
+    args = parser.parse_args()
+
+    input_path = Path(args.input)
+    lines = input_path.read_text(encoding="utf-8-sig").splitlines()
+    records = parse_delimited(lines)
+    warnings: list[str] = []
+    if not records:
+        records, warnings = parse_loose_blocks(lines)
+    records = deduplicate(records)
+    write_output(Path(args.output), records, warnings, args.format)
+    print(f"解析完成：{len(records)} 条技能，{len(warnings)} 条未解析记录")
+    return 0 if records else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

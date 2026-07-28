@@ -1,0 +1,998 @@
+{
+  "schema_version": 1,
+  "packet_type": "model_decision_context",
+  "data_version": "2026-07-27-reviewed",
+  "objective": {
+    "goal_id": "gold_record",
+    "goal_display_name": "赚钱+经验书",
+    "layout": "243",
+    "shifts_per_day": 2,
+    "products": [
+      "lmd_order",
+      "pure_gold",
+      "battle_record"
+    ],
+    "preferences": {
+      "priority": "balanced",
+      "fiammetta": "avoid"
+    }
+  },
+  "hard_rules": {
+    "room_counts": {
+      "trading_post": 2,
+      "factory": 4,
+      "power_plant": 3,
+      "control_center": 1
+    },
+    "facility_capacities": {
+      "trading_post": 3,
+      "factory": 3,
+      "power_plant": 1,
+      "control_center": 5
+    },
+    "same_shift_duplicate_forbidden": true,
+    "operator_must_exist_in_roster": true,
+    "elite_level_from_roster": true,
+    "product_must_match_facility": true
+  },
+  "model_decision_requirements": {
+    "candidate_count": {
+      "minimum": 2,
+      "recommended": 3
+    },
+    "candidate_schema": "schemas/candidate-plan.schema.json",
+    "must_state_strategy": true,
+    "must_state_tradeoffs": true,
+    "must_validate_each_candidate": true,
+    "must_evaluate_each_valid_candidate": true,
+    "script_ranking_is_advisory": true
+  },
+  "roster": [
+    {
+      "name": "但书",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "龙舌兰",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "巫恋",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "鸿雪",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "图耶",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "绮良",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "可露希尔",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "月见夜",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "空爆",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "玫兰莎",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "慕斯",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "雪雉",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "拜松",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "推进之王",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "摩根",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "戴菲恩",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "贝洛内",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "伺夜",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "八幡海铃",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "清流",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "温蒂",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "森蚺",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "冬时",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "娜斯提",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "多萝西",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "缪尔赛思",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "斯卡蒂",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "幽灵鲨",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "歌蕾蒂娅",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "乌尔比安",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "安哲拉",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "砾",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "斑点",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "夜烟",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "温米",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "苍苔",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "引星棘刺",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "野鬃",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "灰毫",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "正义骑士号",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "芬",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "泡普卡",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "桃金娘",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "杜林",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "褐果",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    }
+  ],
+  "roster_summary": {
+    "owned_count": 45,
+    "unknown_in_local_data": [],
+    "required_slots_per_shift": 26,
+    "required_assignments_per_day": 52,
+    "group_counts": {
+      "a1": 2,
+      "abyssal_hunter": 5,
+      "durin": 3,
+      "glasgow": 3,
+      "metalcraft": 5,
+      "red_pine": 3,
+      "rhine_lab": 4,
+      "siracusa": 3
+    }
+  },
+  "capabilities": {
+    "但书": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "违约体验·β"
+        ],
+        "tags": [
+          "multiplier_1_556"
+        ]
+      }
+    ],
+    "龙舌兰": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "天道酬勤·β"
+        ],
+        "tags": [
+          "independent_order_lmd_500"
+        ]
+      }
+    ],
+    "巫恋": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "低语"
+        ],
+        "tags": [
+          "override_room_direct_bonus"
+        ]
+      }
+    ],
+    "鸿雪": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "际崖居民",
+          "销路宣发"
+        ],
+        "tags": [
+          "hongxue_line_source",
+          "hongxue_per_line"
+        ]
+      }
+    ],
+    "图耶": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "物流规划·β"
+        ],
+        "tags": [
+          "tuye_per_two_lines"
+        ]
+      }
+    ],
+    "绮良": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单流可视化·β"
+        ],
+        "tags": [
+          "qiliang_virtual_lines"
+        ]
+      }
+    ],
+    "可露希尔": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "特别订单"
+        ],
+        "tags": [
+          "special_order"
+        ]
+      }
+    ],
+    "月见夜": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单谈判·α"
+        ],
+        "tags": []
+      }
+    ],
+    "空爆": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单谈判·β"
+        ],
+        "tags": []
+      }
+    ],
+    "玫兰莎": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单管理·α"
+        ],
+        "tags": []
+      }
+    ],
+    "慕斯": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单管理·β"
+        ],
+        "tags": []
+      }
+    ],
+    "雪雉": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "天道酬勤·β"
+        ],
+        "tags": [
+          "amplifier_equal_additive"
+        ]
+      }
+    ],
+    "拜松": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "谈判策略·β"
+        ],
+        "tags": []
+      }
+    ],
+    "推进之王": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "领袖"
+        ],
+        "tags": []
+      }
+    ],
+    "摩根": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "格拉斯哥帮·贸易"
+        ],
+        "tags": [
+          "glasgow_per_member"
+        ]
+      }
+    ],
+    "戴菲恩": [
+      {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "skills": [
+          "格拉斯哥帮·中枢"
+        ],
+        "tags": [
+          "glasgow_center"
+        ]
+      }
+    ],
+    "贝洛内": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "叙拉古·贸易"
+        ],
+        "tags": []
+      }
+    ],
+    "伺夜": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "叙拉古·贸易"
+        ],
+        "tags": []
+      }
+    ],
+    "八幡海铃": [
+      {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "skills": [
+          "叙拉古·中枢"
+        ],
+        "tags": [
+          "siracusa_center"
+        ]
+      }
+    ],
+    "清流": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "水文循环"
+        ],
+        "tags": [
+          "qingliu_per_trading_post"
+        ]
+      }
+    ],
+    "温蒂": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "自动化·β"
+        ],
+        "tags": [
+          "wendy_per_power_plant"
+        ]
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "自动化·β"
+        ],
+        "tags": [
+          "wendy_per_power_plant"
+        ]
+      }
+    ],
+    "森蚺": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "自动化·γ"
+        ],
+        "tags": [
+          "eunectes_per_power_plant"
+        ]
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "自动化·γ"
+        ],
+        "tags": [
+          "eunectes_per_power_plant"
+        ]
+      }
+    ],
+    "冬时": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "流程优化"
+        ],
+        "tags": [
+          "dongshi_reset"
+        ]
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "流程优化"
+        ],
+        "tags": [
+          "dongshi_reset"
+        ]
+      }
+    ],
+    "娜斯提": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "莱茵科技·赤金"
+        ],
+        "tags": [
+          "nasti_per_rhine"
+        ]
+      }
+    ],
+    "多萝西": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "莱茵科技·联动"
+        ],
+        "tags": [
+          "dorothy_rhine_room"
+        ]
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "莱茵科技·联动"
+        ],
+        "tags": [
+          "dorothy_rhine_room"
+        ]
+      }
+    ],
+    "缪尔赛思": [
+      {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "skills": [
+          "莱茵科技·能源"
+        ],
+        "tags": [
+          "muelsyse_drone_per_rhine"
+        ]
+      }
+    ],
+    "斯卡蒂": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "晨夜间巡"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "晨夜间巡"
+        ],
+        "tags": []
+      }
+    ],
+    "幽灵鲨": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "剪不断理还乱"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "剪不断理还乱"
+        ],
+        "tags": []
+      }
+    ],
+    "歌蕾蒂娅": [
+      {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "skills": [
+          "集群狩猎·β"
+        ],
+        "tags": [
+          "gladiia_abyssal_activation"
+        ]
+      }
+    ],
+    "乌尔比安": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ]
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ]
+      }
+    ],
+    "安哲拉": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ]
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ]
+      }
+    ],
+    "砾": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": []
+      }
+    ],
+    "斑点": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": []
+      }
+    ],
+    "夜烟": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": []
+      }
+    ],
+    "温米": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": []
+      }
+    ],
+    "苍苔": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·苍苔"
+        ],
+        "tags": [
+          "cangtai_per_other_metalcraft"
+        ]
+      }
+    ],
+    "引星棘刺": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·引星"
+        ],
+        "tags": [
+          "yinji_per_trading_post"
+        ]
+      }
+    ],
+    "野鬃": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": []
+      }
+    ],
+    "灰毫": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": []
+      }
+    ],
+    "正义骑士号": [
+      {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "skills": [
+          "红松骑士·能源"
+        ],
+        "tags": [
+          "red_pine_power"
+        ]
+      }
+    ],
+    "芬": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "历阵锐枪·α"
+        ],
+        "tags": [
+          "fen_per_a1"
+        ]
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "历阵锐枪·α"
+        ],
+        "tags": [
+          "fen_per_a1"
+        ]
+      }
+    ],
+    "泡普卡": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "标准化·β"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "标准化·β"
+        ],
+        "tags": []
+      }
+    ],
+    "桃金娘": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": []
+      }
+    ],
+    "杜林": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": []
+      }
+    ],
+    "褐果": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": []
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": []
+      }
+    ]
+  },
+  "shift_template": [
+    {
+      "name": "A班",
+      "start": "08:00",
+      "end": "20:00",
+      "hours": 12
+    },
+    {
+      "name": "B班",
+      "start": "20:00",
+      "end": "08:00",
+      "hours": 12
+    }
+  ],
+  "external_evidence": [],
+  "instructions_for_model": [
+    "先根据目标和偏好设计多个候选方案，不让备用生成器替代方案决策。",
+    "网络资料用于发现新规则或版本变化；数值进入正式评价前记录来源并转为结构化规则。",
+    "每个候选方案先执行 validate_plan.py，再执行 evaluate_plan.py。",
+    "校验失败时根据错误修订候选方案；无法修订时保留失败原因。",
+    "compare_plans.py 只提供统一指标和参考排序，最终选择由模型结合用户偏好完成。"
+  ]
+}

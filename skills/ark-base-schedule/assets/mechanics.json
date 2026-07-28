@@ -1,0 +1,543 @@
+{
+  "schema_version": 6,
+  "facilities": {
+    "trading_post": {
+      "display_name": "贸易站",
+      "capacity": 3,
+      "level_capacities": {
+        "1": 1,
+        "2": 2,
+        "3": 3
+      }
+    },
+    "factory": {
+      "display_name": "制造站",
+      "capacity": 3,
+      "level_capacities": {
+        "1": 1,
+        "2": 2,
+        "3": 3
+      }
+    },
+    "power_plant": {
+      "display_name": "发电站",
+      "capacity": 1,
+      "level_capacities": {
+        "1": 1,
+        "2": 1,
+        "3": 1
+      }
+    },
+    "control_center": {
+      "display_name": "控制中枢",
+      "capacity": 5,
+      "level_capacities": {
+        "1": 5,
+        "2": 5,
+        "3": 5,
+        "4": 5,
+        "5": 5
+      }
+    },
+    "office": {
+      "display_name": "人力办公室",
+      "capacity": 1,
+      "level_capacities": {
+        "1": 1,
+        "2": 1,
+        "3": 1
+      }
+    },
+    "dormitory": {
+      "display_name": "宿舍",
+      "capacity": 5,
+      "level_capacities": {
+        "1": 5,
+        "2": 5,
+        "3": 5,
+        "4": 5,
+        "5": 5
+      }
+    },
+    "reception_room": {
+      "display_name": "会客室",
+      "capacity": 2,
+      "level_capacities": {
+        "1": 1,
+        "2": 2,
+        "3": 2
+      }
+    },
+    "training_room": {
+      "display_name": "训练室",
+      "capacity": 2,
+      "level_capacities": {
+        "1": 2,
+        "2": 2,
+        "3": 2
+      }
+    },
+    "workshop": {
+      "display_name": "加工站",
+      "capacity": 1,
+      "level_capacities": {
+        "1": 1,
+        "2": 1,
+        "3": 1
+      }
+    }
+  },
+  "products": {
+    "lmd_order": {
+      "display_name": "龙门币订单",
+      "facility": "trading_post"
+    },
+    "orundum_order": {
+      "display_name": "合成玉订单",
+      "facility": "trading_post"
+    },
+    "pure_gold": {
+      "display_name": "赤金",
+      "facility": "factory"
+    },
+    "battle_record": {
+      "display_name": "作战记录",
+      "facility": "factory"
+    },
+    "orundum_shard": {
+      "display_name": "源石碎片",
+      "facility": "factory"
+    },
+    "drone_recovery": {
+      "display_name": "无人机恢复",
+      "facility": "power_plant"
+    },
+    "base_management": {
+      "display_name": "基建管理",
+      "facility": "control_center"
+    },
+    "hr_network": {
+      "display_name": "公开招募联络",
+      "facility": "office"
+    },
+    "morale_recovery": {
+      "display_name": "心情恢复",
+      "facility": "dormitory"
+    }
+  },
+  "layouts": {
+    "243": {
+      "trading_post": 2,
+      "factory": 4,
+      "power_plant": 3,
+      "control_center": 1
+    },
+    "252": {
+      "trading_post": 2,
+      "factory": 5,
+      "power_plant": 2,
+      "control_center": 1
+    },
+    "153": {
+      "trading_post": 1,
+      "factory": 5,
+      "power_plant": 3,
+      "control_center": 1
+    },
+    "333": {
+      "trading_post": 3,
+      "factory": 3,
+      "power_plant": 3,
+      "control_center": 1
+    },
+    "342": {
+      "trading_post": 3,
+      "factory": 4,
+      "power_plant": 2,
+      "control_center": 1
+    },
+    "423": {
+      "trading_post": 4,
+      "factory": 2,
+      "power_plant": 3,
+      "control_center": 1
+    },
+    "513": {
+      "trading_post": 5,
+      "factory": 1,
+      "power_plant": 3,
+      "control_center": 1
+    },
+    "432": {
+      "trading_post": 4,
+      "factory": 3,
+      "power_plant": 2,
+      "control_center": 1
+    },
+    "522": {
+      "trading_post": 5,
+      "factory": 2,
+      "power_plant": 2,
+      "control_center": 1
+    },
+    "351": {
+      "trading_post": 3,
+      "factory": 5,
+      "power_plant": 1,
+      "control_center": 1
+    },
+    "441": {
+      "trading_post": 4,
+      "factory": 4,
+      "power_plant": 1,
+      "control_center": 1
+    },
+    "531": {
+      "trading_post": 5,
+      "factory": 3,
+      "power_plant": 1,
+      "control_center": 1
+    }
+  },
+  "goals": {
+    "all_gold": {
+      "display_name": "纯赚钱",
+      "recommended_layout": "243",
+      "trading_product": "lmd_order",
+      "factory_strategy": "all",
+      "factory_products": [
+        "pure_gold"
+      ]
+    },
+    "all_origin": {
+      "display_name": "纯搓玉",
+      "recommended_layout": "252",
+      "trading_product": "orundum_order",
+      "factory_strategy": "all",
+      "factory_products": [
+        "orundum_shard"
+      ]
+    },
+    "max_origin": {
+      "display_name": "全力搓玉",
+      "recommended_layout": "252",
+      "trading_product": "orundum_order",
+      "factory_strategy": "all",
+      "factory_products": [
+        "orundum_shard"
+      ]
+    },
+    "gold_record": {
+      "display_name": "赚钱+经验书",
+      "recommended_layout": "243",
+      "trading_product": "lmd_order",
+      "factory_strategy": "balanced",
+      "factory_products": [
+        "pure_gold",
+        "battle_record"
+      ]
+    },
+    "gold_origin": {
+      "display_name": "赚钱+搓玉",
+      "recommended_layout": "342",
+      "trading_product": "lmd_order",
+      "factory_strategy": "guide_baseline",
+      "factory_products": [
+        "pure_gold",
+        "pure_gold",
+        "orundum_shard",
+        "battle_record"
+      ],
+      "recommended_template": "guide_342_orundum_3_login",
+      "trading_products": [
+        "lmd_order",
+        "lmd_order",
+        "orundum_order"
+      ]
+    },
+    "orundum_lmd_balance": {
+      "display_name": "合成玉优先+龙门币平衡",
+      "recommended_layout": "layout_search_required",
+      "trading_product": "orundum_order",
+      "factory_strategy": "no_battle_record",
+      "factory_products": [
+        "orundum_shard",
+        "pure_gold"
+      ],
+      "trading_products": [
+        "orundum_order",
+        "lmd_order"
+      ],
+      "forbid_products": [
+        "battle_record"
+      ],
+      "selection_rule": "Run search_layouts.py for the owned roster; do not assume a universal layout."
+    }
+  },
+  "shift_templates": {
+    "2": [
+      {
+        "name": "A班",
+        "start": "08:00",
+        "end": "20:00",
+        "hours": 12
+      },
+      {
+        "name": "B班",
+        "start": "20:00",
+        "end": "08:00",
+        "hours": 12
+      }
+    ],
+    "3": [
+      {
+        "name": "A班",
+        "start": "08:00",
+        "end": "16:00",
+        "hours": 8
+      },
+      {
+        "name": "B班",
+        "start": "16:00",
+        "end": "00:00",
+        "hours": 8
+      },
+      {
+        "name": "C班",
+        "start": "00:00",
+        "end": "08:00",
+        "hours": 8
+      }
+    ]
+  },
+  "model_assumptions": {
+    "max_morale": 24,
+    "default_morale_consumption_per_hour": 1,
+    "efficiency_is_estimate": true,
+    "fixed_order_value_is_not_a_percentage": true,
+    "online_count_is_operation_nodes": true,
+    "final_plan_requires_verified_skill_data": true,
+    "final_gold_origin_requires_economy_projection": true,
+    "default_core_continuous_work_warning_hours": 12,
+    "default_core_daily_work_error_hours": 24
+  },
+  "operation_node_templates": {
+    "2": {
+      "default_times": [
+        "08:00",
+        "20:00"
+      ],
+      "segment_hours": [
+        12,
+        12
+      ]
+    },
+    "3": {
+      "default_times": [
+        "08:00",
+        "14:00",
+        "20:00"
+      ],
+      "segment_hours": [
+        6,
+        6,
+        12
+      ]
+    }
+  },
+  "base_output_metrics_per_hour": {
+    "lmd_order": {
+      "lmd_trade_work": 1.0
+    },
+    "orundum_order": {
+      "orundum": 10.0,
+      "orundum_shard_consumption": 1.0
+    },
+    "pure_gold": {
+      "pure_gold": 0.8333333333
+    },
+    "orundum_shard": {
+      "orundum_shard": 1.0
+    },
+    "battle_record": {
+      "battle_record_units": 0.3333333333,
+      "battle_record_exp": 333.3333333333
+    },
+    "drone_recovery": {
+      "drone_recovery": 10.0
+    },
+    "hr_network": {
+      "hr_network": 1.0
+    },
+    "base_management": {
+      "base_management": 1.0
+    }
+  },
+  "warehouse_capacity": {
+    "factory": {
+      "1": 24,
+      "2": 36,
+      "3": 54
+    }
+  },
+  "warehouse_item_size": {
+    "pure_gold": 2,
+    "orundum_shard": 3,
+    "battle_record": 5
+  },
+  "optimization": {
+    "architecture": "room_combination_enumeration_plus_binary_milp_plus_global_simulation",
+    "backend": "scipy.optimize.milp_highs",
+    "default_top_k_per_room": 60,
+    "default_operator_pool_size": 14,
+    "default_top_solutions": 5,
+    "optimality_scope": "candidate_library_proxy_objective"
+  },
+  "drone_model": {
+    "source_version": "PRTS-2026-07-28",
+    "base_recovery_minutes_per_drone": 6.0,
+    "acceleration_minutes_per_drone": 3.0,
+    "occupied_power_plant_base_bonus_pct": 5.0,
+    "default_capacity": 235,
+    "allocation_at_operation_nodes_only": true,
+    "drone_output_ignores_room_efficiency_bonus": true,
+    "factory_base_minutes": {
+      "pure_gold": 72.0,
+      "orundum_shard": 60.0,
+      "battle_record": 180.0
+    },
+    "factory_costs_per_unit": {
+      "orundum_shard": {
+        "lmd_cost": 1600.0,
+        "orirock_cube_consumption": 2.0
+      }
+    },
+    "orundum_order": {
+      "minutes": 120.0,
+      "orundum_shard_consumption": 2.0,
+      "orundum": 20.0
+    },
+    "lmd_order_distributions": {
+      "1": [
+        {
+          "probability": 1.0,
+          "minutes": 144.0,
+          "pure_gold": 2.0,
+          "lmd": 1000.0
+        }
+      ],
+      "2": [
+        {
+          "probability": 0.6,
+          "minutes": 144.0,
+          "pure_gold": 2.0,
+          "lmd": 1000.0
+        },
+        {
+          "probability": 0.4,
+          "minutes": 210.0,
+          "pure_gold": 3.0,
+          "lmd": 1500.0
+        }
+      ],
+      "3": [
+        {
+          "probability": 0.3,
+          "minutes": 144.0,
+          "pure_gold": 2.0,
+          "lmd": 1000.0
+        },
+        {
+          "probability": 0.5,
+          "minutes": 210.0,
+          "pure_gold": 3.0,
+          "lmd": 1500.0
+        },
+        {
+          "probability": 0.2,
+          "minutes": 276.0,
+          "pure_gold": 4.0,
+          "lmd": 2000.0
+        }
+      ]
+    },
+    "closure_special_order": {
+      "minutes": 144.0,
+      "pure_gold": 2.0,
+      "lmd": 1200.0
+    },
+    "pepe_exclusive_order": {
+      "minutes": 270.0,
+      "pure_gold": 0.0,
+      "lmd": 1000.0
+    },
+    "capacity_source": "cleared_base_areas",
+    "capacity_depends_on_power_plants": false,
+    "fully_cleared_capacity": 235,
+    "capacity_note": "Holding capacity is determined by cleared base areas; fully cleared capacity is 235. Power plants affect electricity supply and staffed recovery, not holding capacity."
+  },
+  "power_model": {
+    "source_version": "PRTS-2026-07-28",
+    "power_plant_supply_by_level": {
+      "1": 60,
+      "2": 130,
+      "3": 270
+    },
+    "production_room_consumption_by_level": {
+      "1": 10,
+      "2": 30,
+      "3": 60
+    },
+    "dormitory_consumption_by_level": {
+      "1": 10,
+      "2": 20,
+      "3": 30,
+      "4": 45,
+      "5": 65
+    },
+    "fixed_facility_consumption_by_level": {
+      "reception_room": {
+        "1": 10,
+        "2": 30,
+        "3": 60
+      },
+      "office": {
+        "1": 10,
+        "2": 30,
+        "3": 60
+      },
+      "training_room": {
+        "1": 10,
+        "2": 30,
+        "3": 60
+      },
+      "workshop": {
+        "1": 10,
+        "2": 10,
+        "3": 10
+      }
+    },
+    "default_endgame_fixed_levels": {
+      "reception_room": 3,
+      "office": 3,
+      "training_room": 3,
+      "workshop": 3,
+      "dormitories": [
+        5,
+        5,
+        5,
+        5
+      ]
+    },
+    "minimum_dormitory_levels": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "notes": [
+      "无人机持有上限由已清理区域决定，与发电站数量和等级无关。",
+      "发电站等级只影响供电；进驻干员与技能影响无人机恢复速度。"
+    ]
+  }
+}

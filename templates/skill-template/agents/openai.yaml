@@ -1,0 +1,4 @@
+interface:
+  display_name: "Replace Skill Name"
+  short_description: "Describe the skill in 25–64 characters"
+  default_prompt: "Use $replace-with-skill-name to complete this task."

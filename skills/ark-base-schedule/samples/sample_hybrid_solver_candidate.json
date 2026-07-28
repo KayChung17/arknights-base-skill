@@ -1,0 +1,4759 @@
+{
+  "schema_version": 4,
+  "plan_id": "milp_plan_5728b44ff8d9",
+  "title": "混合枚举与MILP求解候选",
+  "plan_status": "candidate",
+  "layout": "342",
+  "goal": "gold_origin",
+  "cross_shift_reuse_policy": "allowed",
+  "decision": {
+    "strategy": "单房间组合枚举 + 全局MILP选择 + 同时基建复算",
+    "rationale": [
+      "枚举阶段只保留有验证技能数据的房间组合。",
+      "MILP同时处理房间容量、同一时间重复进驻和每日工时。",
+      "求解后使用所有同时工作干员重新计算全局联动、仓库和无人机库存。",
+      "无人机在操作节点分配，每架按3分钟基础工时折算，发电站恢复形成重复日闭环。"
+    ],
+    "tradeoffs": [
+      "候选库可能因operator_pool_size或top_k截断。",
+      "龙门币无人机收益在未知当前订单时使用订单概率期望；未结构化特殊技能仍需复算。"
+    ],
+    "external_evidence_ids": []
+  },
+  "baseline": {
+    "reference_id": "guide_342_orundum_3_login",
+    "comparison": {},
+    "deviations": []
+  },
+  "facility_configuration": {
+    "rooms": {
+      "trading_post_1": {
+        "facility_id": "trading_post",
+        "level": 3,
+        "product_id": "lmd_order"
+      },
+      "trading_post_2": {
+        "facility_id": "trading_post",
+        "level": 3,
+        "product_id": "lmd_order"
+      },
+      "trading_post_3": {
+        "facility_id": "trading_post",
+        "level": 1,
+        "product_id": "lmd_order"
+      },
+      "factory_1": {
+        "facility_id": "factory",
+        "level": 3,
+        "product_id": "pure_gold"
+      },
+      "factory_2": {
+        "facility_id": "factory",
+        "level": 3,
+        "product_id": "pure_gold"
+      },
+      "factory_3": {
+        "facility_id": "factory",
+        "level": 2,
+        "product_id": "orundum_shard"
+      },
+      "factory_4": {
+        "facility_id": "factory",
+        "level": 2,
+        "product_id": "battle_record"
+      },
+      "power_plant_1": {
+        "facility_id": "power_plant",
+        "level": 3,
+        "product_id": "drone_recovery"
+      },
+      "power_plant_2": {
+        "facility_id": "power_plant",
+        "level": 3,
+        "product_id": "drone_recovery"
+      },
+      "control_center": {
+        "facility_id": "control_center",
+        "level": 5,
+        "product_id": "base_management"
+      },
+      "office": {
+        "facility_id": "office",
+        "level": 3,
+        "product_id": "hr_network"
+      }
+    },
+    "dormitories": [
+      {
+        "room_id": "dormitory_1",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_2",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_3",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_4",
+        "level": 1
+      }
+    ]
+  },
+  "operation_nodes": [
+    {
+      "time": "08:00",
+      "label": "第1次上线",
+      "actions": [
+        "收取产物",
+        "执行计划中的换班与恢复"
+      ]
+    },
+    {
+      "time": "14:00",
+      "label": "第2次上线",
+      "actions": [
+        "收取产物",
+        "执行计划中的换班与恢复"
+      ]
+    },
+    {
+      "time": "20:00",
+      "label": "第3次上线",
+      "actions": [
+        "收取产物",
+        "执行计划中的换班与恢复"
+      ]
+    }
+  ],
+  "segments": {
+    "segment_1": {
+      "name": "区间1",
+      "start": "08:00",
+      "end": "14:00",
+      "hours": 6.0,
+      "rooms": {
+        "control_center": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "望",
+              "elite": 2,
+              "level": 80,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "level": 60,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "level": 15,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_55ae3d0fb018"
+        },
+        "factory_1": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "斑点",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_446ac0366db6"
+        },
+        "factory_2": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_1a82f9585a4e"
+        },
+        "factory_3": {
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "operators": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "地灵",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_4fad09a299dd"
+        },
+        "factory_4": {
+          "facility_id": "factory",
+          "product_id": "battle_record",
+          "operators": [
+            {
+              "name": "幽灵鲨",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "斯卡蒂",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_8ed1c61e735c"
+        },
+        "office": {
+          "facility_id": "office",
+          "product_id": "hr_network",
+          "operators": [
+            {
+              "name": "遥",
+              "elite": 2,
+              "level": 60,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_abc1fa868912"
+        },
+        "power_plant_1": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_ed766f08ac4a"
+        },
+        "power_plant_2": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_8eff31efcbf3"
+        },
+        "trading_post_1": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_f23e76d0e456"
+        },
+        "trading_post_2": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_a324b24a6afa"
+        },
+        "trading_post_3": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_eb1ced7fcfe8"
+        }
+      }
+    },
+    "segment_2": {
+      "name": "区间2",
+      "start": "14:00",
+      "end": "20:00",
+      "hours": 6.0,
+      "rooms": {
+        "control_center": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "望",
+              "elite": 2,
+              "level": 80,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "level": 60,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "level": 15,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_55ae3d0fb018"
+        },
+        "factory_1": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "斑点",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_446ac0366db6"
+        },
+        "factory_2": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_1a82f9585a4e"
+        },
+        "factory_3": {
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "operators": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "地灵",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_4fad09a299dd"
+        },
+        "factory_4": {
+          "facility_id": "factory",
+          "product_id": "battle_record",
+          "operators": [
+            {
+              "name": "幽灵鲨",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "斯卡蒂",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_8ed1c61e735c"
+        },
+        "office": {
+          "facility_id": "office",
+          "product_id": "hr_network",
+          "operators": [
+            {
+              "name": "遥",
+              "elite": 2,
+              "level": 60,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_abc1fa868912"
+        },
+        "power_plant_1": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_ed766f08ac4a"
+        },
+        "power_plant_2": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_8eff31efcbf3"
+        },
+        "trading_post_1": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_f23e76d0e456"
+        },
+        "trading_post_2": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_a324b24a6afa"
+        },
+        "trading_post_3": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_eb1ced7fcfe8"
+        }
+      }
+    },
+    "segment_3": {
+      "name": "区间3",
+      "start": "20:00",
+      "end": "08:00",
+      "hours": 12.0,
+      "rooms": {
+        "control_center": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "望",
+              "elite": 2,
+              "level": 80,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "level": 60,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "level": 15,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_55ae3d0fb018"
+        },
+        "factory_1": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "斑点",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_a3b7963096e1"
+        },
+        "factory_2": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_1a82f9585a4e"
+        },
+        "factory_3": {
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "operators": [
+            {
+              "name": "冬时",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "多萝西",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_fa638a578a48"
+        },
+        "factory_4": {
+          "facility_id": "factory",
+          "product_id": "battle_record",
+          "operators": [
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "野鬃",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_dcb34b531788"
+        },
+        "office": {
+          "facility_id": "office",
+          "product_id": "hr_network",
+          "operators": [
+            {
+              "name": "遥",
+              "elite": 2,
+              "level": 60,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_abc1fa868912"
+        },
+        "power_plant_1": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_ed766f08ac4a"
+        },
+        "power_plant_2": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_8eff31efcbf3"
+        },
+        "trading_post_1": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_f23e76d0e456"
+        },
+        "trading_post_2": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_a324b24a6afa"
+        },
+        "trading_post_3": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "level": 1,
+              "skill_source": "local_versioned_data"
+            }
+          ],
+          "combination_id": "combo_eb1ced7fcfe8"
+        }
+      }
+    }
+  },
+  "recovery_plan": {
+    "events": [],
+    "repeating_day_verified": true
+  },
+  "economy_projection": {
+    "source": "script",
+    "daily": {
+      "base_management": 26.160000000000004,
+      "pure_gold": 84.799999996608,
+      "orundum_shard": 53.97333333333334,
+      "battle_record_units": 12.359999998764,
+      "battle_record_exp": 12359.999999998763,
+      "hr_network": 34.8,
+      "lmd_trade_work": 165.19488,
+      "lmd_cost": 27840.0,
+      "orirock_cube_consumption": 34.800000000000004,
+      "drone_recovery": 348.0,
+      "drone_used": 348.0,
+      "drone_waste": 0.0
+    },
+    "costs": {
+      "lmd": 27840.0,
+      "orirock_cube": 34.800000000000004,
+      "pure_gold_for_drone_orders": 0.0
+    },
+    "inventory_delta": {
+      "orundum_shard": 53.97333333333334
+    },
+    "warehouse_overflow_checked": false,
+    "drone_policy": {
+      "enabled": true,
+      "capacity": 235.0,
+      "repeating_day_balance": true,
+      "base_recovery_minutes_per_drone": 6.0,
+      "acceleration_minutes_per_drone": 3.0,
+      "total_recovered": 348.0,
+      "total_used": 348.0,
+      "total_wasted": 0.0,
+      "feasible": true,
+      "timeline": [
+        {
+          "segment_id": "segment_1",
+          "start": "08:00",
+          "end": "14:00",
+          "hours": 6.0,
+          "start_inventory": 174.0,
+          "used_at_start": 174.0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 87.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 87.0
+        },
+        {
+          "segment_id": "segment_2",
+          "start": "14:00",
+          "end": "20:00",
+          "hours": 6.0,
+          "start_inventory": 87.0,
+          "used_at_start": 0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 87.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 174.0
+        },
+        {
+          "segment_id": "segment_3",
+          "start": "20:00",
+          "end": "08:00",
+          "hours": 12.0,
+          "start_inventory": 174.0,
+          "used_at_start": 174.0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 174.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 174.0
+        }
+      ],
+      "allocations": [
+        {
+          "segment_id": "segment_1",
+          "operation_time": "08:00",
+          "room_id": "factory_3",
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "combination_id": "combo_4fad09a299dd",
+          "drones": 174.0,
+          "base_minutes_removed": 522.0,
+          "metrics_per_drone": {
+            "orundum_shard": 0.05,
+            "lmd_cost": 80.0,
+            "orirock_cube_consumption": 0.1
+          },
+          "metrics": {
+            "orundum_shard": 8.700000000000001,
+            "lmd_cost": 13920.0,
+            "orirock_cube_consumption": 17.400000000000002
+          },
+          "collection_assumption": "节点内加速后立即收取，可重复操作，不占用跨节点仓库容量"
+        },
+        {
+          "segment_id": "segment_3",
+          "operation_time": "20:00",
+          "room_id": "factory_3",
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "combination_id": "combo_fa638a578a48",
+          "drones": 174.0,
+          "base_minutes_removed": 522.0,
+          "metrics_per_drone": {
+            "orundum_shard": 0.05,
+            "lmd_cost": 80.0,
+            "orirock_cube_consumption": 0.1
+          },
+          "metrics": {
+            "orundum_shard": 8.700000000000001,
+            "lmd_cost": 13920.0,
+            "orirock_cube_consumption": 17.400000000000002
+          },
+          "collection_assumption": "节点内加速后立即收取，可重复操作，不占用跨节点仓库容量"
+        }
+      ]
+    }
+  },
+  "assumptions": {
+    "collection_at_every_operation_node": true,
+    "drone_acceleration_collected_immediately_at_node": true,
+    "drone_output_ignores_room_efficiency_bonus": true,
+    "lmd_drone_output_uses_expected_order_distribution_when_current_order_unknown": true,
+    "rest_recovery_per_hour": 0.0,
+    "initial_morale_default": 24.0,
+    "random_lmd_order_sequence_not_simulated": true
+  },
+  "solver": {
+    "architecture": "enumerated_room_combinations_plus_global_milp_with_drones_plus_simulation_rerank",
+    "backend": "scipy.optimize.milp_highs",
+    "model": {
+      "schema_version": 2,
+      "model_type": "mixed_binary_integer_continuous_milp",
+      "backend": "scipy.optimize.milp_highs",
+      "built_at": "2026-07-28T02:46:17+00:00",
+      "variable_count": 3734,
+      "assignment_variable_count": 2217,
+      "continuity_variable_count": 1478,
+      "drone_allocation_variable_count": 33,
+      "drone_inventory_variable_count": 3,
+      "constraint_count": 4703,
+      "constraint_summary": {
+        "continuity_lower": 1478,
+        "continuity_upper_left": 1478,
+        "continuity_upper_right": 1478,
+        "daily_work_hours": 49,
+        "drone_allocation_link": 33,
+        "drone_inventory_flow": 3,
+        "drone_use_available_at_node": 3,
+        "one_combination": 33,
+        "operator_exclusivity": 147,
+        "orundum_shard_balance_including_drones": 1
+      },
+      "objective_weights": {
+        "lmd_trade_work": 35.0,
+        "orundum": 8.0,
+        "orundum_shard": 80.0,
+        "pure_gold": 20.0,
+        "pure_gold_consumption": -20.0,
+        "lmd_cost": -0.002,
+        "orirock_cube_consumption": -1.0,
+        "battle_record_exp": 0.006,
+        "drone_recovery": 4.0,
+        "hr_network": 0.5,
+        "base_management": 2.0,
+        "fixed_lmd": 0.002,
+        "continuity": 0.5
+      },
+      "solver_settings": {
+        "max_daily_work_hours": 24,
+        "require_resource_balance": true,
+        "resource_balance_safety_factor": 1.07,
+        "rest_recovery_per_hour": 0,
+        "minimum_orundum_shard_balance": -4.0,
+        "repeat_day_continuity": false,
+        "allocate_drones": true,
+        "drone_repeating_day_balance": true,
+        "drone_capacity": 235.0,
+        "initial_drone_stock": 235.0,
+        "max_drone_use_per_node": 235.0,
+        "drone_target_products": [
+          "lmd_order",
+          "orundum_order",
+          "pure_gold",
+          "orundum_shard",
+          "battle_record"
+        ]
+      },
+      "drone_model": {
+        "base_recovery_drones_per_hour": 10.0,
+        "acceleration_minutes_per_drone": 3.0,
+        "occupied_power_plant_base_bonus_pct": 5.0,
+        "repeating_day_balance": true
+      },
+      "search_completeness": {
+        "all_rooms_untruncated": false,
+        "truncated_rooms": [
+          "trading_post_1",
+          "trading_post_2",
+          "factory_1",
+          "factory_2",
+          "factory_3"
+        ]
+      }
+    },
+    "candidate_library_complete": false,
+    "proxy_models_solved_to_gap": true,
+    "top_solutions_requested": 1,
+    "top_solutions_returned": 1,
+    "proxy_attempts": 1,
+    "rejected_after_simulation": [],
+    "optimality_claim": "best_found_within_truncated_candidate_library",
+    "actual_simulation_global_optimality_proven": false,
+    "limitations": [
+      "全局联动在求解后复算，实际模拟目标与MILP代理目标不完全相同。",
+      "无人机已进入恢复、库存和分配模型；未知的当前龙门币订单仍使用期望值。",
+      "未结构化特殊技能和随机订单序列不参与实际全局最优性证明。"
+    ]
+  },
+  "simulation": {
+    "schema_version": 2,
+    "simulation_type": "segment_global_recalculation_with_drone_inventory",
+    "simulated_at": "2026-07-28T02:46:17+00:00",
+    "actual_objective_score": 11861.587466598821,
+    "objective_weights": {
+      "lmd_trade_work": 35.0,
+      "orundum": 8.0,
+      "orundum_shard": 80.0,
+      "pure_gold": 20.0,
+      "pure_gold_consumption": -20.0,
+      "lmd_cost": -0.002,
+      "orirock_cube_consumption": -1.0,
+      "battle_record_exp": 0.006,
+      "drone_recovery": 4.0,
+      "hr_network": 0.5,
+      "base_management": 2.0,
+      "fixed_lmd": 0.002,
+      "continuity": 0.5
+    },
+    "aggregate_metrics": {
+      "base_management": 26.160000000000004,
+      "pure_gold": 84.799999996608,
+      "orundum_shard": 53.97333333333334,
+      "battle_record_units": 12.359999998764,
+      "battle_record_exp": 12359.999999998763,
+      "hr_network": 34.8,
+      "lmd_trade_work": 165.19488,
+      "lmd_cost": 27840.0,
+      "orirock_cube_consumption": 34.800000000000004,
+      "drone_recovery": 348.0,
+      "drone_used": 348.0,
+      "drone_waste": 0.0
+    },
+    "natural_metrics": {
+      "base_management": 26.160000000000004,
+      "pure_gold": 84.799999996608,
+      "orundum_shard": 36.57333333333334,
+      "battle_record_units": 12.359999998764,
+      "battle_record_exp": 12359.999999998763,
+      "hr_network": 34.8,
+      "lmd_trade_work": 165.19488
+    },
+    "drone_metrics": {
+      "orundum_shard": 17.400000000000002,
+      "lmd_cost": 27840.0,
+      "orirock_cube_consumption": 34.800000000000004
+    },
+    "aggregate_fixed_metrics": {
+      "fixed_lmd_per_trigger": 1500.0
+    },
+    "orundum_shard_balance": 53.97333333333334,
+    "continuity_matches": 19,
+    "room_results": [
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "control_center",
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "combination_id": "combo_55ae3d0fb018",
+        "operators": [
+          {
+            "name": "望",
+            "elite": 2,
+            "level": 80,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "凯尔希",
+            "elite": 2,
+            "level": 60,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "戴菲恩",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "杜宾",
+            "elite": 0,
+            "level": 15,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "歌蕾蒂娅",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 2.18,
+        "global_recalculation": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "望",
+              "elite": 2,
+              "level": 80,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "level": 60,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "level": 15,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "望",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，若外势大于等于实地，所有贸易站订单效率+7%；若实地大于外势，所有制造站生产力+2%（同种效果取最高）"
+              ]
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，所有制造站生产力+2%（同种效果取最高）"
+              ]
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，同一贸易站中，每有1名格拉斯哥帮干员，订单获取效率+10%",
+                "按外部设施中的格拉斯哥帮成员提供贸易站加成。"
+              ]
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "notes": [
+                "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05"
+              ]
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05；基建内（不包含副手及活动室使用者）深海猎人干员获得特殊加成（与部分技能有特殊叠加规则）",
+                "进驻控制中枢时，每有1个深海猎人干员进驻在宿舍以外的设施，则自身心情每小时消耗+0.5；反之则自身心情每小时恢复+0.5，如果进驻在宿舍内的深海猎人干员为满心情，则额外+0.5"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 9.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 9.0,
+          "estimated_efficiency_bonus_pct": 9.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "all_factory_bonus_2",
+            "glasgow_center",
+            "morale_cost_plus_0.5",
+            "non_stacking_max",
+            "wang_layout_balance"
+          ]
+        },
+        "metrics_per_hour": {
+          "base_management": 1.09
+        },
+        "raw_metrics": {
+          "base_management": 6.540000000000001
+        },
+        "effective_metrics": {
+          "base_management": 6.540000000000001
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "factory_1",
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "combination_id": "combo_446ac0366db6",
+        "operators": [
+          {
+            "name": "斑点",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "温米",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "温蒂",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 31.666666665399998,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "斑点",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "斑点",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "notes": [
+                "2 个发电站 ×15% = +30%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 30.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 60.0,
+            "facility_bonus_pct": 30.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 92.0,
+          "estimated_efficiency_bonus_pct": 92.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "pure_gold": 1.599999999936
+        },
+        "raw_metrics": {
+          "pure_gold": 9.599999999616
+        },
+        "effective_metrics": {
+          "pure_gold": 9.599999999616
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "factory_2",
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "combination_id": "combo_1a82f9585a4e",
+        "operators": [
+          {
+            "name": "清流",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "砾",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "夜烟",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 37.4999999985,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "notes": [
+                "3 个贸易站 ×20% = +60%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 60.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +35%"
+              ],
+              "direct_bonus_pct": 35.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 65.0,
+            "facility_bonus_pct": 60.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 127.0,
+          "estimated_efficiency_bonus_pct": 127.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "pure_gold": 1.891666666591
+        },
+        "raw_metrics": {
+          "pure_gold": 11.349999999546
+        },
+        "effective_metrics": {
+          "pure_gold": 11.349999999546
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "factory_3",
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "combination_id": "combo_4fad09a299dd",
+        "operators": [
+          {
+            "name": "森蚺",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "地灵",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 140.0,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "operators": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "地灵",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "notes": [
+                "2 个发电站 ×20% = +40%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 40.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "地灵",
+              "elite": 1,
+              "notes": [
+                "直接生产力 +35%"
+              ],
+              "direct_bonus_pct": 35.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 35.0,
+            "facility_bonus_pct": 40.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 77.0,
+          "estimated_efficiency_bonus_pct": 77.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "orundum_shard": 1.77
+        },
+        "raw_metrics": {
+          "orundum_shard": 10.620000000000001
+        },
+        "effective_metrics": {
+          "orundum_shard": 10.620000000000001
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "factory_4",
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "combination_id": "combo_8ed1c61e735c",
+        "operators": [
+          {
+            "name": "幽灵鲨",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "斯卡蒂",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 2.9999999999997,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "battle_record",
+          "operators": [
+            {
+              "name": "幽灵鲨",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "斯卡蒂",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "幽灵鲨",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +25%"
+              ],
+              "direct_bonus_pct": 25.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "斯卡蒂",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +25%"
+              ],
+              "direct_bonus_pct": 25.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 50.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 52.0,
+          "estimated_efficiency_bonus_pct": 52.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "battle_record_units": 0.506666666616,
+          "battle_record_exp": 506.66666666661604
+        },
+        "raw_metrics": {
+          "battle_record_units": 3.039999999696,
+          "battle_record_exp": 3039.9999999996962
+        },
+        "effective_metrics": {
+          "battle_record_units": 3.039999999696,
+          "battle_record_exp": 3039.9999999996962
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "office",
+        "facility_id": "office",
+        "product_id": "hr_network",
+        "combination_id": "combo_abc1fa868912",
+        "operators": [
+          {
+            "name": "遥",
+            "elite": 2,
+            "level": 60,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 0.725,
+        "global_recalculation": {
+          "error": "calculator_unsupported:office",
+          "warnings": []
+        },
+        "metrics_per_hour": {
+          "hr_network": 1.45
+        },
+        "raw_metrics": {
+          "hr_network": 8.7
+        },
+        "effective_metrics": {
+          "hr_network": 8.7
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "power_plant_1",
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "combination_id": "combo_ed766f08ac4a",
+        "operators": [
+          {
+            "name": "深靛",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 46.0,
+        "global_recalculation": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "notes": [
+                "无人机恢复 +15%"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 15.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 15.0,
+          "estimated_efficiency_bonus_pct": 15.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {},
+        "raw_metrics": {},
+        "effective_metrics": {},
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "power_plant_2",
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "combination_id": "combo_8eff31efcbf3",
+        "operators": [
+          {
+            "name": "格雷伊",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 48.0,
+        "global_recalculation": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "notes": [
+                "无人机恢复 +20%"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 20.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 20.0,
+          "estimated_efficiency_bonus_pct": 20.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {},
+        "raw_metrics": {},
+        "effective_metrics": {},
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "trading_post_1",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_f23e76d0e456",
+        "operators": [
+          {
+            "name": "龙舌兰",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "拜松",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "月见夜",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 67.5,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%；独立订单价值 +500 龙门币/触发"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 90.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 27.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 117.0,
+          "estimated_efficiency_bonus_pct": 117.0,
+          "fixed_order_value_lmd_per_trigger": 500,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 2.17
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 13.02
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 13.02
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "trading_post_2",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_a324b24a6afa",
+        "operators": [
+          {
+            "name": "巫恋",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "但书",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "摩根",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 100.751,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [
+            "巫恋类替换技能仅替换直接订单效率层，设施与全局联动层继续保留。"
+          ],
+          "operator_details": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "notes": [
+                "直接订单效率替换为 +65%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "notes": [
+                "估算乘算 ×1.556"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "notes": [
+                "同站格拉斯哥成员 1 人：+20%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 20.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 65.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 37.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.556
+          },
+          "paper_bonus_pct": 102.0,
+          "estimated_efficiency_bonus_pct": 214.312,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 3.14312
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 18.85872
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 18.85872
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_1",
+        "hours": 6.0,
+        "room_id": "trading_post_3",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_eb1ced7fcfe8",
+        "operators": [
+          {
+            "name": "空爆",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 45.5,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 27.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 57.0,
+          "estimated_efficiency_bonus_pct": 57.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 1.5699999999999998
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 9.419999999999998
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 9.419999999999998
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "control_center",
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "combination_id": "combo_55ae3d0fb018",
+        "operators": [
+          {
+            "name": "望",
+            "elite": 2,
+            "level": 80,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "凯尔希",
+            "elite": 2,
+            "level": 60,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "戴菲恩",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "杜宾",
+            "elite": 0,
+            "level": 15,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "歌蕾蒂娅",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 2.18,
+        "global_recalculation": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "望",
+              "elite": 2,
+              "level": 80,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "level": 60,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "level": 15,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "望",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，若外势大于等于实地，所有贸易站订单效率+7%；若实地大于外势，所有制造站生产力+2%（同种效果取最高）"
+              ]
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，所有制造站生产力+2%（同种效果取最高）"
+              ]
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，同一贸易站中，每有1名格拉斯哥帮干员，订单获取效率+10%",
+                "按外部设施中的格拉斯哥帮成员提供贸易站加成。"
+              ]
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "notes": [
+                "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05"
+              ]
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05；基建内（不包含副手及活动室使用者）深海猎人干员获得特殊加成（与部分技能有特殊叠加规则）",
+                "进驻控制中枢时，每有1个深海猎人干员进驻在宿舍以外的设施，则自身心情每小时消耗+0.5；反之则自身心情每小时恢复+0.5，如果进驻在宿舍内的深海猎人干员为满心情，则额外+0.5"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 9.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 9.0,
+          "estimated_efficiency_bonus_pct": 9.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "all_factory_bonus_2",
+            "glasgow_center",
+            "morale_cost_plus_0.5",
+            "non_stacking_max",
+            "wang_layout_balance"
+          ]
+        },
+        "metrics_per_hour": {
+          "base_management": 1.09
+        },
+        "raw_metrics": {
+          "base_management": 6.540000000000001
+        },
+        "effective_metrics": {
+          "base_management": 6.540000000000001
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "factory_1",
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "combination_id": "combo_446ac0366db6",
+        "operators": [
+          {
+            "name": "斑点",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "温米",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "温蒂",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 31.666666665399998,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "斑点",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "斑点",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "notes": [
+                "2 个发电站 ×15% = +30%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 30.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 60.0,
+            "facility_bonus_pct": 30.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 92.0,
+          "estimated_efficiency_bonus_pct": 92.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "pure_gold": 1.599999999936
+        },
+        "raw_metrics": {
+          "pure_gold": 9.599999999616
+        },
+        "effective_metrics": {
+          "pure_gold": 9.599999999616
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "factory_2",
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "combination_id": "combo_1a82f9585a4e",
+        "operators": [
+          {
+            "name": "清流",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "砾",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "夜烟",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 37.4999999985,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "notes": [
+                "3 个贸易站 ×20% = +60%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 60.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +35%"
+              ],
+              "direct_bonus_pct": 35.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 65.0,
+            "facility_bonus_pct": 60.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 127.0,
+          "estimated_efficiency_bonus_pct": 127.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "pure_gold": 1.891666666591
+        },
+        "raw_metrics": {
+          "pure_gold": 11.349999999546
+        },
+        "effective_metrics": {
+          "pure_gold": 11.349999999546
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "factory_3",
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "combination_id": "combo_4fad09a299dd",
+        "operators": [
+          {
+            "name": "森蚺",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "地灵",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 140.0,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "operators": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "地灵",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "notes": [
+                "2 个发电站 ×20% = +40%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 40.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "地灵",
+              "elite": 1,
+              "notes": [
+                "直接生产力 +35%"
+              ],
+              "direct_bonus_pct": 35.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 35.0,
+            "facility_bonus_pct": 40.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 77.0,
+          "estimated_efficiency_bonus_pct": 77.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "orundum_shard": 1.77
+        },
+        "raw_metrics": {
+          "orundum_shard": 10.620000000000001
+        },
+        "effective_metrics": {
+          "orundum_shard": 10.620000000000001
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "factory_4",
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "combination_id": "combo_8ed1c61e735c",
+        "operators": [
+          {
+            "name": "幽灵鲨",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "斯卡蒂",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 2.9999999999997,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "battle_record",
+          "operators": [
+            {
+              "name": "幽灵鲨",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "斯卡蒂",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "幽灵鲨",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +25%"
+              ],
+              "direct_bonus_pct": 25.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "斯卡蒂",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +25%"
+              ],
+              "direct_bonus_pct": 25.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 50.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 52.0,
+          "estimated_efficiency_bonus_pct": 52.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "battle_record_units": 0.506666666616,
+          "battle_record_exp": 506.66666666661604
+        },
+        "raw_metrics": {
+          "battle_record_units": 3.039999999696,
+          "battle_record_exp": 3039.9999999996962
+        },
+        "effective_metrics": {
+          "battle_record_units": 3.039999999696,
+          "battle_record_exp": 3039.9999999996962
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "office",
+        "facility_id": "office",
+        "product_id": "hr_network",
+        "combination_id": "combo_abc1fa868912",
+        "operators": [
+          {
+            "name": "遥",
+            "elite": 2,
+            "level": 60,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 0.725,
+        "global_recalculation": {
+          "error": "calculator_unsupported:office",
+          "warnings": []
+        },
+        "metrics_per_hour": {
+          "hr_network": 1.45
+        },
+        "raw_metrics": {
+          "hr_network": 8.7
+        },
+        "effective_metrics": {
+          "hr_network": 8.7
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "power_plant_1",
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "combination_id": "combo_ed766f08ac4a",
+        "operators": [
+          {
+            "name": "深靛",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 46.0,
+        "global_recalculation": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "notes": [
+                "无人机恢复 +15%"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 15.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 15.0,
+          "estimated_efficiency_bonus_pct": 15.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {},
+        "raw_metrics": {},
+        "effective_metrics": {},
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "power_plant_2",
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "combination_id": "combo_8eff31efcbf3",
+        "operators": [
+          {
+            "name": "格雷伊",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 48.0,
+        "global_recalculation": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "notes": [
+                "无人机恢复 +20%"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 20.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 20.0,
+          "estimated_efficiency_bonus_pct": 20.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {},
+        "raw_metrics": {},
+        "effective_metrics": {},
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "trading_post_1",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_f23e76d0e456",
+        "operators": [
+          {
+            "name": "龙舌兰",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "拜松",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "月见夜",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 67.5,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%；独立订单价值 +500 龙门币/触发"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 90.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 27.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 117.0,
+          "estimated_efficiency_bonus_pct": 117.0,
+          "fixed_order_value_lmd_per_trigger": 500,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 2.17
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 13.02
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 13.02
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "trading_post_2",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_a324b24a6afa",
+        "operators": [
+          {
+            "name": "巫恋",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "但书",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "摩根",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 100.751,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [
+            "巫恋类替换技能仅替换直接订单效率层，设施与全局联动层继续保留。"
+          ],
+          "operator_details": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "notes": [
+                "直接订单效率替换为 +65%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "notes": [
+                "估算乘算 ×1.556"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "notes": [
+                "同站格拉斯哥成员 1 人：+20%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 20.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 65.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 37.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.556
+          },
+          "paper_bonus_pct": 102.0,
+          "estimated_efficiency_bonus_pct": 214.312,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 3.14312
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 18.85872
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 18.85872
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_2",
+        "hours": 6.0,
+        "room_id": "trading_post_3",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_eb1ced7fcfe8",
+        "operators": [
+          {
+            "name": "空爆",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 45.5,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 27.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 57.0,
+          "estimated_efficiency_bonus_pct": 57.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 1.5699999999999998
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 9.419999999999998
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 9.419999999999998
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "control_center",
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "combination_id": "combo_55ae3d0fb018",
+        "operators": [
+          {
+            "name": "望",
+            "elite": 2,
+            "level": 80,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "凯尔希",
+            "elite": 2,
+            "level": 60,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "戴菲恩",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "杜宾",
+            "elite": 0,
+            "level": 15,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "歌蕾蒂娅",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 2.18,
+        "global_recalculation": {
+          "facility_id": "control_center",
+          "product_id": "base_management",
+          "operators": [
+            {
+              "name": "望",
+              "elite": 2,
+              "level": 80,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "level": 60,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "level": 15,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "望",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，若外势大于等于实地，所有贸易站订单效率+7%；若实地大于外势，所有制造站生产力+2%（同种效果取最高）"
+              ]
+            },
+            {
+              "name": "凯尔希",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，所有制造站生产力+2%（同种效果取最高）"
+              ]
+            },
+            {
+              "name": "戴菲恩",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，同一贸易站中，每有1名格拉斯哥帮干员，订单获取效率+10%",
+                "按外部设施中的格拉斯哥帮成员提供贸易站加成。"
+              ]
+            },
+            {
+              "name": "杜宾",
+              "elite": 0,
+              "notes": [
+                "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05"
+              ]
+            },
+            {
+              "name": "歌蕾蒂娅",
+              "elite": 2,
+              "notes": [
+                "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05；基建内（不包含副手及活动室使用者）深海猎人干员获得特殊加成（与部分技能有特殊叠加规则）",
+                "进驻控制中枢时，每有1个深海猎人干员进驻在宿舍以外的设施，则自身心情每小时消耗+0.5；反之则自身心情每小时恢复+0.5，如果进驻在宿舍内的深海猎人干员为满心情，则额外+0.5"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 9.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 9.0,
+          "estimated_efficiency_bonus_pct": 9.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "all_factory_bonus_2",
+            "glasgow_center",
+            "morale_cost_plus_0.5",
+            "non_stacking_max",
+            "wang_layout_balance"
+          ]
+        },
+        "metrics_per_hour": {
+          "base_management": 1.09
+        },
+        "raw_metrics": {
+          "base_management": 13.080000000000002
+        },
+        "effective_metrics": {
+          "base_management": 13.080000000000002
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "factory_1",
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "combination_id": "combo_a3b7963096e1",
+        "operators": [
+          {
+            "name": "森蚺",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "斑点",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "温米",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 33.333333332,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "斑点",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "森蚺",
+              "elite": 2,
+              "notes": [
+                "2 个发电站 ×20% = +40%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 40.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "斑点",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "温米",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 60.0,
+            "facility_bonus_pct": 40.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 102.0,
+          "estimated_efficiency_bonus_pct": 102.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "pure_gold": 1.683333333266
+        },
+        "raw_metrics": {
+          "pure_gold": 20.199999999192002
+        },
+        "effective_metrics": {
+          "pure_gold": 20.199999999192002
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "factory_2",
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "combination_id": "combo_1a82f9585a4e",
+        "operators": [
+          {
+            "name": "清流",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "砾",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "夜烟",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 37.4999999985,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "pure_gold",
+          "operators": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "清流",
+              "elite": 2,
+              "notes": [
+                "3 个贸易站 ×20% = +60%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 60.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "砾",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +35%"
+              ],
+              "direct_bonus_pct": 35.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "夜烟",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 65.0,
+            "facility_bonus_pct": 60.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 127.0,
+          "estimated_efficiency_bonus_pct": 127.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "pure_gold": 1.891666666591
+        },
+        "raw_metrics": {
+          "pure_gold": 22.699999999092
+        },
+        "effective_metrics": {
+          "pure_gold": 22.699999999092
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "factory_3",
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "combination_id": "combo_fa638a578a48",
+        "operators": [
+          {
+            "name": "冬时",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "多萝西",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 104.0,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "operators": [
+            {
+              "name": "冬时",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "多萝西",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [
+            "冬时类技能仅替换直接生产力层，设施与全局联动层继续保留。"
+          ],
+          "operator_details": [
+            {
+              "name": "冬时",
+              "elite": 2,
+              "notes": [
+                "直接生产力替换为站内 2 人 ×10% = +20%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "多萝西",
+              "elite": 2,
+              "notes": [
+                "同站莱茵生命 1 人：+10%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 10.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 20,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 12.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 32.0,
+          "estimated_efficiency_bonus_pct": 32.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [
+            "dongshi_reset"
+          ]
+        },
+        "metrics_per_hour": {
+          "orundum_shard": 1.32
+        },
+        "raw_metrics": {
+          "orundum_shard": 15.84
+        },
+        "effective_metrics": {
+          "orundum_shard": 15.333333333333334
+        },
+        "warehouse_overflow": {
+          "raw_units": 15.84,
+          "effective_units": 15.333333333333334,
+          "warehouse_capacity": 46.0,
+          "item_size": 3.0,
+          "lost_units": 0.5066666666666659
+        }
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "factory_4",
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "combination_id": "combo_dcb34b531788",
+        "operators": [
+          {
+            "name": "温蒂",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "野鬃",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 3.09999999999969,
+        "global_recalculation": {
+          "facility_id": "factory",
+          "product_id": "battle_record",
+          "operators": [
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "野鬃",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "温蒂",
+              "elite": 2,
+              "notes": [
+                "2 个发电站 ×15% = +30%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 30.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "野鬃",
+              "elite": 2,
+              "notes": [
+                "直接生产力 +25%"
+              ],
+              "direct_bonus_pct": 25.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 25.0,
+            "facility_bonus_pct": 30.0,
+            "global_bonus_pct": 2.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 57.0,
+          "estimated_efficiency_bonus_pct": 57.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {
+          "battle_record_units": 0.523333333281,
+          "battle_record_exp": 523.333333333281
+        },
+        "raw_metrics": {
+          "battle_record_units": 6.2799999993719995,
+          "battle_record_exp": 6279.9999999993715
+        },
+        "effective_metrics": {
+          "battle_record_units": 6.2799999993719995,
+          "battle_record_exp": 6279.9999999993715
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "office",
+        "facility_id": "office",
+        "product_id": "hr_network",
+        "combination_id": "combo_abc1fa868912",
+        "operators": [
+          {
+            "name": "遥",
+            "elite": 2,
+            "level": 60,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 0.725,
+        "global_recalculation": {
+          "error": "calculator_unsupported:office",
+          "warnings": []
+        },
+        "metrics_per_hour": {
+          "hr_network": 1.45
+        },
+        "raw_metrics": {
+          "hr_network": 17.4
+        },
+        "effective_metrics": {
+          "hr_network": 17.4
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "power_plant_1",
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "combination_id": "combo_ed766f08ac4a",
+        "operators": [
+          {
+            "name": "深靛",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 46.0,
+        "global_recalculation": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "深靛",
+              "elite": 1,
+              "notes": [
+                "无人机恢复 +15%"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 15.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 15.0,
+          "estimated_efficiency_bonus_pct": 15.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {},
+        "raw_metrics": {},
+        "effective_metrics": {},
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "power_plant_2",
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "combination_id": "combo_8eff31efcbf3",
+        "operators": [
+          {
+            "name": "格雷伊",
+            "elite": 1,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 48.0,
+        "global_recalculation": {
+          "facility_id": "power_plant",
+          "product_id": "drone_recovery",
+          "operators": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "格雷伊",
+              "elite": 1,
+              "notes": [
+                "无人机恢复 +20%"
+              ]
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 20.0,
+            "facility_bonus_pct": 0,
+            "global_bonus_pct": 0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 20.0,
+          "estimated_efficiency_bonus_pct": 20.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": []
+        },
+        "metrics_per_hour": {},
+        "raw_metrics": {},
+        "effective_metrics": {},
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "trading_post_1",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_f23e76d0e456",
+        "operators": [
+          {
+            "name": "龙舌兰",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "拜松",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "月见夜",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 67.5,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "龙舌兰",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%；独立订单价值 +500 龙门币/触发"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "拜松",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "月见夜",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 90.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 27.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 117.0,
+          "estimated_efficiency_bonus_pct": 117.0,
+          "fixed_order_value_lmd_per_trigger": 500,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 2.17
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 26.04
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 26.04
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "trading_post_2",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_a324b24a6afa",
+        "operators": [
+          {
+            "name": "巫恋",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "但书",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          },
+          {
+            "name": "摩根",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 100.751,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [
+            "巫恋类替换技能仅替换直接订单效率层，设施与全局联动层继续保留。"
+          ],
+          "operator_details": [
+            {
+              "name": "巫恋",
+              "elite": 2,
+              "notes": [
+                "直接订单效率替换为 +65%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "但书",
+              "elite": 2,
+              "notes": [
+                "估算乘算 ×1.556"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            },
+            {
+              "name": "摩根",
+              "elite": 2,
+              "notes": [
+                "同站格拉斯哥成员 1 人：+20%"
+              ],
+              "direct_bonus_pct": 0.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 20.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 65.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 37.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.556
+          },
+          "paper_bonus_pct": 102.0,
+          "estimated_efficiency_bonus_pct": 214.312,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 3.14312
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 37.71744
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 37.71744
+        },
+        "warehouse_overflow": null
+      },
+      {
+        "segment_id": "segment_3",
+        "hours": 12.0,
+        "room_id": "trading_post_3",
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "combination_id": "combo_eb1ced7fcfe8",
+        "operators": [
+          {
+            "name": "空爆",
+            "elite": 2,
+            "level": 1,
+            "skill_source": "local_versioned_data"
+          }
+        ],
+        "local_proxy_score_per_hour": 45.5,
+        "global_recalculation": {
+          "facility_id": "trading_post",
+          "product_id": "lmd_order",
+          "operators": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "level": 1,
+              "recruited": true,
+              "morale": null
+            }
+          ],
+          "unknown_operators": [],
+          "data_version": "2026-07-27-owned-roster-228",
+          "model": "rule_based_estimate",
+          "warnings": [],
+          "operator_details": [
+            {
+              "name": "空爆",
+              "elite": 2,
+              "notes": [
+                "直接效率 +30%"
+              ],
+              "direct_bonus_pct": 30.0,
+              "facility_bonus_pct": 0.0,
+              "global_bonus_pct": 0.0
+            }
+          ],
+          "layers": {
+            "direct_bonus_pct": 30.0,
+            "facility_bonus_pct": 0.0,
+            "global_bonus_pct": 27.0,
+            "amplifier_bonus_pct": 0.0,
+            "multiplier": 1.0
+          },
+          "paper_bonus_pct": 57.0,
+          "estimated_efficiency_bonus_pct": 57.0,
+          "fixed_order_value_lmd_per_trigger": 0,
+          "special_flags": [],
+          "production_lines": 0
+        },
+        "metrics_per_hour": {
+          "lmd_trade_work": 1.5699999999999998
+        },
+        "raw_metrics": {
+          "lmd_trade_work": 18.839999999999996
+        },
+        "effective_metrics": {
+          "lmd_trade_work": 18.839999999999996
+        },
+        "warehouse_overflow": null
+      }
+    ],
+    "drone_plan": {
+      "enabled": true,
+      "capacity": 235.0,
+      "repeating_day_balance": true,
+      "base_recovery_minutes_per_drone": 6.0,
+      "acceleration_minutes_per_drone": 3.0,
+      "total_recovered": 348.0,
+      "total_used": 348.0,
+      "total_wasted": 0.0,
+      "feasible": true,
+      "timeline": [
+        {
+          "segment_id": "segment_1",
+          "start": "08:00",
+          "end": "14:00",
+          "hours": 6.0,
+          "start_inventory": 174.0,
+          "used_at_start": 174.0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 87.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 87.0
+        },
+        {
+          "segment_id": "segment_2",
+          "start": "14:00",
+          "end": "20:00",
+          "hours": 6.0,
+          "start_inventory": 87.0,
+          "used_at_start": 0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 87.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 174.0
+        },
+        {
+          "segment_id": "segment_3",
+          "start": "20:00",
+          "end": "08:00",
+          "hours": 12.0,
+          "start_inventory": 174.0,
+          "used_at_start": 174.0,
+          "power_plant_total_bonus_pct": 45.0,
+          "recovered_during_segment": 174.0,
+          "wasted_over_capacity": 0.0,
+          "end_inventory": 174.0
+        }
+      ],
+      "allocations": [
+        {
+          "segment_id": "segment_1",
+          "operation_time": "08:00",
+          "room_id": "factory_3",
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "combination_id": "combo_4fad09a299dd",
+          "drones": 174.0,
+          "base_minutes_removed": 522.0,
+          "metrics_per_drone": {
+            "orundum_shard": 0.05,
+            "lmd_cost": 80.0,
+            "orirock_cube_consumption": 0.1
+          },
+          "metrics": {
+            "orundum_shard": 8.700000000000001,
+            "lmd_cost": 13920.0,
+            "orirock_cube_consumption": 17.400000000000002
+          },
+          "collection_assumption": "节点内加速后立即收取，可重复操作，不占用跨节点仓库容量"
+        },
+        {
+          "segment_id": "segment_3",
+          "operation_time": "20:00",
+          "room_id": "factory_3",
+          "facility_id": "factory",
+          "product_id": "orundum_shard",
+          "combination_id": "combo_fa638a578a48",
+          "drones": 174.0,
+          "base_minutes_removed": 522.0,
+          "metrics_per_drone": {
+            "orundum_shard": 0.05,
+            "lmd_cost": 80.0,
+            "orirock_cube_consumption": 0.1
+          },
+          "metrics": {
+            "orundum_shard": 8.700000000000001,
+            "lmd_cost": 13920.0,
+            "orirock_cube_consumption": 17.400000000000002
+          },
+          "collection_assumption": "节点内加速后立即收取，可重复操作，不占用跨节点仓库容量"
+        }
+      ]
+    },
+    "morale": {
+      "但书": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "龙舌兰": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "巫恋": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "鸿雪": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "图耶": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "绮良": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "可露希尔": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "月见夜": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "空爆": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "玫兰莎": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "慕斯": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "雪雉": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "拜松": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "推进之王": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "摩根": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "戴菲恩": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "贝洛内": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "伺夜": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "八幡海铃": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "清流": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "温蒂": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "森蚺": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "冬时": {
+        "initial": 24.0,
+        "end": 12.0,
+        "minimum": 12.0,
+        "daily_work_hours": 12.0,
+        "max_continuous_work_hours": 12.0,
+        "working_segments": [
+          "segment_3"
+        ]
+      },
+      "娜斯提": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "多萝西": {
+        "initial": 24.0,
+        "end": 12.0,
+        "minimum": 12.0,
+        "daily_work_hours": 12.0,
+        "max_continuous_work_hours": 12.0,
+        "working_segments": [
+          "segment_3"
+        ]
+      },
+      "缪尔赛思": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "斯卡蒂": {
+        "initial": 24.0,
+        "end": 12.0,
+        "minimum": 12.0,
+        "daily_work_hours": 12.0,
+        "max_continuous_work_hours": 12.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2"
+        ]
+      },
+      "幽灵鲨": {
+        "initial": 24.0,
+        "end": 12.0,
+        "minimum": 12.0,
+        "daily_work_hours": 12.0,
+        "max_continuous_work_hours": 12.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2"
+        ]
+      },
+      "歌蕾蒂娅": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "乌尔比安": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "安哲拉": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "砾": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "斑点": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "夜烟": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "温米": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "苍苔": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "引星棘刺": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "野鬃": {
+        "initial": 24.0,
+        "end": 12.0,
+        "minimum": 12.0,
+        "daily_work_hours": 12.0,
+        "max_continuous_work_hours": 12.0,
+        "working_segments": [
+          "segment_3"
+        ]
+      },
+      "灰毫": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "正义骑士号": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "芬": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "泡普卡": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "桃金娘": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "杜林": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "褐果": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "望": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "凯尔希": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "明椒": {
+        "initial": 24.0,
+        "end": 24.0,
+        "minimum": 24.0,
+        "daily_work_hours": 0.0,
+        "max_continuous_work_hours": 0.0,
+        "working_segments": []
+      },
+      "杜宾": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "格雷伊": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "深靛": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "遥": {
+        "initial": 24.0,
+        "end": 0.0,
+        "minimum": 0.0,
+        "daily_work_hours": 24.0,
+        "max_continuous_work_hours": 24.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2",
+          "segment_3"
+        ]
+      },
+      "地灵": {
+        "initial": 24.0,
+        "end": 12.0,
+        "minimum": 12.0,
+        "daily_work_hours": 12.0,
+        "max_continuous_work_hours": 12.0,
+        "working_segments": [
+          "segment_1",
+          "segment_2"
+        ]
+      }
+    },
+    "warnings": [
+      "segment_3/factory_3 仓库封顶，损失约 0.51 单位 orundum_shard"
+    ],
+    "assumptions": {
+      "collection_at_every_operation_node": true,
+      "drone_acceleration_collected_immediately_at_node": true,
+      "drone_output_ignores_room_efficiency_bonus": true,
+      "lmd_drone_output_uses_expected_order_distribution_when_current_order_unknown": true,
+      "rest_recovery_per_hour": 0.0,
+      "initial_morale_default": 24.0,
+      "random_lmd_order_sequence_not_simulated": true
+    }
+  }
+}

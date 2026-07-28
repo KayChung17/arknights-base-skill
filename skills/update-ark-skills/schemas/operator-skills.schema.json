@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Arknights Base Operator Skills",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "data_version",
+    "operators"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "data_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string"
+    },
+    "operators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "groups",
+          "skills"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "facility",
+                "elite",
+                "skill_name",
+                "description",
+                "base_bonus_pct",
+                "tags",
+                "products"
+              ],
+              "properties": {
+                "facility": {
+                  "type": "string"
+                },
+                "elite": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "skill_name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "base_bonus_pct": {
+                  "type": "number"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "products": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "required_level": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "source_line": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1
+                },
+                "variant_group": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "rarity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "source_level": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source_elite": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2
+          }
+        }
+      }
+    }
+  }
+}

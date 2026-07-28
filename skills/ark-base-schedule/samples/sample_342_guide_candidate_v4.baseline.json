@@ -1,0 +1,105 @@
+{
+  "comparison_type": "guide_baseline_comparison",
+  "baseline_id": "guide_342_orundum_3_login",
+  "baseline_source": {
+    "source_type": "user_provided_guide_image",
+    "title": "搓玉342-3队列",
+    "retrieved_at": "2026-07-27",
+    "verification": "structure_extracted_from_user_image",
+    "notes": "仓库仅保存结构化摘要，不再分发原图。具体干员组合需要按当前版本攻略与用户 roster 再核验。"
+  },
+  "structural_match_ratio": 0.833333,
+  "checks": {
+    "layout": {
+      "expected": "342",
+      "actual": "342",
+      "matched": true
+    },
+    "facility_room_signatures": {
+      "expected": {
+        "control_center|5|base_management": 1,
+        "factory|2|battle_record": 1,
+        "factory|2|orundum_shard": 1,
+        "factory|3|pure_gold": 2,
+        "office|3|hr_network": 1,
+        "power_plant|3|drone_recovery": 2,
+        "trading_post|1|orundum_order": 1,
+        "trading_post|3|lmd_order": 2
+      },
+      "actual": {
+        "control_center|5|base_management": 1,
+        "factory|2|battle_record": 1,
+        "factory|2|orundum_shard": 1,
+        "factory|3|pure_gold": 2,
+        "office|3|hr_network": 1,
+        "power_plant|3|drone_recovery": 2,
+        "trading_post|1|orundum_order": 1,
+        "trading_post|3|lmd_order": 2
+      },
+      "matched": true
+    },
+    "online_count": {
+      "expected": 3,
+      "actual": 3,
+      "matched": true
+    },
+    "segment_hours": {
+      "expected": [
+        6.0,
+        6.0,
+        12.0
+      ],
+      "actual": [
+        6.0,
+        6.0,
+        12.0
+      ],
+      "matched": true
+    },
+    "priority_recovery_targets": {
+      "expected": [
+        "但书",
+        "清流"
+      ],
+      "verified": [],
+      "matched": false
+    },
+    "economy_projection_present": {
+      "expected": true,
+      "actual": true,
+      "matched": true
+    },
+    "economy_delta": {
+      "lmd_orders": {
+        "baseline": 47000,
+        "actual": 47000,
+        "delta": 0
+      },
+      "pure_gold": {
+        "baseline": 44000,
+        "actual": 44000,
+        "delta": 0
+      },
+      "pure_gold_drone_equivalent": {
+        "baseline": 9400,
+        "actual": 9400,
+        "delta": 0
+      },
+      "orundum": {
+        "baseline": 535,
+        "actual": 535,
+        "delta": 0
+      },
+      "battle_record_exp": {
+        "baseline": 14000,
+        "actual": 14000,
+        "delta": 0
+      }
+    }
+  },
+  "generated_deviations": [
+    "基线恢复目标尚未全部验证: ['但书', '清流']"
+  ],
+  "requires_model_explanation": true,
+  "rule": "结构差异由脚本列出，是否接受差异由模型结合用户 roster、当前攻略和用户偏好决定。"
+}

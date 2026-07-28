@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Arknights hybrid solver result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "result_type",
+    "solver",
+    "selected_solution",
+    "candidate_plan",
+    "alternatives"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "result_type": {
+      "const": "hybrid_schedule_solution"
+    },
+    "solved_at": {
+      "type": "string"
+    },
+    "solver": {
+      "type": "object",
+      "required": [
+        "architecture",
+        "backend",
+        "optimality_claim",
+        "actual_simulation_global_optimality_proven"
+      ]
+    },
+    "combination_library_summary": {
+      "type": "object"
+    },
+    "selected_solution": {
+      "type": "object",
+      "required": [
+        "proxy_objective",
+        "assignments",
+        "drone_allocations",
+        "drone_inventory",
+        "drone_waste",
+        "simulation"
+      ],
+      "properties": {
+        "proxy_objective": {
+          "type": "number"
+        },
+        "assignments": {
+          "type": "array"
+        },
+        "drone_allocations": {
+          "type": "array"
+        },
+        "drone_inventory": {
+          "type": "array"
+        },
+        "drone_waste": {
+          "type": "array"
+        },
+        "simulation": {
+          "type": "object",
+          "properties": {
+            "drone_plan": {
+              "type": "object",
+              "required": [
+                "enabled",
+                "capacity",
+                "repeating_day_balance",
+                "total_recovered",
+                "total_used",
+                "total_wasted",
+                "timeline",
+                "allocations",
+                "feasible"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "candidate_plan": {
+      "type": "object"
+    },
+    "alternatives": {
+      "type": "array",
+      "minItems": 1
+    }
+  }
+}

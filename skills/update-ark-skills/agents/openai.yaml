@@ -1,0 +1,4 @@
+interface:
+  display_name: "明日方舟基建技能数据维护"
+  short_description: "导入、规范化、合并并校验版本化基建技能数据"
+  default_prompt: "使用 $update-ark-skills 解析我提供的基建技能表，保留完整中文描述和来源，谨慎结构化数值与机制标签，输出导入警告，更新数据版本，并运行数据与回归校验。"

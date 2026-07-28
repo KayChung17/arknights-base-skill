@@ -1,101 +1,107 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-build_final_all.py — 合并干员练度表和技能数据，生成全干员基建技能一览
+"""Merge an operator roster with parsed base-skill records."""
 
-输入：
-  1. 干员练度表.txt（tab 分隔：干员名称、是否已招募、星级、等级、精英化等级……）
-  2. skills_parsed.txt（可选，parse_skills.py 的输出，格式：干员名|精等级|设施|技能名|技能描述）
-输出：基建技能一览_全干员.txt
+from __future__ import annotations
 
-Usage:
-    python build_final_all.py [--operators 干员练度表.txt] [--skills skills_parsed.txt] [--output 基建技能一览_全干员.txt]
-"""
-
-import sys
+import argparse
+import csv
+import json
+from pathlib import Path
 
 
-def load_operator_list(path: str) -> dict[str, dict]:
-    operators: dict[str, dict] = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f.readlines()[1:]:
-            parts = line.strip().split("\t")
-            if len(parts) < 5:
-                continue
-            name = parts[0].strip()
-            operators[name] = {
-                "star": parts[2].strip(),
-                "level": parts[3].strip(),
-                "elite": parts[4].strip(),
-                "owned": parts[1].strip().upper() == "TRUE",
-            }
-    return operators
+def read_roster(path: Path) -> list[dict]:
+    text = path.read_text(encoding="utf-8-sig")
+    first = text.splitlines()[0] if text.splitlines() else ""
+    delimiter = "\t" if "\t" in first else ","
+    rows = csv.DictReader(text.splitlines(), delimiter=delimiter)
+    result = []
+    for row in rows:
+        name = (row.get("干员名称") or row.get("干员名") or row.get("name") or "").strip()
+        if not name:
+            continue
+        recruited = str(
+            row.get("是否已招募") or row.get("recruited") or "TRUE"
+        ).strip().lower() in {"true", "1", "yes", "是", "已招募"}
+        elite_raw = row.get("精英化等级") or row.get("精英等级") or row.get("elite") or 0
+        try:
+            elite = int(float(str(elite_raw).replace("E", "").replace("e", "")))
+        except ValueError:
+            elite = 0
+        result.append({"name": name, "recruited": recruited, "elite": max(0, min(2, elite)), "raw": row})
+    return result
 
 
-def load_skills(path: str) -> dict[str, list[tuple[str, str, str, str]]]:
-    skills: dict[str, list[tuple[str, str, str, str]]] = {}
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split("|")
-                if len(parts) >= 5:
-                    name = parts[0].strip()
-                    if name not in skills:
-                        skills[name] = []
-                    skills[name].append((parts[1].strip(), parts[2].strip(), parts[3].strip(), parts[4].strip()))
-    except FileNotFoundError:
-        print(f"[WARN] {path} 不存在，跳过技能数据加载")
-    return skills
+def read_skills(path: Path) -> list[dict]:
+    if path.suffix.lower() == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload.get("records", payload if isinstance(payload, list) else [])
+    result = []
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        if not line.strip() or line.startswith("干员名|"):
+            continue
+        parts = line.split("|", 4)
+        if len(parts) != 5:
+            continue
+        name, elite, facility, skill_name, description = parts
+        result.append({
+            "name": name.strip(),
+            "elite": int(elite.strip().upper().replace("E", "") or 0),
+            "facility": facility.strip(),
+            "skill_name": skill_name.strip(),
+            "description": description.strip(),
+            "base_bonus_pct": 0,
+            "tags": [],
+            "products": [],
+        })
+    return result
 
 
-def build_output(operators: dict[str, dict], skills: dict[str, list[tuple[str, str, str, str]]], output_path: str) -> None:
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("基建技能一览（全干员）\n")
-        f.write(f"共 {len(operators)} 名干员\n")
-        f.write("=" * 80 + "\n\n")
-        for name in sorted(operators.keys()):
-            info = operators[name]
-            tag = "[已招募]" if info["owned"] else "[未招募]"
-            f.write(f"{tag} 【{name}】星级{info['star']} Lv{info['level']} E{info['elite'] or '0'}\n")
-            if name in skills:
-                for sk in skills[name]:
-                    f.write(f"  {sk[0]} | {sk[1]} | {sk[2]} | {sk[3]}\n")
-            else:
-                f.write("  (无基建技能数据)\n")
-            f.write("\n")
-    print(f"[OK] 生成完成: {output_path}")
-    print(f"     共 {len(operators)} 名干员，{sum(len(v) for v in skills.values())} 条技能")
+def main() -> int:
+    parser = argparse.ArgumentParser(description="合并干员练度表和基建技能")
+    parser.add_argument("--operators", required=True)
+    parser.add_argument("--skills", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--format", choices=["json", "tsv"], default="tsv")
+    args = parser.parse_args()
 
+    roster = read_roster(Path(args.operators))
+    skills = read_skills(Path(args.skills))
+    by_name: dict[str, list[dict]] = {}
+    for skill in skills:
+        by_name.setdefault(skill["name"], []).append(skill)
 
-def main():
-    op_path = "干员练度表.txt"
-    sk_path = "skills_parsed.txt"
-    out_path = "基建技能一览_全干员.txt"
+    rows = []
+    for operator in roster:
+        unlocked = [
+            item for item in by_name.get(operator["name"], [])
+            if int(item.get("elite", 0)) <= operator["elite"]
+        ]
+        rows.append({
+            "name": operator["name"],
+            "recruited": operator["recruited"],
+            "elite": operator["elite"],
+            "skills": unlocked,
+        })
 
-    args = sys.argv[1:]
-    i = 0
-    while i < len(args):
-        if args[i] == "--operators" and i + 1 < len(args):
-            op_path = args[i + 1]
-            i += 2
-        elif args[i] == "--skills" and i + 1 < len(args):
-            sk_path = args[i + 1]
-            i += 2
-        elif args[i] == "--output" and i + 1 < len(args):
-            out_path = args[i + 1]
-            i += 2
-        else:
-            i += 1
-
-    try:
-        operators = load_operator_list(op_path)
-    except FileNotFoundError:
-        print(f"[ERR] 干员练度表不存在: {op_path}")
-        sys.exit(1)
-
-    skills = load_skills(sk_path)
-    build_output(operators, skills, out_path)
+    output = Path(args.output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if args.format == "json":
+        output.write_text(json.dumps({"schema_version":1,"operators":rows}, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        lines = ["干员名\t已招募\t精英等级\t设施\t技能名\t技能描述"]
+        for operator in rows:
+            if not operator["skills"]:
+                lines.append(f"{operator['name']}\t{operator['recruited']}\tE{operator['elite']}\t\t\t")
+            for skill in operator["skills"]:
+                lines.append(
+                    f"{operator['name']}\t{operator['recruited']}\tE{operator['elite']}\t"
+                    f"{skill.get('facility','')}\t{skill.get('skill_name','')}\t{skill.get('description','')}"
+                )
+        output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"生成完成：{len(rows)} 名干员")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

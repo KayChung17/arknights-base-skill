@@ -1,0 +1,964 @@
+{
+  "schema_version": 1,
+  "version": "0.7.1",
+  "objective": {
+    "primary": "maximize_orundum_per_day",
+    "minimum_net_lmd_per_day": -10000.0,
+    "minimum_orundum_shard_balance": 0.0,
+    "minimum_pure_gold_balance": 0.0,
+    "battle_record_factories": 0,
+    "online_times": [
+      "08:00",
+      "14:00",
+      "20:00"
+    ],
+    "max_daily_work_hours": 18.0
+  },
+  "current_roster_best_found": {
+    "profile_id": "252-output",
+    "layout": "252",
+    "trading_levels": [
+      3,
+      3
+    ],
+    "factory_levels": [
+      3,
+      3,
+      2,
+      2,
+      1
+    ],
+    "dormitory_levels": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "product_split": {
+      "orundum_trading_posts": 1,
+      "lmd_trading_posts": 1,
+      "orundum_shard_factories": 1,
+      "pure_gold_factories": 4
+    },
+    "orundum_per_day": 354.59999999999997,
+    "gross_lmd_per_day": 49043.25663716816,
+    "shard_lmd_cost_per_day": 58176.0,
+    "net_lmd_per_day": -9132.74336283184,
+    "orundum_shard_balance": 0.8999999999999986,
+    "pure_gold_balance": 0.9634867221816847,
+    "drones_recovered": 336.0,
+    "drones_used": 302.0,
+    "drones_wasted": 34.0,
+    "optimality_claim": "best_found_within_truncated_candidate_library"
+  },
+  "promotion_frontier": {
+    "safe_without_jaye_e1_or_dongshi_e1": {
+      "profile_id": "252-output",
+      "layout": "252",
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 1,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 4
+      },
+      "orundum_per_day": 423.0,
+      "net_lmd_per_day": -9870.33628318584,
+      "orundum_shard_balance": 0.5400000000000063,
+      "pure_gold_balance": 0.1889557480203763,
+      "drones_recovered": 360.0,
+      "drones_used": 360.0,
+      "drones_wasted": 0.0,
+      "optimality_claim": "best_found_within_truncated_candidate_library"
+    },
+    "maximum_candidate_keep_dongshi_e0_use_jaye_e1": {
+      "profile_id": "252-output",
+      "layout": "252",
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 1,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 4
+      },
+      "orundum_per_day": 434.4,
+      "net_lmd_per_day": -9587.362831858401,
+      "orundum_shard_balance": 0.5200000000000031,
+      "pure_gold_balance": 0.3531681372289057,
+      "drones_recovered": 360.0,
+      "drones_used": 360.0,
+      "drones_wasted": 0.0,
+      "optimality_claim": "best_found_within_truncated_candidate_library"
+    },
+    "all_20_including_dongshi_e1": {
+      "profile_id": "342-output",
+      "layout": "342",
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 2,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 3
+      },
+      "orundum_per_day": 428.30000000000007,
+      "net_lmd_per_day": -9960.680825958698,
+      "orundum_shard_balance": 1.9099999999999966,
+      "pure_gold_balance": 0.19650442006175695,
+      "drones_recovered": 360.0,
+      "drones_used": 342.0,
+      "drones_wasted": 18.0,
+      "optimality_claim": "best_found_within_truncated_candidate_library"
+    },
+    "without_jaye_e1_with_dongshi_e1": {
+      "profile_id": "252-output",
+      "layout": "252",
+      "product_split": {
+        "orundum_trading_posts": 1,
+        "lmd_trading_posts": 1,
+        "orundum_shard_factories": 1,
+        "pure_gold_factories": 4
+      },
+      "orundum_per_day": 420.6,
+      "net_lmd_per_day": -9979.52802359881,
+      "orundum_shard_balance": 0.693333333333328,
+      "pure_gold_balance": 2.034672562125678,
+      "drones_recovered": 360.0,
+      "drones_used": 360.0,
+      "drones_wasted": 0.0,
+      "optimality_claim": "best_found_within_truncated_candidate_library"
+    }
+  },
+  "upgrade_packages": {
+    "common_core_11": [
+      {
+        "operator": "巫恋",
+        "current_elite": 1,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻贸易站时，当前贸易站内其他干员提供的订单获取效率全部归零，且每人为自身+45%订单获取效率，同时全体心情每小时消耗+0.25",
+            "tags": [
+              "morale_cost_plus_0.25",
+              "override_room_direct_bonus"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 65.0,
+        "promotion_risk_notes": [
+          "技能会覆盖同站其他直接效率，需要按完整组合验证。"
+        ],
+        "recommendation_status": "requires_state_comparison_before_irreversible_upgrade",
+        "priority_score": 137.0
+      },
+      {
+        "operator": "薄绿",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 1,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 12.0,
+        "rooms": [
+          "factory_1"
+        ],
+        "products": [
+          "orundum_shard"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "orundum_shard",
+            "elite": 1,
+            "required_level": 1,
+            "description": "进驻制造站时，源石类配方的生产力+30%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 30.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 102.0
+      },
+      {
+        "operator": "梅尔",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 12.0,
+        "rooms": [
+          "factory_1"
+        ],
+        "products": [
+          "orundum_shard"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "orundum_shard",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，生产力+30%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 30.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 102.0
+      },
+      {
+        "operator": "天空盒",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "power_plant_2"
+        ],
+        "products": [
+          "drone_recovery"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "power_plant",
+            "product": "drone_recovery",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻发电站时，无人机充能速度+20%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 20.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 65.0
+      },
+      {
+        "operator": "星源",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "factory_2",
+          "factory_3"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，生产力+25%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 10.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 64.0
+      },
+      {
+        "operator": "杏仁",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "factory_4"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，基建内（不包含副手及活动室使用者）每有1名黑钢国际干员（最多3名），贵金属类配方的生产力+2%，心情每小时消耗-0.15",
+            "tags": [
+              "morale_cost_minus_0.15"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 54.0
+      },
+      {
+        "operator": "阿兰娜",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "factory_4"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，当与温米在同一个制造站时，贵金属类配方的生产力+15%",
+            "tags": [
+              "with_wanqing_gold_15",
+              "work_platform_per_member_10"
+            ]
+          },
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，每有1台作业平台进驻发电站，贵金属类配方的生产力+10%",
+            "tags": [
+              "work_platform_per_member_10"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 54.0
+      },
+      {
+        "operator": "龙舌兰",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 6.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻贸易站后，如果下笔赤金订单交付数大于3（违约订单不视作赤金订单），则其龙门币收益+500，心情每小时消耗-0.25",
+            "tags": [
+              "independent_order_lmd_500",
+              "morale_cost_minus_0.25"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 30.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 54.0
+      },
+      {
+        "operator": "雷蛇",
+        "current_elite": 0,
+        "current_level": 20,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "power_plant_1",
+          "power_plant_2"
+        ],
+        "products": [
+          "drone_recovery"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "power_plant",
+            "product": "drone_recovery",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻发电站时，无人机充能速度+20%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 5.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 50.0
+      },
+      {
+        "operator": "海蒂",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 6.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻贸易站时，订单获取效率+35%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 15.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 39.0
+      },
+      {
+        "operator": "掠风",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 6.0,
+        "rooms": [
+          "factory_4"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+5%的生产力",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 18.0
+      }
+    ],
+    "safe_branch": [
+      {
+        "operator": "雷狼龙S空爆",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "trading_post_1"
+        ],
+        "products": [
+          "orundum_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "orundum_order",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻贸易站时，订单获取效率+35%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 35.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 143.0
+      }
+    ],
+    "maximum_branch": [
+      {
+        "operator": "孑",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 1,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 1,
+            "required_level": 1,
+            "description": "进驻贸易站时，当前贸易站内其他干员提供的每10%订单获取效率使订单上限-1（订单最少为1），同时每有1笔订单就+4%订单获取效率（与部分技能有特殊叠加规则）",
+            "tags": [
+              "jaye_order_count_4"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [
+          "精英1会改变孑的订单数联动，收益不具单调性且不可逆。"
+        ],
+        "recommendation_status": "requires_state_comparison_before_irreversible_upgrade",
+        "priority_score": 72.0
+      },
+      {
+        "operator": "史都华德",
+        "current_elite": 0,
+        "current_level": 20,
+        "target_elite": 1,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 12.0,
+        "rooms": [
+          "factory_2"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 1,
+            "required_level": 1,
+            "description": "进驻制造站时，生产力+25%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 25.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 61.0
+      }
+    ],
+    "maximum_candidate_all_required": [
+      {
+        "operator": "巫恋",
+        "current_elite": 1,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻贸易站时，当前贸易站内其他干员提供的订单获取效率全部归零，且每人为自身+45%订单获取效率，同时全体心情每小时消耗+0.25",
+            "tags": [
+              "morale_cost_plus_0.25",
+              "override_room_direct_bonus"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 65.0,
+        "promotion_risk_notes": [
+          "技能会覆盖同站其他直接效率，需要按完整组合验证。"
+        ],
+        "recommendation_status": "requires_state_comparison_before_irreversible_upgrade",
+        "priority_score": 137.0
+      },
+      {
+        "operator": "薄绿",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 1,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 12.0,
+        "rooms": [
+          "factory_1"
+        ],
+        "products": [
+          "orundum_shard"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "orundum_shard",
+            "elite": 1,
+            "required_level": 1,
+            "description": "进驻制造站时，源石类配方的生产力+30%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 30.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 102.0
+      },
+      {
+        "operator": "梅尔",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 12.0,
+        "rooms": [
+          "factory_1"
+        ],
+        "products": [
+          "orundum_shard"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "orundum_shard",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，生产力+30%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 30.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 102.0
+      },
+      {
+        "operator": "孑",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 1,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 1,
+            "required_level": 1,
+            "description": "进驻贸易站时，当前贸易站内其他干员提供的每10%订单获取效率使订单上限-1（订单最少为1），同时每有1笔订单就+4%订单获取效率（与部分技能有特殊叠加规则）",
+            "tags": [
+              "jaye_order_count_4"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [
+          "精英1会改变孑的订单数联动，收益不具单调性且不可逆。"
+        ],
+        "recommendation_status": "requires_state_comparison_before_irreversible_upgrade",
+        "priority_score": 72.0
+      },
+      {
+        "operator": "天空盒",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "power_plant_2"
+        ],
+        "products": [
+          "drone_recovery"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "power_plant",
+            "product": "drone_recovery",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻发电站时，无人机充能速度+20%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 20.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 65.0
+      },
+      {
+        "operator": "星源",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "factory_2",
+          "factory_3"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，生产力+25%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 10.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 64.0
+      },
+      {
+        "operator": "史都华德",
+        "current_elite": 0,
+        "current_level": 20,
+        "target_elite": 1,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 12.0,
+        "rooms": [
+          "factory_2"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 1,
+            "required_level": 1,
+            "description": "进驻制造站时，生产力+25%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 25.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 61.0
+      },
+      {
+        "operator": "杏仁",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "factory_4"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，基建内（不包含副手及活动室使用者）每有1名黑钢国际干员（最多3名），贵金属类配方的生产力+2%，心情每小时消耗-0.15",
+            "tags": [
+              "morale_cost_minus_0.15"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 54.0
+      },
+      {
+        "operator": "阿兰娜",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "factory_4"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，当与温米在同一个制造站时，贵金属类配方的生产力+15%",
+            "tags": [
+              "with_wanqing_gold_15",
+              "work_platform_per_member_10"
+            ]
+          },
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，每有1台作业平台进驻发电站，贵金属类配方的生产力+10%",
+            "tags": [
+              "work_platform_per_member_10"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 54.0
+      },
+      {
+        "operator": "龙舌兰",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 6.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻贸易站后，如果下笔赤金订单交付数大于3（违约订单不视作赤金订单），则其龙门币收益+500，心情每小时消耗-0.25",
+            "tags": [
+              "independent_order_lmd_500",
+              "morale_cost_minus_0.25"
+            ]
+          }
+        ],
+        "base_bonus_delta_pct": 30.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 54.0
+      },
+      {
+        "operator": "雷蛇",
+        "current_elite": 0,
+        "current_level": 20,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 18.0,
+        "rooms": [
+          "power_plant_1",
+          "power_plant_2"
+        ],
+        "products": [
+          "drone_recovery"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "power_plant",
+            "product": "drone_recovery",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻发电站时，无人机充能速度+20%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 5.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 50.0
+      },
+      {
+        "operator": "海蒂",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 6.0,
+        "rooms": [
+          "trading_post_2"
+        ],
+        "products": [
+          "lmd_order"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "trading_post",
+            "product": "lmd_order",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻贸易站时，订单获取效率+35%",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 15.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 39.0
+      },
+      {
+        "operator": "掠风",
+        "current_elite": 0,
+        "current_level": 1,
+        "target_elite": 2,
+        "target_level": 1,
+        "hours_used_in_ceiling_plan": 6.0,
+        "rooms": [
+          "factory_4"
+        ],
+        "products": [
+          "pure_gold"
+        ],
+        "unlocked_skills": [
+          {
+            "facility": "factory",
+            "product": "pure_gold",
+            "elite": 2,
+            "required_level": 1,
+            "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+5%的生产力",
+            "tags": []
+          }
+        ],
+        "base_bonus_delta_pct": 0.0,
+        "promotion_risk_notes": [],
+        "recommendation_status": "direct_upgrade_candidate",
+        "priority_score": 18.0
+      }
+    ]
+  },
+  "matched_state_comparisons": {
+    "jaye_e1_effect_with_dongshi_e0": 11.4,
+    "jaye_e1_effect_with_dongshi_e1": 7.7,
+    "dongshi_e1_effect_with_jaye_e1": -6.1,
+    "dongshi_e1_effect_without_jaye_e1": -2.4
+  },
+  "limitations": [
+    "结果是当前布局配置、候选组合库和求解时间内的最佳候选，不构成完整数学全局最优证明。",
+    "培养成本没有进入目标函数；升级列表只表示基建技能解锁状态。",
+    "孑与冬时的晋升会改变技能形态，属于不可逆且非单调的状态选择。",
+    "贸易订单随机性和部分特殊订单机制仍采用期望值或组合级仿真。"
+  ]
+}

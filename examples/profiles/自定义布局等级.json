@@ -1,0 +1,18 @@
+{
+  "profiles": {
+    "252-user": {
+      "layout": "252",
+      "trading_levels": [3, 3],
+      "factory_levels": [3, 3, 2, 2, 1],
+      "power_plant_levels": [3, 3],
+      "dorm_levels": [1, 1, 1, 1]
+    },
+    "342-user": {
+      "layout": "342",
+      "trading_levels": [3, 3, 1],
+      "factory_levels": [3, 3, 2, 2],
+      "power_plant_levels": [3, 3],
+      "dorm_levels": [1, 1, 1, 1]
+    }
+  }
+}

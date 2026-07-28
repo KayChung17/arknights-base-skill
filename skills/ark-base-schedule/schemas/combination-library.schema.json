@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Arknights room combination library",
+  "type": "object",
+  "required": ["schema_version", "library_type", "parameters", "rooms", "search_completeness"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "library_type": {"const": "room_combination_library"},
+    "generated_at": {"type": "string"},
+    "data_version": {"type": ["string", "null"]},
+    "parameters": {
+      "type": "object",
+      "required": ["top_k_per_room", "operator_pool_size", "allow_partial"]
+    },
+    "objective_weights": {"type": "object"},
+    "rooms": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["room", "eligible_operator_count", "enumerated_count", "kept_count", "truncated", "combinations"],
+        "properties": {
+          "room": {"type": "object"},
+          "eligible_operator_count": {"type": "integer", "minimum": 0},
+          "enumerated_count": {"type": "integer", "minimum": 0},
+          "kept_count": {"type": "integer", "minimum": 0},
+          "truncated": {"type": "boolean"},
+          "combinations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["combination_id", "room_id", "facility_id", "product_id", "operators", "proxy_score_per_hour", "metrics_per_hour"]
+            }
+          }
+        }
+      }
+    },
+    "search_completeness": {
+      "type": "object",
+      "required": ["all_rooms_untruncated", "truncated_rooms"]
+    }
+  }
+}

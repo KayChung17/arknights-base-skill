@@ -1,0 +1,2038 @@
+{
+  "schema_version": 2,
+  "packet_type": "model_decision_context",
+  "data_version": "2026-07-27-reviewed",
+  "objective": {
+    "goal_id": "gold_origin",
+    "goal_display_name": "赚钱+搓玉",
+    "layout": "342",
+    "online_count": 3,
+    "online_times": [
+      "08:00",
+      "14:00",
+      "20:00"
+    ],
+    "products": [
+      "base_management",
+      "battle_record",
+      "drone_recovery",
+      "hr_network",
+      "lmd_order",
+      "orundum_order",
+      "orundum_shard",
+      "pure_gold"
+    ],
+    "preferences": {
+      "priority": "balanced",
+      "solver": {
+        "max_daily_work_hours": 24,
+        "require_resource_balance": true,
+        "resource_balance_safety_factor": 1.07,
+        "rest_recovery_per_hour": 0
+      }
+    }
+  },
+  "baseline": {
+    "reference_id": "guide_342_orundum_3_login",
+    "template": {
+      "display_name": "342 赚钱与搓玉三次上线攻略基线",
+      "goal": "gold_origin",
+      "layout": "342",
+      "status": "community_guide_baseline",
+      "source": {
+        "source_type": "user_provided_guide_image",
+        "title": "搓玉342-3队列",
+        "retrieved_at": "2026-07-27",
+        "verification": "structure_extracted_from_user_image",
+        "notes": "仓库仅保存结构化摘要，不再分发原图。具体干员组合需要按当前版本攻略与用户 roster 再核验。"
+      },
+      "facility_configuration": {
+        "rooms": {
+          "trading_post_1": {
+            "facility_id": "trading_post",
+            "level": 3,
+            "product_id": "lmd_order"
+          },
+          "trading_post_2": {
+            "facility_id": "trading_post",
+            "level": 3,
+            "product_id": "lmd_order"
+          },
+          "trading_post_3": {
+            "facility_id": "trading_post",
+            "level": 1,
+            "product_id": "orundum_order"
+          },
+          "factory_1": {
+            "facility_id": "factory",
+            "level": 3,
+            "product_id": "pure_gold"
+          },
+          "factory_2": {
+            "facility_id": "factory",
+            "level": 3,
+            "product_id": "pure_gold"
+          },
+          "factory_3": {
+            "facility_id": "factory",
+            "level": 2,
+            "product_id": "orundum_shard"
+          },
+          "factory_4": {
+            "facility_id": "factory",
+            "level": 2,
+            "product_id": "battle_record"
+          },
+          "power_plant_1": {
+            "facility_id": "power_plant",
+            "level": 3,
+            "product_id": "drone_recovery"
+          },
+          "power_plant_2": {
+            "facility_id": "power_plant",
+            "level": 3,
+            "product_id": "drone_recovery"
+          },
+          "control_center": {
+            "facility_id": "control_center",
+            "level": 5,
+            "product_id": "base_management"
+          },
+          "office": {
+            "facility_id": "office",
+            "level": 3,
+            "product_id": "hr_network"
+          }
+        },
+        "dormitories": [
+          {
+            "room_id": "dormitory_1",
+            "level": 1
+          },
+          {
+            "room_id": "dormitory_2",
+            "level": 1
+          },
+          {
+            "room_id": "dormitory_3",
+            "level": 1
+          },
+          {
+            "room_id": "dormitory_4",
+            "level": 1
+          }
+        ]
+      },
+      "operation_model": {
+        "online_count": 3,
+        "default_online_times": [
+          "08:00",
+          "14:00",
+          "20:00"
+        ],
+        "segment_hours": [
+          6,
+          6,
+          12
+        ],
+        "room_rotation_guidance": {
+          "queue_1": [
+            12
+          ],
+          "queue_2": [
+            12,
+            6
+          ],
+          "queue_3": [
+            12,
+            6
+          ]
+        },
+        "principle": "上线次数定义可操作节点，房间人员可以跨相邻区间连续工作，不能机械拆成三个等长班次。"
+      },
+      "recovery_requirements": {
+        "fiammetta_priority_targets": [
+          "但书",
+          "清流"
+        ],
+        "requires_recovery_plan": true,
+        "requires_repeating_day_check": true,
+        "notes": "核心组合允许重复使用，前提是宿舍、菲亚梅塔和下一周期心情时间线可验证。"
+      },
+      "economy_baseline": {
+        "approximate": true,
+        "daily": {
+          "lmd_orders_lmd": 47000,
+          "pure_gold_lmd_equivalent": 44000,
+          "pure_gold_drone_lmd_equivalent": 9400,
+          "orundum": 535,
+          "battle_record_exp": 14000
+        },
+        "costs": {
+          "orirock_cube": 100,
+          "lmd": 80000,
+          "orundum_shard_inventory_delta": -4
+        },
+        "drone_alternatives": {
+          "lmd_orders": 14000,
+          "pure_gold": 6700,
+          "battle_record_exp": 5300
+        },
+        "notes": "数值来自用户提供攻略图的预估栏，只作为基准比较，不替代当前版本实测。"
+      },
+      "required_final_checks": [
+        "current_guide_verified",
+        "facility_levels_match",
+        "all_production_operator_skills_verified",
+        "room_specific_rotation_verified",
+        "morale_and_recovery_timeline_verified",
+        "warehouse_overflow_checked",
+        "economy_projection_complete",
+        "baseline_deviations_explained"
+      ]
+    },
+    "rule": "先以当前攻略基线构造候选，再根据 roster、设施和上线时间做局部替换。"
+  },
+  "facility_configuration": {
+    "rooms": {
+      "trading_post_1": {
+        "facility_id": "trading_post",
+        "level": 3,
+        "product_id": "lmd_order"
+      },
+      "trading_post_2": {
+        "facility_id": "trading_post",
+        "level": 3,
+        "product_id": "lmd_order"
+      },
+      "trading_post_3": {
+        "facility_id": "trading_post",
+        "level": 1,
+        "product_id": "lmd_order"
+      },
+      "factory_1": {
+        "facility_id": "factory",
+        "level": 3,
+        "product_id": "pure_gold"
+      },
+      "factory_2": {
+        "facility_id": "factory",
+        "level": 3,
+        "product_id": "pure_gold"
+      },
+      "factory_3": {
+        "facility_id": "factory",
+        "level": 2,
+        "product_id": "orundum_shard"
+      },
+      "factory_4": {
+        "facility_id": "factory",
+        "level": 2,
+        "product_id": "battle_record"
+      },
+      "power_plant_1": {
+        "facility_id": "power_plant",
+        "level": 3,
+        "product_id": "drone_recovery"
+      },
+      "power_plant_2": {
+        "facility_id": "power_plant",
+        "level": 3,
+        "product_id": "drone_recovery"
+      },
+      "control_center": {
+        "facility_id": "control_center",
+        "level": 5,
+        "product_id": "base_management"
+      },
+      "office": {
+        "facility_id": "office",
+        "level": 3,
+        "product_id": "hr_network"
+      }
+    },
+    "dormitories": [
+      {
+        "room_id": "dormitory_1",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_2",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_3",
+        "level": 1
+      },
+      {
+        "room_id": "dormitory_4",
+        "level": 1
+      }
+    ]
+  },
+  "operation_nodes": [
+    {
+      "time": "08:00",
+      "label": "第1次上线",
+      "actions": [
+        "收取产物",
+        "执行计划中的换班与恢复"
+      ]
+    },
+    {
+      "time": "14:00",
+      "label": "第2次上线",
+      "actions": [
+        "收取产物",
+        "执行计划中的换班与恢复"
+      ]
+    },
+    {
+      "time": "20:00",
+      "label": "第3次上线",
+      "actions": [
+        "收取产物",
+        "执行计划中的换班与恢复"
+      ]
+    }
+  ],
+  "segment_template": {
+    "segment_1": {
+      "name": "区间1",
+      "start": "08:00",
+      "end": "14:00",
+      "hours": 6.0,
+      "rooms": {}
+    },
+    "segment_2": {
+      "name": "区间2",
+      "start": "14:00",
+      "end": "20:00",
+      "hours": 6.0,
+      "rooms": {}
+    },
+    "segment_3": {
+      "name": "区间3",
+      "start": "20:00",
+      "end": "08:00",
+      "hours": 12.0,
+      "rooms": {}
+    }
+  },
+  "hard_rules": {
+    "same_segment_duplicate_forbidden": true,
+    "operator_must_exist_in_roster": true,
+    "elite_level_from_roster": true,
+    "product_must_match_facility": true,
+    "facility_level_controls_capacity": true,
+    "final_plan_requires_verified_skill_data": true,
+    "final_plan_requires_room_specific_timeline": true,
+    "final_plan_requires_repeating_day_morale_check": true,
+    "final_gold_origin_requires_economy_projection": true,
+    "unknown_local_operator_skill_requires_verified_external_evidence": true
+  },
+  "model_decision_requirements": {
+    "candidate_count": {
+      "minimum": 2,
+      "recommended": 3
+    },
+    "candidate_schema": "schemas/candidate-plan.schema.json",
+    "must_start_from_current_guide_baseline": false,
+    "must_include_current_guide_baseline_as_candidate": true,
+    "guide_template_is_search_boundary": false,
+    "must_explain_every_baseline_deviation": true,
+    "hybrid_solver_preferred": true,
+    "solver_workflow": [
+      "build_combinations",
+      "build_model",
+      "solve_schedule",
+      "simulate_schedule"
+    ],
+    "must_state_strategy": true,
+    "must_state_tradeoffs": true,
+    "must_validate_each_candidate": true,
+    "must_evaluate_each_valid_candidate": true,
+    "must_compare_to_baseline": true,
+    "script_ranking_is_advisory": true
+  },
+  "roster": [
+    {
+      "name": "但书",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "龙舌兰",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "巫恋",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "鸿雪",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "图耶",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "绮良",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "可露希尔",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "月见夜",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "空爆",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "玫兰莎",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "慕斯",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "雪雉",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "拜松",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "推进之王",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "摩根",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "戴菲恩",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "贝洛内",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "伺夜",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "八幡海铃",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "清流",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "温蒂",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "森蚺",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "冬时",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "娜斯提",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "多萝西",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "缪尔赛思",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "斯卡蒂",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "幽灵鲨",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "歌蕾蒂娅",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "乌尔比安",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "安哲拉",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "砾",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "斑点",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "夜烟",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "温米",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "苍苔",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "引星棘刺",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "野鬃",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "灰毫",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "正义骑士号",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "芬",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "泡普卡",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "桃金娘",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "杜林",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "褐果",
+      "elite": 2,
+      "recruited": true,
+      "morale": 24.0
+    },
+    {
+      "name": "望",
+      "elite": 2,
+      "level": 80,
+      "recruited": true,
+      "morale": 24
+    },
+    {
+      "name": "凯尔希",
+      "elite": 2,
+      "level": 60,
+      "recruited": true,
+      "morale": 24
+    },
+    {
+      "name": "明椒",
+      "elite": 2,
+      "level": 1,
+      "recruited": true,
+      "morale": 24
+    },
+    {
+      "name": "杜宾",
+      "elite": 0,
+      "level": 15,
+      "recruited": true,
+      "morale": 24
+    },
+    {
+      "name": "格雷伊",
+      "elite": 1,
+      "level": 1,
+      "recruited": true,
+      "morale": 24
+    },
+    {
+      "name": "深靛",
+      "elite": 1,
+      "level": 1,
+      "recruited": true,
+      "morale": 24
+    },
+    {
+      "name": "遥",
+      "elite": 2,
+      "level": 60,
+      "recruited": true,
+      "morale": 24
+    },
+    {
+      "name": "地灵",
+      "elite": 1,
+      "level": 1,
+      "recruited": true,
+      "morale": 24
+    }
+  ],
+  "roster_summary": {
+    "owned_count": 45,
+    "unknown_in_local_data": [],
+    "local_data_coverage_ratio": 1.0,
+    "required_slots_per_segment": 25,
+    "group_counts": {
+      "a1": 2,
+      "abyssal_hunter": 5,
+      "durin": 3,
+      "glasgow": 3,
+      "metalcraft": 5,
+      "red_pine": 3,
+      "rhine_lab": 4,
+      "siracusa": 3
+    }
+  },
+  "capabilities": {
+    "但书": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "违约体验·β"
+        ],
+        "tags": [
+          "multiplier_1_556"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "违约体验·β"
+        ],
+        "tags": [
+          "multiplier_1_556"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "龙舌兰": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "天道酬勤·β"
+        ],
+        "tags": [
+          "independent_order_lmd_500"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "天道酬勤·β"
+        ],
+        "tags": [
+          "independent_order_lmd_500"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "巫恋": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "低语"
+        ],
+        "tags": [
+          "override_room_direct_bonus"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "低语"
+        ],
+        "tags": [
+          "override_room_direct_bonus"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "鸿雪": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "际崖居民",
+          "销路宣发"
+        ],
+        "tags": [
+          "hongxue_line_source",
+          "hongxue_per_line"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "际崖居民",
+          "销路宣发"
+        ],
+        "tags": [
+          "hongxue_line_source",
+          "hongxue_per_line"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "图耶": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "物流规划·β"
+        ],
+        "tags": [
+          "tuye_per_two_lines"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "物流规划·β"
+        ],
+        "tags": [
+          "tuye_per_two_lines"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "绮良": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单流可视化·β"
+        ],
+        "tags": [
+          "qiliang_virtual_lines"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单流可视化·β"
+        ],
+        "tags": [
+          "qiliang_virtual_lines"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "可露希尔": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "特别订单"
+        ],
+        "tags": [
+          "special_order"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "特别订单"
+        ],
+        "tags": [
+          "special_order"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "月见夜": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单谈判·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单谈判·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "orundum_order",
+        "skills": [
+          "订单谈判·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "空爆": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单谈判·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单谈判·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "orundum_order",
+        "skills": [
+          "订单谈判·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "玫兰莎": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单管理·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单管理·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "orundum_order",
+        "skills": [
+          "订单管理·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "慕斯": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单管理·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "订单管理·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "orundum_order",
+        "skills": [
+          "订单管理·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "雪雉": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "天道酬勤·β"
+        ],
+        "tags": [
+          "amplifier_equal_additive"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "天道酬勤·β"
+        ],
+        "tags": [
+          "amplifier_equal_additive"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "拜松": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "谈判策略·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "谈判策略·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "orundum_order",
+        "skills": [
+          "谈判策略·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "推进之王": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "领袖"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "领袖"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "orundum_order",
+        "skills": [
+          "领袖"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "摩根": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "格拉斯哥帮·贸易"
+        ],
+        "tags": [
+          "glasgow_per_member"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "格拉斯哥帮·贸易"
+        ],
+        "tags": [
+          "glasgow_per_member"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "戴菲恩": [
+      {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "skills": [
+          "格拉斯哥帮·中枢"
+        ],
+        "tags": [
+          "glasgow_center"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "贝洛内": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "叙拉古·贸易"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "叙拉古·贸易"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "伺夜": [
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "叙拉古·贸易"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "trading_post",
+        "product_id": "lmd_order",
+        "skills": [
+          "叙拉古·贸易"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "八幡海铃": [
+      {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "skills": [
+          "叙拉古·中枢"
+        ],
+        "tags": [
+          "siracusa_center"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "清流": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "水文循环"
+        ],
+        "tags": [
+          "qingliu_per_trading_post"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "水文循环"
+        ],
+        "tags": [
+          "qingliu_per_trading_post"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "温蒂": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "自动化·β"
+        ],
+        "tags": [
+          "wendy_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "自动化·β"
+        ],
+        "tags": [
+          "wendy_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "自动化·β"
+        ],
+        "tags": [
+          "wendy_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "自动化·β"
+        ],
+        "tags": [
+          "wendy_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "森蚺": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "自动化·γ"
+        ],
+        "tags": [
+          "eunectes_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "自动化·γ"
+        ],
+        "tags": [
+          "eunectes_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "自动化·γ"
+        ],
+        "tags": [
+          "eunectes_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "自动化·γ"
+        ],
+        "tags": [
+          "eunectes_per_power_plant"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "冬时": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "流程优化"
+        ],
+        "tags": [
+          "dongshi_reset"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "流程优化"
+        ],
+        "tags": [
+          "dongshi_reset"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "流程优化"
+        ],
+        "tags": [
+          "dongshi_reset"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "流程优化"
+        ],
+        "tags": [
+          "dongshi_reset"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "娜斯提": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "莱茵科技·赤金"
+        ],
+        "tags": [
+          "nasti_per_rhine"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "莱茵科技·赤金"
+        ],
+        "tags": [
+          "nasti_per_rhine"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "多萝西": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "莱茵科技·联动"
+        ],
+        "tags": [
+          "dorothy_rhine_room"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "莱茵科技·联动"
+        ],
+        "tags": [
+          "dorothy_rhine_room"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "莱茵科技·联动"
+        ],
+        "tags": [
+          "dorothy_rhine_room"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "莱茵科技·联动"
+        ],
+        "tags": [
+          "dorothy_rhine_room"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "缪尔赛思": [
+      {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "skills": [
+          "莱茵科技·能源"
+        ],
+        "tags": [
+          "muelsyse_drone_per_rhine"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "skills": [
+          "莱茵科技·能源"
+        ],
+        "tags": [
+          "muelsyse_drone_per_rhine"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "斯卡蒂": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "晨夜间巡"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "晨夜间巡"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "晨夜间巡"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "晨夜间巡"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "幽灵鲨": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "剪不断理还乱"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "剪不断理还乱"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "剪不断理还乱"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "剪不断理还乱"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "歌蕾蒂娅": [
+      {
+        "facility_id": "control_center",
+        "product_id": "base_management",
+        "skills": [
+          "集群狩猎·β"
+        ],
+        "tags": [
+          "gladiia_abyssal_activation"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "乌尔比安": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "安哲拉": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "深海猎人·制造"
+        ],
+        "tags": [
+          "abyssal_factory"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "砾": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "斑点": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "夜烟": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "温米": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·α"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "苍苔": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·苍苔"
+        ],
+        "tags": [
+          "cangtai_per_other_metalcraft"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·苍苔"
+        ],
+        "tags": [
+          "cangtai_per_other_metalcraft"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "引星棘刺": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·引星"
+        ],
+        "tags": [
+          "yinji_per_trading_post"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "金属工艺·引星"
+        ],
+        "tags": [
+          "yinji_per_trading_post"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "野鬃": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "灰毫": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "红松骑士·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "正义骑士号": [
+      {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "skills": [
+          "红松骑士·能源"
+        ],
+        "tags": [
+          "red_pine_power"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "power_plant",
+        "product_id": "drone_recovery",
+        "skills": [
+          "红松骑士·能源"
+        ],
+        "tags": [
+          "red_pine_power"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "芬": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "历阵锐枪·α"
+        ],
+        "tags": [
+          "fen_per_a1"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "历阵锐枪·α"
+        ],
+        "tags": [
+          "fen_per_a1"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "历阵锐枪·α"
+        ],
+        "tags": [
+          "fen_per_a1"
+        ],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "历阵锐枪·α"
+        ],
+        "tags": [
+          "fen_per_a1"
+        ],
+        "source": "local_versioned_data"
+      }
+    ],
+    "泡普卡": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "标准化·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "标准化·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "标准化·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "标准化·β"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "桃金娘": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "杜林": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ],
+    "褐果": [
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "pure_gold",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "orundum_shard",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      },
+      {
+        "facility_id": "factory",
+        "product_id": "battle_record",
+        "skills": [
+          "杜林·制造"
+        ],
+        "tags": [],
+        "source": "local_versioned_data"
+      }
+    ]
+  },
+  "external_evidence": [],
+  "instructions_for_model": [
+    "把上线次数理解为可操作节点，不自动拆成等长班次。",
+    "读取当前版本攻略基线并把它作为比较候选；攻略模板不能成为搜索边界。",
+    "优先运行单房间组合枚举、全局MILP和复算链路，再由模型解释与修订候选。",
+    "为每个房间单独决定连续工作区间；同一队可跨相邻区间持续工作。",
+    "核心干员允许跨区间复用，前提是恢复事件和次日循环心情能够验证。",
+    "本地未收录的生产干员必须附带已验证的外部技能证据，候选才可升级为 final。",
+    "赚钱加搓玉方案必须给出赤金、订单、源石碎片、经验、合成玉、龙门币与材料消耗的经济投影。",
+    "每个候选先校验与评价，再与攻略基线比较；所有偏离基线的部分都要说明原因和代价。"
+  ]
+}
