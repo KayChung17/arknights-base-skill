@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KayChung17/arknights-base-skill/blob/main/skills/ark-base-schedule/schemas/project-config.schema.json",
+  "title": "明日方舟基建优化项目配置",
+  "type": "object",
+  "required": ["schema_version", "mode", "roster", "objective", "base_state", "horizon"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project_name": {"type": "string"},
+    "mode": {"enum": ["layout_search", "upgrade_search", "fixed_schedule"]},
+    "roster": {"type": "string", "minLength": 1},
+    "output_dir": {"type": "string"},
+    "layout": {"type": "string", "pattern": "^[1-5][1-5][1-3]$"},
+    "objective": {
+      "type": "object",
+      "required": [
+        "goal",
+        "online_times",
+        "minimum_net_lmd_per_day",
+        "minimum_pure_gold_balance",
+        "max_daily_work_hours"
+      ],
+      "properties": {
+        "goal": {"type": "string", "minLength": 1},
+        "online_times": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"}
+        },
+        "minimum_net_lmd_per_day": {"type": "number"},
+        "minimum_originium_shard_balance": {"type": "number"},
+        "minimum_orundum_shard_balance": {
+          "type": "number",
+          "deprecated": true,
+          "description": "兼容旧字段；请迁移到 minimum_originium_shard_balance。"
+        },
+        "minimum_pure_gold_balance": {"type": "number"},
+        "max_daily_work_hours": {"type": "number", "minimum": 0, "maximum": 24},
+        "max_orundum_trading_posts": {"type": "integer", "minimum": 1},
+        "max_shard_factories": {"type": "integer", "minimum": 1}
+      },
+      "anyOf": [
+        {"required": ["minimum_originium_shard_balance"]},
+        {"required": ["minimum_orundum_shard_balance"]}
+      ],
+      "additionalProperties": false
+    },
+    "base_state": {
+      "type": "object",
+      "required": ["drone_capacity", "initial_drone_stock", "dormitory_levels", "right_side_levels"],
+      "properties": {
+        "drone_capacity": {"type": "number", "minimum": 0},
+        "initial_drone_stock": {"type": "number", "minimum": 0},
+        "dormitory_levels": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "integer", "minimum": 1, "maximum": 5}
+        },
+        "right_side_levels": {
+          "type": "object",
+          "required": ["reception_room", "office", "training_room", "workshop"],
+          "properties": {
+            "reception_room": {"type": "integer", "minimum": 1, "maximum": 3},
+            "office": {"type": "integer", "minimum": 1, "maximum": 3},
+            "training_room": {"type": "integer", "minimum": 1, "maximum": 3},
+            "workshop": {"type": "integer", "minimum": 1, "maximum": 3}
+          },
+          "additionalProperties": false
+        },
+        "initial_resources": {
+          "type": "object",
+          "properties": {
+            "lmd": {"type": "number", "minimum": 0},
+            "pure_gold": {"type": "number", "minimum": 0},
+            "originium_shard": {"type": "number", "minimum": 0},
+            "orirock_cube": {"type": "number", "minimum": 0}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "horizon": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["steady_state", "finite_days"]},
+        "days": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "profiles": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["representative", "level_grid"]},
+        "ids": {"type": "array", "items": {"type": "string"}},
+        "file": {"type": "string"},
+        "layouts": {"type": "array", "items": {"type": "string", "pattern": "^[1-5][1-5][1-3]$"}},
+        "max_profiles": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "search": {
+      "type": "object",
+      "properties": {
+        "top_k": {"type": "integer", "minimum": 1},
+        "operator_pool_size": {"type": "integer", "minimum": 1},
+        "time_limit_seconds": {"type": "number", "exclusiveMinimum": 0},
+        "max_proxy_attempts": {"type": "integer", "minimum": 1},
+        "top_solutions": {"type": "integer", "minimum": 1},
+        "mip_rel_gap": {"type": "number", "minimum": 0},
+        "lmd_proxy_floor_slack": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "upgrades": {
+      "type": "object",
+      "properties": {
+        "marginal_limit": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "input_policy": {
+      "type": "object",
+      "properties": {
+        "allow_repository_defaults": {"type": "boolean"},
+        "authorized_defaults": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^/"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object",
+      "properties": {
+        "strict_warnings": {"type": "boolean"},
+        "require_all_unlocked_skills_structured": {"type": "boolean"},
+        "stability_check": {"type": "boolean"},
+        "expanded_factor": {"type": "number", "exclusiveMinimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "preferences": {"type": "object"},
+    "facility_configuration": {"type": "object"},
+    "_resolution": {"type": "object", "readOnly": true}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"enum": ["layout_search", "upgrade_search"]}}, "required": ["mode"]},
+      "then": {"required": ["profiles"]}
+    },
+    {
+      "if": {"properties": {"mode": {"const": "fixed_schedule"}}, "required": ["mode"]},
+      "then": {"required": ["facility_configuration"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "horizon": {
+            "properties": {"mode": {"const": "finite_days"}},
+            "required": ["mode"]
+          }
+        },
+        "required": ["horizon"]
+      },
+      "then": {
+        "properties": {
+          "horizon": {"required": ["days"]},
+          "base_state": {"required": ["initial_resources"]}
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}
