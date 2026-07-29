@@ -3,7 +3,7 @@
   "source_type": "sanitized_community_structured_snapshot",
   "source_file": null,
   "retrieved_at": "2026-07-29",
-  "data_version": "2026-07-29-structured-mechanisms-v6",
+  "data_version": "2026-07-29-structured-mechanisms-v7",
   "canonical_operator_count": 248,
   "canonical_skill_count": 505,
   "personal_roster_state_removed": true,

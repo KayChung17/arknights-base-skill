@@ -130,6 +130,66 @@ class OwnedSkillTableImportTests(unittest.TestCase):
         beta = next(item for item in proviso["skills"] if item["skill_name"] == "违约索赔·β")
         self.assertIn("proviso_breach_order", beta["tags"])
 
+    def test_trade_corrections_survive_existing_data_merge(self):
+        from import_owned_skill_table import merge_existing, parse_table
+
+        source = """干员基建技能全表
+你拥有 2 名干员
+================================================================================
+
+【巫恋】星级5 Lv1 E2
+  精2 | 贸易站 | 低语 | 进驻贸易站时，当前贸易站内其他干员提供的订单获取效率全部归零，且每人为自身+45%订单获取效率，同时全体心情每小时消耗+0.25
+
+【龙舌兰】星级5 Lv1 E2
+  精2 | 贸易站 | 投资·β | 进驻贸易站后，如果下笔赤金订单交付数大于3（违约订单不视作赤金订单），则其龙门币收益+500，心情每小时消耗-0.25
+"""
+        existing = {
+            "operators": [
+                {
+                    "name": "巫恋",
+                    "groups": [],
+                    "skills": [{
+                        "facility": "trading_post",
+                        "elite": 2,
+                        "skill_name": "低语",
+                        "base_bonus_pct": 65,
+                        "tags": ["override_room_direct_bonus", "morale_cost_plus_0.25"],
+                    }],
+                },
+                {
+                    "name": "龙舌兰",
+                    "groups": [],
+                    "skills": [{
+                        "facility": "trading_post",
+                        "elite": 2,
+                        "skill_name": "投资·β",
+                        "base_bonus_pct": 30,
+                        "tags": ["independent_order_lmd_500", "morale_cost_minus_0.25"],
+                    }],
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_path = root / "owned.txt"
+            existing_path = root / "existing.json"
+            source_path.write_text(source, encoding="utf-8")
+            existing_path.write_text(json.dumps(existing, ensure_ascii=False), encoding="utf-8")
+            parsed, warnings = parse_table(source_path)
+            merged = merge_existing(parsed, existing_path)
+
+        self.assertEqual(warnings, [])
+        shamare = next(item for item in merged if item["name"] == "巫恋")["skills"][0]
+        self.assertEqual(shamare["base_bonus_pct"], 0)
+        self.assertEqual(
+            shamare["tags"],
+            ["room_morale_cost_plus_0.25", "shamare_whisper_per_other_worker_45"],
+        )
+        tequila = next(item for item in merged if item["name"] == "龙舌兰")["skills"][0]
+        self.assertEqual(tequila["base_bonus_pct"], 0)
+        self.assertNotIn("independent_order_lmd_500", tequila["tags"])
+        self.assertIn("tequila_investment_order", tequila["tags"])
+
 
 if __name__ == "__main__":
     unittest.main()

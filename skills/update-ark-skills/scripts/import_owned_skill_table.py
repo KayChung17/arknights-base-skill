@@ -74,6 +74,9 @@ EXTRA_GROUPS = {
 }
 
 KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
+    ("巫恋", "低语"): ["shamare_whisper_per_other_worker_45", "room_morale_cost_plus_0.25"],
+    ("龙舌兰", "投资·α"): ["tequila_investment_order"],
+    ("龙舌兰", "投资·β"): ["tequila_investment_order"],
     ("Friston-3", "“愉快的对谈”"): ["power_with_kaltsit_control_5"],
     ("GALLUS²", "鸡励机制"): ["power_with_other_work_platform_5"],
     ("Miss.Christine", "盛餐的回报"): ["with_jiushen_battle_record_30"],
@@ -132,6 +135,17 @@ KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
     ("戴菲恩", "运筹好手"): ["glasgow_center"],
     ("红隼", "捍卫之道"): ["control_room_all_morale_recovery_0.05"],
     ("魔王", "“未完的故事”"): ["demon_king_amiya_pair_morale_recovery_0.10"],
+}
+
+KNOWN_BASE_BONUS_OVERRIDES: dict[tuple[str, str], float] = {
+    ("巫恋", "低语"): 0.0,
+    ("龙舌兰", "投资·α"): 0.0,
+    ("龙舌兰", "投资·β"): 0.0,
+}
+
+OBSOLETE_TAGS_BY_SKILL: dict[tuple[str, str], set[str]] = {
+    ("巫恋", "低语"): {"override_room_direct_bonus", "morale_cost_plus_0.25"},
+    ("龙舌兰", "投资·β"): {"independent_order_lmd_500"},
 }
 
 
@@ -306,6 +320,9 @@ def parse_table(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
             skill_name = match.group(3).strip()
             description = match.group(4).strip()
             base_bonus = first_direct_percent(description, facility)
+            base_bonus = KNOWN_BASE_BONUS_OVERRIDES.get(
+                (current["name"], skill_name), base_bonus,
+            )
             tags = infer_tags(current["name"], skill_name, description)
             current["skills"].append({
                 "facility": facility,
@@ -360,8 +377,13 @@ def merge_existing(parsed: list[dict[str, Any]], existing_path: Path | None) -> 
                 and int(skill.get("elite", 0)) == int(old_skill.get("elite", 0))
             ), None)
             if exact is not None:
-                exact["tags"] = sorted(set(exact.get("tags", [])) | set(tags))
-                if float(exact.get("base_bonus_pct", 0) or 0) == 0 and float(old_skill.get("base_bonus_pct", 0) or 0):
+                obsolete = OBSOLETE_TAGS_BY_SKILL.get((target["name"], str(exact.get("skill_name") or "")), set())
+                exact["tags"] = sorted((set(exact.get("tags", [])) | set(tags)) - obsolete)
+                if (
+                    (target["name"], str(exact.get("skill_name") or "")) not in KNOWN_BASE_BONUS_OVERRIDES
+                    and float(exact.get("base_bonus_pct", 0) or 0) == 0
+                    and float(old_skill.get("base_bonus_pct", 0) or 0)
+                ):
                     exact["base_bonus_pct"] = float(old_skill["base_bonus_pct"])
                 if old_skill.get("products"):
                     exact["products"] = list(old_skill["products"])

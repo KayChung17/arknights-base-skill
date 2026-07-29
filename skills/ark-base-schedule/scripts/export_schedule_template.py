@@ -28,6 +28,11 @@ PRODUCT_NAMES = {
     "pure_gold": "Pure Gold",
     "orundum_shard": "Originium Shard",
 }
+FACILITY_LABELS = {
+    "trading_post": "贸易站",
+    "factory": "制造站",
+    "power_plant": "发电站",
+}
 
 
 def _stable_numeric_id(value: Any) -> int:
@@ -85,11 +90,11 @@ def export_schedule(value: dict[str, Any], template: dict[str, Any] | None = Non
     for rooms in ordered_rooms.values():
         rooms.sort(key=lambda item: _room_index(item[0]))
 
-    drone_allocations = {
-        str(item.get("segment_id")): item
-        for item in ((((plan.get("simulation") or {}).get("drone_plan") or {}).get("allocations") or []))
-        if float(item.get("drones", 0) or 0) > 0
-    }
+    drone_allocations: dict[str, list[dict[str, Any]]] = {}
+    for item in ((((plan.get("simulation") or {}).get("drone_plan") or {}).get("allocations") or [])):
+        if float(item.get("drones", 0) or 0) <= 0:
+            continue
+        drone_allocations.setdefault(str(item.get("segment_id")), []).append(item)
     dormitory_assignments = {
         (str(item.get("segment_id")), str(item.get("dormitory_id"))): item
         for item in ((plan.get("recovery_plan") or {}).get("events") or [])
@@ -117,7 +122,8 @@ def export_schedule(value: dict[str, Any], template: dict[str, Any] | None = Non
         rooms["hire"] = [_empty_room(skip=True)]
         rooms["processing"] = [_empty_room(skip=True)]
 
-        allocation = drone_allocations.get(segment_id)
+        allocations = drone_allocations.get(segment_id, [])
+        allocation = max(allocations, key=lambda item: float(item.get("drones", 0) or 0), default=None)
         drone = {"room": "trading", "index": 1, "enable": False, "order": "pre"}
         if allocation:
             room_id = str(allocation.get("room_id") or "")
@@ -129,10 +135,22 @@ def export_schedule(value: dict[str, Any], template: dict[str, Any] | None = Non
             })
         start = str(segment.get("start") or "")
         end = str(segment.get("end") or "")
+        drone_instruction = ""
+        if allocations:
+            parts = []
+            for item in sorted(allocations, key=lambda value: str(value.get("room_id") or "")):
+                facility = str(item.get("facility_id") or "")
+                room_id = str(item.get("room_id") or "")
+                count = float(item.get("drones", 0) or 0)
+                rendered_count = str(int(count)) if count.is_integer() else f"{count:g}"
+                parts.append(
+                    f"{FACILITY_LABELS.get(facility, facility)}{_room_index(room_id)} {rendered_count}架"
+                )
+            drone_instruction = f"无人机分配：{'、'.join(parts)}；"
         exported_plans.append({
             "name": f"第{ordinal:02d}班 {start}",
             "description": f"{start} 上线执行，覆盖 {start}–{end}",
-            "description_post": f"完成换班后运行至 {end}",
+            "description_post": f"{drone_instruction}完成换班后运行至 {end}",
             "Fiammetta": {"enable": False, "target": "", "order": "pre"},
             "drones": drone,
             "rooms": rooms,

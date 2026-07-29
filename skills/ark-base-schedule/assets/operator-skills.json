@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "data_version": "2026-07-29-structured-mechanisms-v6",
+  "data_version": "2026-07-29-structured-mechanisms-v7",
   "source": "Sanitized community base-skill snapshot with PRTS cross-checks; personal roster level/elite state and raw export removed",
   "operators": [
     {
@@ -2677,11 +2677,12 @@
           "skill_name": "低语",
           "variant_group": "trading_post:skill:低语",
           "description": "进驻贸易站时，当前贸易站内其他干员提供的订单获取效率全部归零，且每人为自身+45%订单获取效率，同时全体心情每小时消耗+0.25",
-          "base_bonus_pct": 65.0,
+          "base_bonus_pct": 0.0,
           "tags": [
-            "morale_cost_plus_0.25",
-            "override_room_direct_bonus"
+            "room_morale_cost_plus_0.25",
+            "shamare_whisper_per_other_worker_45"
           ],
+          "model_status": "structured",
           "products": [
             "lmd_order"
           ]
@@ -9119,11 +9120,12 @@
           "skill_name": "投资·β",
           "variant_group": "trading_post:name:投资",
           "description": "进驻贸易站后，如果下笔赤金订单交付数大于3（违约订单不视作赤金订单），则其龙门币收益+500，心情每小时消耗-0.25",
-          "base_bonus_pct": 30.0,
+          "base_bonus_pct": 0.0,
           "tags": [
-            "independent_order_lmd_500",
-            "morale_cost_minus_0.25"
+            "morale_cost_minus_0.25",
+            "tequila_investment_order"
           ],
+          "model_status": "structured",
           "products": [
             "lmd_order"
           ]
@@ -9137,8 +9139,10 @@
           "description": "进驻贸易站后，如果下笔赤金订单交付数大于3（违约订单不视作赤金订单），则其龙门币收益+250，心情每小时消耗-0.25",
           "base_bonus_pct": 0.0,
           "tags": [
-            "morale_cost_minus_0.25"
+            "morale_cost_minus_0.25",
+            "tequila_investment_order"
           ],
+          "model_status": "structured",
           "products": [
             "lmd_order"
           ]

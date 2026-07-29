@@ -419,6 +419,7 @@ class EfficiencyCalculator:
         """Return per-hour morale consumption for operators in this room."""
         rates = {op["name"]: 1.0 for op in self.operators}
         room_recovery = 0.0
+        room_morale_cost = 0.0
         staffed_reduction = 0.0
         if self.facility in {"trading_post", "factory"}:
             if len(self.operators) >= 3:
@@ -502,6 +503,8 @@ class EfficiencyCalculator:
                 for tag in tags:
                     if tag.startswith("room_morale_recovery_"):
                         room_recovery += float(tag.rsplit("_", 1)[1])
+                    elif tag.startswith("room_morale_cost_plus_"):
+                        room_morale_cost += float(tag.rsplit("_", 1)[1])
                     elif tag.startswith("morale_cost_minus_"):
                         rates[op["name"]] -= float(tag.rsplit("_", 1)[1])
                     elif tag.startswith("morale_cost_plus_") and "ave_trade_per_8_heat_1" not in tags:
@@ -518,6 +521,7 @@ class EfficiencyCalculator:
             name: max(
                 0.0,
                 value
+                + room_morale_cost
                 - room_recovery
                 - staffed_reduction
                 - global_control_reduction
@@ -559,6 +563,16 @@ class EfficiencyCalculator:
         special_flags: list[str] = []
         jaye_special_bonus = 0.0
         jaye_amplifier_exclusion = False
+
+        whisper_operators = {
+            op["name"]
+            for op in self.operators
+            if any(
+                "shamare_whisper_per_other_worker_45" in skill.get("tags", [])
+                for skill in self._skills(op)
+            )
+        }
+        whisper_active = bool(whisper_operators)
 
         durin_count = min(self.count_global_group("durin"), 4)
         production_lines = durin_count
@@ -603,12 +617,26 @@ class EfficiencyCalculator:
             op_direct = 0.0
             op_facility = 0.0
             op_global = 0.0
+            cleared_by_whisper = whisper_active and op["name"] not in whisper_operators
             skills = self._skills(op)
             if not skills:
                 detail["notes"].append("当前精英等级未解锁适配技能，或技能数据缺失")
             for skill in skills:
                 tags = set(skill.get("tags", []))
                 bonus = float(skill.get("base_bonus_pct", 0))
+                if "shamare_whisper_per_other_worker_45" in tags:
+                    workers = max(0, len(self.operators) - 1)
+                    value = workers * 45.0
+                    op_direct += value
+                    special_flags.append("shamare_whisper_reset")
+                    detail["notes"].append(
+                        f"同站其他工作干员 {workers} 人 ×45% = +{value:g}%"
+                    )
+                    continue
+                if "tequila_investment_order" in tags:
+                    special_flags.append("tequila_investment_order")
+                    detail["notes"].append("仅对符合条件的4赤金订单加价，由订单模型结算")
+                    continue
                 if "override_room_direct_bonus" in tags:
                     override_values.append(bonus)
                     detail["notes"].append(f"直接订单效率替换为 +{bonus:.0f}%")
@@ -732,11 +760,13 @@ class EfficiencyCalculator:
                     result["warnings"].append("孑E1技能数据不完整：缺少摊贩经济。")
                     continue
                 if "snowant_amplifier_cap_25" in tags:
-                    snowant_caps.append(25.0)
+                    if not cleared_by_whisper:
+                        snowant_caps.append(25.0)
                     detail["notes"].append("雪雉放大上限 +25%")
                     continue
                 if "snowant_amplifier_cap_35" in tags:
-                    snowant_caps.append(35.0)
+                    if not cleared_by_whisper:
+                        snowant_caps.append(35.0)
                     detail["notes"].append("雪雉放大上限 +35%")
                     continue
                 if "special_order" in tags:
@@ -748,6 +778,15 @@ class EfficiencyCalculator:
                 if bonus:
                     detail["notes"].append(f"直接效率 +{bonus:.0f}%")
 
+            if cleared_by_whisper:
+                removed = op_direct + op_facility + op_global
+                op_direct = 0.0
+                op_facility = 0.0
+                op_global = 0.0
+                detail["notes"].append(
+                    f"巫恋·低语清零该干员提供的订单效率 {removed:g}%；订单类型与心情效果保留"
+                )
+
             direct_bonus += op_direct
             facility_bonus += op_facility
             global_bonus += op_global
@@ -758,7 +797,7 @@ class EfficiencyCalculator:
             })
             result["operator_details"].append(detail)
 
-        if jaye_e1_operators:
+        if jaye_e1_operators and not whisper_active:
             teammate_efficiency = sum(
                 max(0.0, float(detail.get("direct_bonus_pct", 0.0)))
                 + max(0.0, float(detail.get("facility_bonus_pct", 0.0)))
@@ -804,6 +843,7 @@ class EfficiencyCalculator:
             for skill in self._skills(op)
             if "amplifier_equal_additive" in skill.get("tags", [])
             and not any(tag.startswith("snowant_amplifier_cap_") for tag in skill.get("tags", []))
+            and not (whisper_active and op["name"] not in whisper_operators)
         )
         amplifier_bonus = additive_before_amplifier * generic_amplifier_count
         snowant_input = max(
@@ -831,7 +871,9 @@ class EfficiencyCalculator:
             "special_flags": sorted(set(special_flags)),
             "order_capacity": 10 + room_order_capacity,
             "jaye_e0_proxy_bonus_pct": (
-                jaye_special_bonus if "孑" in room_names and not jaye_e1_operators else 0.0
+                jaye_special_bonus
+                if "孑" in room_names and not jaye_e1_operators and not whisper_active
+                else 0.0
             ),
             "production_lines": production_lines,
         })
