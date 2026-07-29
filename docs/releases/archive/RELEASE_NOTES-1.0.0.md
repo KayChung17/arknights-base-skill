@@ -23,7 +23,7 @@
 - 区分代理 MILP 最优、候选库截断和最终模拟产出。
 - 孑、冬时等升级后技能形态变化进入培养风险提示。
 
-完整复盘见 `docs/实际问题复盘.md`，迁移方式见 `MIGRATION-1.0.0.md`。
+完整复盘见 `docs/实际问题复盘.md`，迁移方式见 `docs/releases/archive/MIGRATION-1.0.0.md`。
 
 ## 验证
 
