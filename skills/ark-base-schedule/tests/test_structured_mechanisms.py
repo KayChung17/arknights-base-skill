@@ -93,9 +93,22 @@ class StructuredMechanismTests(unittest.TestCase):
 
     def test_siracusa_group_data_covers_owned_link_candidates(self) -> None:
         index = operator_index()
-        for name in ("巫恋", "拉普兰德", "红云", "贾维", "子月", "伺夜", "阿罗玛", "复奏"):
+        for name in ("德克萨斯", "巫恋", "拉普兰德", "红云", "贾维", "子月", "伺夜", "阿罗玛", "复奏"):
             with self.subTest(name=name):
                 self.assertIn("siracusa", index[name]["groups"])
+
+    def test_laterano_and_texas_room_links_are_counted(self) -> None:
+        index = operator_index()
+        self.assertIn("laterano", index["安德切尔"]["groups"])
+        trading = [
+            self.assigned("德克萨斯", 0, "trading_post"),
+            self.assigned("拉普兰德", 1, "trading_post"),
+            self.assigned("玫兰莎", 1, "trading_post"),
+        ]
+        result = EfficiencyCalculator(
+            "trading_post", trading, "orundum_order", global_operators=trading,
+        ).compute()
+        self.assertEqual(result["layers"]["direct_bonus_pct"], 90)
 
     def test_roster_override_unlocks_scenario_without_editing_workbook(self) -> None:
         original = [OwnedOperator("八幡海铃", elite=1, level=70)]
@@ -113,6 +126,40 @@ class StructuredMechanismTests(unittest.TestCase):
         self.assertIn("集群狩猎·β", names)
         self.assertIn("潮汐守望", names)
         self.assertNotIn("集群狩猎·α", names)
+
+    def test_huojguo_different_named_factory_skills_stack(self) -> None:
+        skills = select_available_skills(operator_index()["褐果"], "factory", 1, "orundum_shard", 1)
+        self.assertEqual({skill["skill_name"] for skill in skills}, {"地质学·α", "标准化·α"})
+
+    def test_jaye_different_named_skills_stack_after_e1(self) -> None:
+        index = operator_index()["孑"]
+        e0 = select_available_skills(index, "trading_post", 0, "lmd_order", 1)
+        e1 = select_available_skills(index, "trading_post", 1, "lmd_order", 1)
+        self.assertEqual([skill["skill_name"] for skill in e0], ["摊贩经济"])
+        self.assertEqual({skill["skill_name"] for skill in e1}, {"市井之道", "摊贩经济"})
+
+    def test_jaye_e1_combines_both_skills_into_constant_limit_bonus(self) -> None:
+        jaye = [self.assigned("孑", 1, "trading_post")]
+        result = EfficiencyCalculator(
+            "trading_post", jaye, "lmd_order", global_operators=jaye,
+        ).compute()
+        self.assertEqual(result["layers"]["global_bonus_pct"], 40)
+        self.assertEqual(result["paper_bonus_pct"], 40)
+        self.assertEqual(result["staffing_base_bonus_pct"], 1)
+        self.assertNotIn("代理", "".join(result["warnings"]))
+
+    def test_jaye_e1_uses_teammate_efficiency_and_capacity(self) -> None:
+        trading = [
+            self.assigned("孑", 1, "trading_post"),
+            self.assigned("梓兰", 1, "trading_post"),
+        ]
+        result = EfficiencyCalculator(
+            "trading_post", trading, "lmd_order", global_operators=trading,
+        ).compute()
+        self.assertEqual(result["layers"]["direct_bonus_pct"], 25)
+        self.assertEqual(result["layers"]["global_bonus_pct"], 36)
+        self.assertEqual(result["paper_bonus_pct"], 61)
+        self.assertEqual(result["staffing_base_bonus_pct"], 2)
 
     def test_gladiia_alpha_beta_special_bonus_scales_per_abyssal_operator(self) -> None:
         factory = [
@@ -191,14 +238,14 @@ class StructuredMechanismTests(unittest.TestCase):
         self.assertEqual(warehouse_capacity(room, star), 59)
 
         trading = [
-            self.assigned("孑", 1, "trading_post"),
+            self.assigned("孑", 0, "trading_post"),
             self.assigned("瑰盐", 0, "trading_post"),
         ]
         result = EfficiencyCalculator(
             "trading_post", trading, "lmd_order", facility_level=3,
             global_operators=trading,
         ).compute()
-        self.assertEqual(result["layers"]["global_bonus_pct"], 64)
+        self.assertEqual(result["layers"]["global_bonus_pct"], 52)
 
     def test_control_center_morale_rules_are_structured(self) -> None:
         control = [
@@ -213,6 +260,289 @@ class StructuredMechanismTests(unittest.TestCase):
         self.assertAlmostEqual(rates["若叶睦"], 0.80)
         self.assertAlmostEqual(rates["丰川祥子"], 0.85)
         self.assertAlmostEqual(rates["杜宾"], 0.80)
+
+    def test_greyy_virtual_plant_only_affects_automation(self) -> None:
+        factory = [self.assigned("温蒂", 1, "factory")]
+        grey = self.assigned("承曦格雷伊", 2, "power_plant")
+        with_grey = EfficiencyCalculator(
+            "factory", factory, "pure_gold", power_plant_count=2,
+            global_operators=factory + [grey],
+        ).compute()
+        self.assertEqual(with_grey["layers"]["facility_bonus_pct"], 45)
+
+        platform = self.assigned("Lancet-2", 0, "power_plant")
+        with_real_platform = EfficiencyCalculator(
+            "factory", factory, "pure_gold", power_plant_count=2,
+            global_operators=factory + [grey, platform],
+        ).compute()
+        self.assertEqual(with_real_platform["layers"]["facility_bonus_pct"], 30)
+
+    def test_work_platform_skills_count_actual_platform_operators(self) -> None:
+        factory = [self.assigned("阿兰娜", 0, "factory")]
+        no_platform = EfficiencyCalculator(
+            "factory", factory, "pure_gold", power_plant_count=3,
+            global_operators=factory,
+        ).compute()
+        self.assertEqual(no_platform["layers"]["facility_bonus_pct"], 0)
+
+        platform = self.assigned("Lancet-2", 0, "power_plant")
+        one_platform = EfficiencyCalculator(
+            "factory", factory, "pure_gold", power_plant_count=3,
+            global_operators=factory + [platform],
+        ).compute()
+        self.assertEqual(one_platform["layers"]["facility_bonus_pct"], 5)
+
+    def test_heat_and_human_fireworks_use_dormitory_occupancy(self) -> None:
+        control = [self.assigned("阿米娅", 2, "control_center")]
+        trading = [self.assigned("乌有", 2, "trading_post")]
+        result = EfficiencyCalculator(
+            "trading_post", trading, "lmd_order",
+            dormitory_occupant_count=7,
+            global_operators=trading + control,
+        ).compute()
+        detail = next(item for item in result["operator_details"] if item["name"] == "乌有")
+        self.assertTrue(any("人间烟火 7" in note for note in detail["notes"]))
+
+    def test_catnip_is_recomputed_from_control_center_crew(self) -> None:
+        survey = self.assigned("泰拉大陆调查团", 0, "factory")
+        blackhorn = self.assigned("火龙S黑角", 0, "control_center")
+        result = EfficiencyCalculator(
+            "factory", [survey], "pure_gold",
+            global_operators=[survey, blackhorn],
+        ).compute()
+        # One Monster Hunter member in control gives 2 catnip: 5% base + 2% chain.
+        self.assertEqual(result["layers"]["direct_bonus_pct"], 5)
+        self.assertEqual(result["layers"]["global_bonus_pct"], 2)
+
+    def test_control_center_room_recovery_and_targeted_pair_stack(self) -> None:
+        control = [
+            self.assigned("红", 0, "control_center"),
+            self.assigned("玛恩纳", 0, "control_center"),
+            self.assigned("杜宾", 0, "control_center"),
+        ]
+        rates = EfficiencyCalculator(
+            "control_center", control, "base_management", global_operators=control,
+        ).morale_cost_rates()
+        for name in ("红", "玛恩纳", "杜宾"):
+            self.assertAlmostEqual(rates[name], 0.70)
+
+        pair = [
+            self.assigned("魔王", 0, "control_center"),
+            self.assigned("阿米娅", 0, "control_center"),
+        ]
+        pair_rates = EfficiencyCalculator(
+            "control_center", pair, "base_management", global_operators=pair,
+        ).morale_cost_rates()
+        self.assertAlmostEqual(pair_rates["魔王"], 0.85)
+        self.assertAlmostEqual(pair_rates["阿米娅"], 0.85)
+
+    def test_mlynar_business_scope_and_extended_control_skills(self) -> None:
+        control = [
+            self.assigned("玛恩纳", 2, "control_center"),
+            self.assigned("红", 0, "control_center"),
+        ]
+        factory = [self.assigned("砾", 0, "factory")]
+        factory_rates = EfficiencyCalculator(
+            "factory", factory, "pure_gold", global_operators=control + factory,
+        ).morale_cost_rates()
+        # Two occupied control slots give -0.10/h. 独善其身 and S.W.E.E.P.
+        # each extend another -0.05/h to factories under 公事公办.
+        self.assertAlmostEqual(factory_rates["砾"], 0.80)
+
+        power = [self.assigned("Lancet-2", 0, "power_plant")]
+        power_rates = EfficiencyCalculator(
+            "power_plant", power, "drone_recovery", global_operators=control + power,
+        ).morale_cost_rates()
+        # Power plants additionally receive the direct +0.10/h recovery.
+        self.assertAlmostEqual(power_rates["Lancet-2"], 0.70)
+
+    def test_other_facility_morale_special_comparison_uses_max(self) -> None:
+        control = [
+            self.assigned("玛恩纳", 2, "control_center"),
+            self.assigned("红", 0, "control_center"),
+            self.assigned("重岳", 2, "control_center"),
+            self.assigned("维什戴尔", 2, "control_center"),
+            self.assigned("魔王", 0, "control_center"),
+        ]
+        factory = [self.assigned("砾", 0, "factory")]
+        rates = EfficiencyCalculator(
+            "factory", factory, "pure_gold", global_operators=control + factory,
+        ).morale_cost_rates()
+        # CC base reduction is 0.25. Public-business extension is 0.10,
+        # Chongyue is 0.05 here, and Babel with Demon King is 0.20. Only 0.20 wins.
+        self.assertAlmostEqual(rates["砾"], 0.55)
+
+    def test_alternate_and_lgd_control_groups_use_current_room_members(self) -> None:
+        alternates = [
+            self.assigned("濯尘芙蓉", 0, "control_center"),
+            self.assigned("寒芒克洛丝", 0, "control_center"),
+            self.assigned("承曦格雷伊", 0, "control_center"),
+        ]
+        alternate_rates = EfficiencyCalculator(
+            "control_center", alternates, "base_management", global_operators=alternates,
+        ).morale_cost_rates()
+        # Two skill sources each read three alternate operators: 2 * 3 * 0.05.
+        for name in ("濯尘芙蓉", "寒芒克洛丝", "承曦格雷伊"):
+            self.assertAlmostEqual(alternate_rates[name], 0.55)
+
+        lgd = [
+            self.assigned("陈", 0, "control_center"),
+            self.assigned("星熊", 0, "control_center"),
+            self.assigned("诗怀雅", 0, "control_center"),
+        ]
+        lgd_rates = EfficiencyCalculator(
+            "control_center", lgd, "base_management", global_operators=lgd,
+        ).morale_cost_rates()
+        for name in ("陈", "星熊", "诗怀雅"):
+            self.assertAlmostEqual(lgd_rates[name], 0.70)
+
+    def test_remaining_control_morale_and_glasgow_rules(self) -> None:
+        lee_control = [
+            self.assigned("吽", 2, "control_center"),
+            self.assigned("老鲤", 0, "control_center"),
+            self.assigned("砾", 0, "control_center"),
+        ]
+        lee_rates = EfficiencyCalculator(
+            "control_center", lee_control, "base_management", global_operators=lee_control,
+        ).morale_cost_rates()
+        self.assertAlmostEqual(lee_rates["吽"], 0.35)
+        self.assertAlmostEqual(lee_rates["老鲤"], 0.35)
+        self.assertAlmostEqual(lee_rates["砾"], 0.75)
+
+        pair = [
+            self.assigned("魔王", 2, "control_center"),
+            self.assigned("阿米娅", 0, "control_center"),
+        ]
+        pair_rates = EfficiencyCalculator(
+            "control_center", pair, "base_management", global_operators=pair,
+        ).morale_cost_rates()
+        self.assertAlmostEqual(pair_rates["魔王"], 0.75)
+        self.assertAlmostEqual(pair_rates["阿米娅"], 0.75)
+
+        trading = [
+            self.assigned("推进之王", 0, "trading_post"),
+            self.assigned("因陀罗", 0, "trading_post"),
+        ]
+        control = [self.assigned("戴菲恩", 0, "control_center")]
+        result = EfficiencyCalculator(
+            "trading_post", trading, "lmd_order", global_operators=trading + control,
+        ).compute()
+        self.assertEqual(result["layers"]["global_bonus_pct"], 20)
+
+    def test_conditional_power_plant_skills_use_actual_assignments(self) -> None:
+        friston = self.assigned("Friston-3", 0, "power_plant")
+        without_kaltsit = EfficiencyCalculator(
+            "power_plant", [friston], "drone_recovery", global_operators=[friston],
+        ).compute()
+        self.assertEqual(without_kaltsit["paper_bonus_pct"], 10)
+
+        kaltsit = self.assigned("凯尔希", 0, "control_center")
+        with_kaltsit = EfficiencyCalculator(
+            "power_plant", [friston], "drone_recovery", global_operators=[friston, kaltsit],
+        ).compute()
+        self.assertEqual(with_kaltsit["paper_bonus_pct"], 15)
+
+        gallus = self.assigned("GALLUS²", 0, "power_plant")
+        alone = EfficiencyCalculator(
+            "power_plant", [gallus], "drone_recovery", global_operators=[gallus],
+        ).compute()
+        platform = self.assigned("Lancet-2", 0, "power_plant")
+        paired = EfficiencyCalculator(
+            "power_plant", [gallus], "drone_recovery", global_operators=[gallus, platform],
+        ).compute()
+        self.assertEqual(alone["paper_bonus_pct"], 10)
+        self.assertEqual(paired["paper_bonus_pct"], 15)
+
+    def test_christine_morgan_and_firewhistle_conditions(self) -> None:
+        christine = self.assigned("Miss.Christine", 2, "factory")
+        jiushen = self.assigned("酒神", 2, "factory")
+        record = EfficiencyCalculator(
+            "factory", [christine, jiushen], "battle_record",
+            global_operators=[christine, jiushen],
+        ).compute()
+        self.assertEqual(record["layers"]["direct_bonus_pct"], 35)
+        self.assertEqual(record["layers"]["global_bonus_pct"], 30)
+        gold = EfficiencyCalculator(
+            "factory", [christine, jiushen], "pure_gold",
+            global_operators=[christine, jiushen],
+        ).compute()
+        self.assertEqual(gold["layers"]["global_bonus_pct"], 0)
+
+        morgan = self.assigned("摩根", 2, "trading_post")
+        siege = self.assigned("推进之王", 0, "trading_post")
+        compass = EfficiencyCalculator(
+            "trading_post", [morgan, siege], "lmd_order",
+            global_operators=[morgan, siege],
+        ).compute()
+        morgan_detail = next(item for item in compass["operator_details"] if item["name"] == "摩根")
+        self.assertEqual(morgan_detail["global_bonus_pct"], 75)
+
+        firewhistle = self.assigned("火哨", 2, "trading_post")
+        workers = [firewhistle, self.assigned("砾", 0, "trading_post"), self.assigned("杜宾", 0, "trading_post")]
+        negotiation = EfficiencyCalculator(
+            "trading_post", workers, "lmd_order", global_operators=workers,
+        ).compute()
+        detail = next(item for item in negotiation["operator_details"] if item["name"] == "火哨")
+        self.assertEqual(detail["direct_bonus_pct"], 30)
+
+    def test_capacity_conversion_training_room_and_sui_facilities(self) -> None:
+        redcloud = self.assigned("红云", 1, "factory")
+        christine = self.assigned("Miss.Christine", 0, "factory")
+        recycled = EfficiencyCalculator(
+            "factory", [redcloud, christine], "battle_record",
+            global_operators=[redcloud, christine],
+        ).compute()
+        self.assertEqual(recycled["layers"]["global_bonus_pct"], 36)
+
+        bubble = self.assigned("泡泡", 1, "factory")
+        priority = EfficiencyCalculator(
+            "factory", [bubble, redcloud, christine], "battle_record",
+            global_operators=[bubble, redcloud, christine],
+        ).compute()
+        # 10 + 8 + 10 capacity, all individual increases are at most 16.
+        self.assertEqual(priority["layers"]["global_bonus_pct"], 28)
+
+        wei = self.assigned("维伊", 2, "factory")
+        for level, expected in ((1, 10), (2, 20), (3, 30)):
+            with self.subTest(training_room_level=level):
+                result = EfficiencyCalculator(
+                    "factory", [wei], "battle_record", training_room_level=level,
+                    global_operators=[wei],
+                ).compute()
+                self.assertEqual(result["layers"]["facility_bonus_pct"], expected)
+
+        fengxu = dict(self.assigned("风絮", 2, "trading_post"), assigned_room_id="trade_1")
+        sui = [
+            dict(self.assigned("年", 0, "factory"), assigned_room_id="factory_1"),
+            dict(self.assigned("夕", 0, "factory"), assigned_room_id="factory_1"),
+            dict(self.assigned("令", 0, "control_center"), assigned_room_id="control_center"),
+            dict(self.assigned("重岳", 0, "dormitory"), assigned_room_id="dormitory_1"),
+        ]
+        teachable = EfficiencyCalculator(
+            "trading_post", [fengxu], "lmd_order", global_operators=[fengxu, *sui],
+        ).compute()
+        detail = next(item for item in teachable["operator_details"] if item["name"] == "风絮")
+        self.assertEqual(detail["global_bonus_pct"], 12)
+
+    def test_automation_alpha_clears_only_non_facility_count_teammate_bonus(self) -> None:
+        windflit = self.assigned("掠风", 2, "factory")
+        gravel = self.assigned("砾", 1, "factory")
+        cleared = EfficiencyCalculator(
+            "factory", [windflit, gravel], "pure_gold", power_plant_count=2,
+            global_operators=[windflit, gravel],
+        ).compute()
+        self.assertEqual(cleared["paper_bonus_pct"], 10)
+        gravel_detail = next(item for item in cleared["operator_details"] if item["name"] == "砾")
+        self.assertEqual(gravel_detail["direct_bonus_pct"], 0)
+
+        purestream = self.assigned("清流", 1, "factory")
+        preserved = EfficiencyCalculator(
+            "factory", [windflit, purestream], "pure_gold",
+            trading_post_count=2, power_plant_count=2,
+            global_operators=[windflit, purestream],
+        ).compute()
+        self.assertEqual(preserved["layers"]["facility_bonus_pct"], 50)
+        self.assertIn("automation_reset_others", preserved["special_flags"])
 
     def test_relevant_unmodeled_report_deduplicates_and_flags_numeric_description(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

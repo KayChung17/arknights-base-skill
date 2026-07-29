@@ -163,6 +163,35 @@ class HybridSolverTests(unittest.TestCase):
         self.assertIsNotNone(sim["room_results"][0]["warehouse_overflow"])
         self.assertTrue(any("仓库封顶" in item for item in sim["warnings"]))
 
+    def test_simulator_exposes_jaye_e0_queue_state_per_operation_interval(self):
+        rooms = {"trading_post_1": {"facility_id": "trading_post", "level": 1, "product_id": "lmd_order"}}
+        segments = {
+            "segment_1": {"name": "一班", "start": "00:00", "end": "08:00", "hours": 8.0, "rooms": {}},
+            "segment_2": {"name": "二班", "start": "08:00", "end": "16:00", "hours": 8.0, "rooms": {}},
+            "segment_3": {"name": "三班", "start": "16:00", "end": "00:00", "hours": 8.0, "rooms": {}},
+        }
+        context = self._context(
+            rooms,
+            segments=segments,
+            roster=[{"name": "孑", "elite": 0, "level": 1, "recruited": True, "morale": 24}],
+            solver={"max_daily_work_hours": 24, "allocate_drones": False},
+        )
+        library = build_library(context, top_k=10, operator_pool_size=2, allow_partial=True)
+        combo = next(
+            item for item in library["rooms"]["trading_post_1"]["combinations"]
+            if {op["name"] for op in item["operators"]} == {"孑"}
+        )
+        assignments = [
+            {"segment_id": segment_id, "room_id": "trading_post_1", "combination_id": combo["combination_id"]}
+            for segment_id in segments
+        ]
+        simulation = simulate_assignment(context, library, assignments)
+        queues = [item["trade_queue"] for item in simulation["room_results"]]
+        self.assertTrue(all(queue["queue_state_exact"] for queue in queues))
+        self.assertTrue(all(queue["jaye_e0_dynamic"] for queue in queues))
+        self.assertTrue(all(queue["state"]["completed_orders"] > 0 for queue in queues))
+        self.assertEqual(simulation["simulation_type"], "segment_global_recalculation_with_trade_queue_and_drone_inventory")
+
 
     def test_xlsx_roster_is_supported(self):
         from openpyxl import Workbook

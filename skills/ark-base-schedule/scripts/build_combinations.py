@@ -17,7 +17,7 @@ from typing import Any
 
 from data_loader import load_operator_data, operator_index, select_available_skills
 from drone_model import drone_rules, natural_lmd_metrics_per_hour
-from efficiency_calculator import EfficiencyCalculator
+from efficiency_calculator import EfficiencyCalculator, production_bonus_for_duration
 from optimizer_common import (
     context_rooms,
     context_roster,
@@ -45,6 +45,7 @@ def _compute_efficiency(
     drone_capacity: float = 235.0,
     facility_level: int = 1,
     dormitory_levels: list[int] | None = None,
+    training_room_level: int = 3,
 ) -> dict[str, Any]:
     if facility not in {"trading_post", "factory", "power_plant", "control_center"}:
         return {"error": f"calculator_unsupported:{facility}", "warnings": []}
@@ -57,6 +58,7 @@ def _compute_efficiency(
         power_plant_count=power_count,
         drone_capacity=drone_capacity,
         facility_level=facility_level,
+        training_room_level=training_room_level,
         dormitory_levels=dormitory_levels,
         global_operators=assigned,
     ).compute()
@@ -92,7 +94,9 @@ def _metrics_per_hour(
     product = room["product_id"]
     if not operators and facility in {"factory", "trading_post", "power_plant", "control_center"}:
         return {}, {"fixed_lmd_per_trigger": 0.0}
-    bonus = _effective_bonus(result) + _external_bonus(operators, facility, product)
+    # Room libraries score the standard 8-hour segment. The simulator
+    # re-evaluates time-dependent profiles at each actual segment duration.
+    bonus = production_bonus_for_duration(result, 8.0) + _external_bonus(operators, facility, product)
     if result.get("error"):
         index = operator_index()
         bonus += sum(
@@ -145,12 +149,16 @@ def build_room_combinations(
         (((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}).get("drone_capacity", 235.0)
     )
     dormitory_levels = list((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1])
+    training_room_level = int(
+        (((context.get("base_state") or {}).get("right_side_levels") or {}).get("training_room", 3))
+    )
 
     individual_records: list[dict[str, Any]] = []
     for op in eligible:
         result = _compute_efficiency(
             facility, product, [op], trading_count, power_count, drone_capacity,
             int(room.get("level", 1)), dormitory_levels,
+            training_room_level,
         )
         metrics, fixed = _metrics_per_hour(room, result, [op])
         score = metric_score(metrics, objective_profile(context)) + fixed["fixed_lmd_per_trigger"] * 0.001
@@ -205,6 +213,7 @@ def build_room_combinations(
             result = _compute_efficiency(
                 facility, product, selected, trading_count, power_count, drone_capacity,
                 int(room.get("level", 1)), dormitory_levels,
+                training_room_level,
             )
             metrics, fixed = _metrics_per_hour(room, result, selected)
             score = metric_score(metrics, objective_profile(context))
@@ -282,6 +291,15 @@ def build_room_combinations(
         for key in sorted(metric_keys):
             add_item(max(combinations, key=lambda item: float((item.get("metrics_per_hour") or {}).get(key, 0.0))))
             add_item(min(combinations, key=lambda item: float((item.get("metrics_per_hour") or {}).get(key, 0.0))))
+        if facility == "trading_post" and product == "lmd_order":
+            tailoring_names = {"巫恋", "柏喙", "卡夫卡", "贝娜", "明椒"}
+            for minimum_count in (1, 2, 3):
+                add_item(next((
+                    item for item in combinations
+                    if len(tailoring_names.intersection(
+                        {op["name"] for op in item["operators"]}
+                    )) >= minimum_count
+                ), None))
         pool_names = [op["name"] for op in pool]
         # Best combination containing each operator.
         for name in pool_names:

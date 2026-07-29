@@ -24,6 +24,7 @@ from optimizer_common import (
     write_json,
 )
 from simulate_schedule import simulate_assignment
+from timeline_utils import rotation_analysis
 
 
 def _selected_variables(bundle, vector) -> tuple[list[dict[str, Any]], list[int], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -287,6 +288,10 @@ def _candidate_plan(
         "layout": objective.get("layout"),
         "goal": objective.get("goal_id"),
         "cross_shift_reuse_policy": "allowed",
+        "rotation_analysis": rotation_analysis({
+            "segments": plan_segments,
+            "assumptions": {"repeating_daily": True},
+        }),
         "decision": {
             "strategy": "单房间组合枚举 + 全局MILP选择 + 同时基建复算",
             "rationale": [

@@ -214,6 +214,15 @@ def compact_result(
     selected = result["selected_solution"]
     simulation = selected["simulation"]
     aggregate = simulation["aggregate_metrics"]
+    shift_scores: dict[str, float] = {}
+    for room_result in simulation.get("room_results") or []:
+        segment_id = str(room_result.get("segment_id") or "")
+        hours = float(room_result.get("hours", 0.0) or 0.0)
+        rate = float(room_result.get("local_proxy_score_per_hour", 0.0) or 0.0)
+        shift_scores[segment_id] = shift_scores.get(segment_id, 0.0) + rate * hours
+    score_values = list(shift_scores.values())
+    mean_score = sum(score_values) / len(score_values) if score_values else 0.0
+    variance = sum((value - mean_score) ** 2 for value in score_values) / len(score_values) if score_values else 0.0
     shard_balance = float(simulation.get("orundum_shard_balance", 0.0))
     gold_balance = float(simulation.get("pure_gold_balance", 0.0))
     return {
@@ -247,6 +256,12 @@ def compact_result(
         "drones_used": float((simulation.get("drone_plan") or {}).get("total_used", 0.0)),
         "drones_wasted": float((simulation.get("drone_plan") or {}).get("total_wasted", 0.0)),
         "actual_objective_score": float(simulation.get("actual_objective_score", 0.0)),
+        "shift_profile": {
+            "scores": shift_scores,
+            "minimum_score": min(score_values) if score_values else 0.0,
+            "variance": variance,
+            "source": "simulation.room_results.local_proxy_score_per_hour",
+        },
         "optimality_claim": result.get("solver", {}).get("optimality_claim"),
         "plan": result.get("candidate_plan"),
         "solver_result": result,
@@ -393,6 +408,8 @@ def search_layouts(
         -item["orundum_per_day"],
         -item["net_lmd_per_day"],
         item["resource_balance_deviation"],
+        -float((item.get("shift_profile") or {}).get("minimum_score", 0.0)),
+        float((item.get("shift_profile") or {}).get("variance", 0.0)),
         -item["actual_objective_score"],
     ))
     result = {

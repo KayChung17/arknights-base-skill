@@ -58,7 +58,7 @@ class ParseTests(unittest.TestCase):
                             "type": "amplifier_exclusion",
                             "excluded_amplifier_skill_names": ["测试技能"],
                         }],
-                        "tags": ["multiplier_1_556"],
+                        "tags": ["proviso_breach_order"],
                         "products": ["lmd_order"],
                     }],
                 }],
@@ -91,7 +91,7 @@ class ParseTests(unittest.TestCase):
             ], check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
             output = json.loads(output_path.read_text(encoding="utf-8"))
             skill = output["operators"][0]["skills"][0]
-            self.assertEqual(skill["tags"], ["multiplier_1_556"])
+            self.assertEqual(skill["tags"], ["proviso_breach_order"])
             self.assertEqual(skill["products"], ["lmd_order"])
             self.assertEqual(skill["description"], "新描述")
             self.assertEqual(skill["model_status"], "structured")
@@ -125,9 +125,10 @@ class OwnedSkillTableImportTests(unittest.TestCase):
         friston = next(item for item in operators if item["name"] == "Friston-3")
         level_skill = next(item for item in friston["skills"] if item["skill_name"] == "“愉快的对谈”")
         self.assertEqual(level_skill["required_level"], 30)
+        self.assertEqual(level_skill["tags"], ["power_with_kaltsit_control_5"])
         proviso = next(item for item in operators if item["name"] == "但书")
         beta = next(item for item in proviso["skills"] if item["skill_name"] == "违约索赔·β")
-        self.assertIn("multiplier_1_556", beta["tags"])
+        self.assertIn("proviso_breach_order", beta["tags"])
 
 
 if __name__ == "__main__":

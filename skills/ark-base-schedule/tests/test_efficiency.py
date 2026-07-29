@@ -9,7 +9,11 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from data_loader import OwnedOperator, load_mechanics
-from efficiency_calculator import EfficiencyCalculator
+from efficiency_calculator import (
+    EfficiencyCalculator,
+    effective_bonus_for_duration,
+    production_bonus_for_duration,
+)
 
 
 class EfficiencyTests(unittest.TestCase):
@@ -75,6 +79,26 @@ class EfficiencyTests(unittest.TestCase):
         self.assertEqual(result["layers"]["direct_bonus_pct"], 30)
         self.assertEqual(result["layers"]["facility_bonus_pct"], 85)
         self.assertEqual(result["estimated_efficiency_bonus_pct"], 115)
+
+    def test_hourly_growth_is_integrated_over_the_shift(self):
+        operators = [
+            OwnedOperator("克洛丝", 1, 55),
+            OwnedOperator("铅踝", 0, 1),
+            OwnedOperator("芬", 0, 15),
+        ]
+        control = [OwnedOperator("凯尔希", 2, 80)]
+        assigned = [dict(item.to_dict(), assigned_facility="factory") for item in operators]
+        global_ops = assigned + [dict(item.to_dict(), assigned_facility="control_center") for item in control]
+        result = EfficiencyCalculator(
+            "factory", assigned, "battle_record",
+            trading_post_count=2, power_plant_count=3,
+            facility_level=3,
+            global_operators=global_ops,
+        ).compute()
+        self.assertEqual(result["estimated_efficiency_bonus_pct"], 82)
+        self.assertAlmostEqual(effective_bonus_for_duration(result, 8), 76.375)
+        self.assertAlmostEqual(effective_bonus_for_duration(result, 6), 74.5)
+        self.assertAlmostEqual(production_bonus_for_duration(result, 8), 79.375)
 
 
 if __name__ == "__main__":

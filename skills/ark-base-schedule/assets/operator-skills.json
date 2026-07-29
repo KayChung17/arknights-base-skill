@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "data_version": "2026-07-29-structured-mechanisms-v2",
+  "data_version": "2026-07-29-structured-mechanisms-v6",
   "source": "Sanitized community base-skill snapshot with PRTS cross-checks; personal roster level/elite state and raw export removed",
   "operators": [
     {
@@ -49,7 +49,10 @@
           "variant_group": "power_plant:skill:“愉快的对谈”",
           "description": "进驻发电站时，如果凯尔希进驻在控制中枢，则无人机充能速度+5%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "power_with_kaltsit_control_5"
+          ],
+          "model_status": "structured",
           "products": [
             "drone_recovery"
           ]
@@ -85,7 +88,10 @@
           "variant_group": "power_plant:skill:鸡励机制",
           "description": "进驻发电站时，如果其他作业平台进驻在发电站，则无人机充能速度+5%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "power_with_other_work_platform_5"
+          ],
+          "model_status": "structured",
           "products": [
             "drone_recovery"
           ]
@@ -157,7 +163,10 @@
           "variant_group": "factory:skill:盛餐的回报",
           "description": "进驻制造站时，当与酒神在同一个制造站时，作战记录类配方的生产力+30%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "with_jiushen_battle_record_30"
+          ],
+          "model_status": "structured",
           "products": [
             "battle_record"
           ]
@@ -649,7 +658,7 @@
           "description": "进驻贸易站时，如果下笔赤金订单是违约订单，则赤金交付数额外+2",
           "base_bonus_pct": 0.0,
           "tags": [
-            "multiplier_1_556"
+            "proviso_breach_order"
           ],
           "products": [
             "lmd_order"
@@ -1526,7 +1535,10 @@
           "variant_group": "control_center:skill:坚毅随和",
           "description": "进驻控制中枢时，控制中枢内每个鲤氏侦探事务所干员可使该派系干员额外恢复心情，同时每人可使控制中枢内所有干员的心情每小时恢复+0.2",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "control_lee_per_member_morale_recovery"
+          ],
           "products": [
             "base_management"
           ]
@@ -2281,7 +2293,9 @@
       "id": "op_8bf9e223852e",
       "name": "安德切尔",
       "rarity": 3,
-      "groups": [],
+      "groups": [
+        "laterano"
+      ],
       "skills": [
         {
           "facility": "workshop",
@@ -2474,8 +2488,10 @@
       "variant_group": "control_center:skill:异格者",
       "description": "进驻控制中枢时，控制中枢内每个异格干员可使控制中枢内所有干员的心情每小时恢复+0.05",
       "base_bonus_pct": 0.0,
-      "model_status": "conservative_zero",
-      "tags": [],
+      "model_status": "structured",
+      "tags": [
+        "control_alternate_per_member_morale_recovery_0.05"
+      ],
           "products": [
             "base_management"
           ]
@@ -2830,7 +2846,8 @@
       "name": "德克萨斯",
       "rarity": 5,
       "groups": [
-        "penguin_logistics"
+        "penguin_logistics",
+        "siracusa"
       ],
       "skills": [
         {
@@ -2858,7 +2875,8 @@
           "description": "当与拉普兰德在同一个贸易站时，心情每小时消耗+0.3，订单获取效率+65%",
           "base_bonus_pct": 0.0,
           "tags": [
-            "morale_cost_plus_0.3"
+            "morale_cost_plus_0.3",
+            "texas_with_lappland_65"
           ],
           "products": [
             "lmd_order",
@@ -2920,7 +2938,10 @@
           "variant_group": "control_center:skill:运筹好手",
           "description": "进驻控制中枢时，同一贸易站中，每有1名格拉斯哥帮干员，订单获取效率+10%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "glasgow_center"
+          ],
           "products": [
             "base_management"
           ]
@@ -2967,8 +2988,10 @@
           "variant_group": "power_plant:skill:晨曦",
           "description": "进驻发电站时，如果其他发电站内没有进驻作业平台，则发电站额外+1(仅影响设施数量)",
           "base_bonus_pct": 0.0,
-          "model_status": "unsupported",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "automation_virtual_power_plant_1"
+          ],
           "products": [
             "drone_recovery"
           ]
@@ -3101,7 +3124,10 @@
           "variant_group": "factory:name:自动化",
           "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+5%的生产力",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "automation_reset_others_per_power_plant_5"
+          ],
+          "model_status": "structured",
           "products": [
             "pure_gold",
             "battle_record",
@@ -3198,7 +3224,10 @@
           "variant_group": "trading_post:skill:帮派指南针",
           "description": "进驻贸易站时，同个贸易站中每有1名格拉斯哥帮干员，当前贸易站订单获取效率+20%；当与推进之王在同一个贸易站时，订单获取效率额外+35%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "morgan_glasgow_compass"
+          ],
+          "model_status": "structured",
           "products": [
             "lmd_order",
             "orundum_order"
@@ -3216,21 +3245,6 @@
           "products": [
             "morale_recovery"
           ]
-        },
-        {
-          "facility": "trading_post",
-          "elite": 0,
-          "skill_name": "格拉斯哥帮·贸易",
-          "description": "同站每有1名格拉斯哥帮干员，订单获取效率+20%。",
-          "base_bonus_pct": 0,
-          "tags": [
-            "glasgow_per_member"
-          ],
-          "products": [
-            "lmd_order"
-          ],
-          "required_level": 1,
-          "variant_group": "trading_post:skill:格拉斯哥帮·贸易"
         }
       ]
     },
@@ -3652,8 +3666,10 @@
           "variant_group": "control_center:skill:护卫",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "model_status": "conservative_zero",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "control_room_all_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -4674,7 +4690,8 @@
           "description": "进驻制造站时，仓库容量上限+8，生产力+5%，同时每有1个木天蓼，则生产力+1%",
           "base_bonus_pct": 5.0,
           "tags": [
-            "warehouse_capacity_8"
+            "warehouse_capacity_8",
+            "factory_per_catnip_1"
           ],
           "products": [
             "pure_gold",
@@ -4691,7 +4708,8 @@
           "description": "进驻贸易站时，订单获取效率+5%，且订单上限+2，同时每有1个木天蓼，则订单获取效率+3%",
           "base_bonus_pct": 5.0,
           "tags": [
-            "order_capacity_2"
+            "order_capacity_2",
+            "trade_per_catnip_3"
           ],
           "products": [
             "lmd_order",
@@ -5076,7 +5094,9 @@
           "variant_group": "control_center:skill:S.W.E.E.P.",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "control_room_all_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -5265,7 +5285,10 @@
           "variant_group": "control_center:skill:异格者",
           "description": "进驻控制中枢时，控制中枢内每个异格干员可使控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "control_alternate_per_member_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -5286,7 +5309,10 @@
           "variant_group": "trading_post:skill:代为说项",
           "description": "进驻贸易站时，贸易站内除自身以外每名处于工作状态的干员+15%订单获取效率",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "trade_per_other_worker_15"
+          ],
+          "model_status": "structured",
           "products": [
             "lmd_order",
             "orundum_order"
@@ -5398,7 +5424,9 @@
           "variant_group": "control_center:skill:团队合作",
           "description": "进驻控制中枢时，控制中枢内每有1名怪物猎人小队干员，则木天蓼+2",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "catnip_per_control_monster_hunter_2"
+          ],
           "products": [
             "base_management"
           ]
@@ -5567,7 +5595,10 @@
           "variant_group": "control_center:skill:公事公办",
           "description": "进驻控制中枢时，部分设施内处于工作状态的干员心情每小时恢复+0.1；同时控制中枢内部分技能可以为其他设施内处于工作状态的干员额外提供心情恢复",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "mlynar_business_is_business"
+          ],
           "products": [
             "base_management"
           ]
@@ -5580,7 +5611,9 @@
           "variant_group": "control_center:skill:独善其身",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "control_room_all_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -5720,7 +5753,9 @@
           "variant_group": "control_center:skill:点滴关照",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "control_room_all_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -6055,7 +6090,9 @@
           "variant_group": "control_center:skill:S.W.E.E.P.",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "control_room_all_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -6076,7 +6113,10 @@
           "variant_group": "factory:skill:回收利用",
           "description": "进驻制造站时，当前制造站内干员提升的每格仓库容量，提供2%生产力",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "redcloud_capacity_conversion_2"
+          ],
+          "model_status": "structured",
           "products": [
             "pure_gold",
             "battle_record",
@@ -6149,7 +6189,10 @@
           "variant_group": "control_center:skill:捍卫之道",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "control_room_all_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -6205,8 +6248,9 @@
           "variant_group": "control_center:skill:巴别塔之帜",
           "description": "进驻控制中枢时，其他设施内处于工作状态的干员心情每小时恢复+0.1，当魔王进驻中枢时额外+0.1（与控制中枢加成有特殊比较规则）",
           "base_bonus_pct": 0.0,
+          "model_status": "structured",
           "tags": [
-            "order_capacity_2"
+            "babel_other_facility_morale_recovery"
           ],
           "products": [
             "base_management"
@@ -6258,7 +6302,10 @@
           "variant_group": "factory:skill:手艺人",
           "description": "进驻制造站时，训练室每级为当前制造站+10%生产力，最多30%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "training_room_level_10_cap_30"
+          ],
+          "model_status": "structured",
           "products": [
             "pure_gold",
             "battle_record",
@@ -6723,7 +6770,6 @@
           "description": "进驻制造站后，生产力首小时+20%，此后每小时+1%，最终达到+25%",
           "base_bonus_pct": 0.0,
           "tags": [
-            "fen_per_a1",
             "hourly_growth_20_to_25",
             "time_dependent"
           ],
@@ -7312,7 +7358,7 @@
           "elite": 1,
           "required_level": 1,
           "skill_name": "地质学·α",
-          "variant_group": "factory:known:1",
+          "variant_group": "factory:name:地质学",
           "description": "进驻制造站时，源石类配方的生产力+30%",
           "base_bonus_pct": 30.0,
           "tags": [],
@@ -7325,7 +7371,7 @@
           "elite": 0,
           "required_level": 1,
           "skill_name": "标准化·α",
-          "variant_group": "factory:known:1",
+          "variant_group": "factory:name:标准化",
           "description": "进驻制造站时，生产力+15%",
           "base_bonus_pct": 15.0,
           "tags": [],
@@ -7946,7 +7992,10 @@
           "variant_group": "control_center:skill:孤光共照",
           "description": "进驻控制中枢时，其他设施内处于工作状态的干员心情每小时恢复+0.05；同时每有20点人间烟火，则额外+0.05，（与控制中枢加成有特殊比较规则）",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "chongyue_other_facility_morale_recovery"
+          ],
           "products": [
             "base_management"
           ]
@@ -8396,7 +8445,10 @@
           "variant_group": "control_center:skill:德才兼备",
           "description": "进驻控制中枢时，控制中枢内每个龙门近卫局干员可使控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "control_lgd_per_member_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -8705,7 +8757,10 @@
           "variant_group": "trading_post:skill:“孺子可教！”",
           "description": "进驻贸易站时，基建内（不包含副手及活动室）每有一间进驻岁干员的设施，订单获取效率+4%（最多5间）",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "trade_per_sui_occupied_facility_4_cap_20"
+          ],
+          "model_status": "structured",
           "products": [
             "lmd_order",
             "orundum_order"
@@ -8823,7 +8878,10 @@
           "variant_group": "control_center:skill:“未完的故事”",
           "description": "当与阿米娅一起进驻控制中枢时，自身和阿米娅心情每小时恢复+0.1",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "demon_king_amiya_pair_morale_recovery_0.10"
+          ],
           "products": [
             "base_management"
           ]
@@ -8836,7 +8894,9 @@
           "variant_group": "control_center:skill:魔王传承",
           "description": "当与阿米娅一起进驻控制中枢时，自身和阿米娅心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "demon_king_amiya_pair_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ]
@@ -8921,7 +8981,8 @@
           "description": "进驻控制中枢时，自身心情每小时消耗+0.5，木天蓼+8",
           "base_bonus_pct": 0.0,
           "tags": [
-            "morale_cost_plus_0.5"
+            "morale_cost_plus_0.5",
+            "catnip_fixed_8"
           ],
           "products": [
             "base_management"

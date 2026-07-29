@@ -181,3 +181,50 @@ def total_work_hours(plan: dict[str, Any]) -> dict[str, float]:
     for name, intervals in operator_work_intervals(plan).items():
         result[name] = sum(float(item["hours"]) for item in intervals)
     return dict(result)
+
+
+def rotation_analysis(plan: dict[str, Any]) -> dict[str, Any]:
+    """Describe cross-shift room/operator rotation without inventing bindings."""
+    segments = list(get_segments(plan).items())
+    if not segments:
+        return {"segment_count": 0, "rooms": [], "operators": {}}
+    room_ids = sorted({
+        str(room_id)
+        for _, segment in segments
+        for room_id in (segment.get("rooms") or {})
+    })
+    rooms: list[dict[str, Any]] = []
+    for room_id in room_ids:
+        names_by_segment: list[list[str]] = []
+        for _, segment in segments:
+            raw = (segment.get("rooms") or {}).get(room_id) or {}
+            room = raw if isinstance(raw, dict) else {"operators": raw}
+            names_by_segment.append(sorted({
+                str(op.get("name") if isinstance(op, dict) else op)
+                for op in room.get("operators", [])
+                if (op.get("name") if isinstance(op, dict) else op)
+            }))
+        presence: dict[str, str] = {}
+        for index, names in enumerate(names_by_segment):
+            for name in names:
+                flags = list(presence.get(name, "0" * len(segments)))
+                flags[index] = "1"
+                presence[name] = "".join(flags)
+        rooms.append({
+            "room_id": room_id,
+            "operator_presence": dict(sorted(presence.items())),
+            "rotation_patterns": sorted(set(presence.values())),
+        })
+    operators: dict[str, dict[str, Any]] = {}
+    for room in rooms:
+        for name, pattern in room["operator_presence"].items():
+            operators.setdefault(name, {"rooms": [], "patterns": []})
+            operators[name]["rooms"].append(room["room_id"])
+            operators[name]["patterns"].append(pattern)
+    return {
+        "segment_count": len(segments),
+        "segment_hours": [float(segment.get("hours", 0.0) or 0.0) for _, segment in segments],
+        "rooms": rooms,
+        "operators": operators,
+        "pattern_legend": "每位干员按区间顺序使用0/1表示休息/工作；110、101、011是典型错峰轮换。",
+    }

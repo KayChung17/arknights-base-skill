@@ -3,9 +3,9 @@
   "source_type": "sanitized_community_structured_snapshot",
   "source_file": null,
   "retrieved_at": "2026-07-29",
-  "data_version": "2026-07-29-structured-mechanisms-v2",
+  "data_version": "2026-07-29-structured-mechanisms-v6",
   "canonical_operator_count": 248,
-  "canonical_skill_count": 506,
+  "canonical_skill_count": 505,
   "personal_roster_state_removed": true,
   "sources": [
     {
@@ -31,6 +31,18 @@
       "url": "https://prts.wiki/w/%E7%BD%97%E5%BE%B7%E5%B2%9B%E5%9F%BA%E5%BB%BA/%E4%BC%9A%E5%AE%A2%E5%AE%A4",
       "retrieved_at": "2026-07-29",
       "scope": "右满电力回归：会客室、办公室、训练室各 60，加工站 10，合计 190；其余分项链接见 mechanic-sources.md"
+    },
+    {
+      "name": "PRTS 制造站与贸易站",
+      "url": "https://prts.wiki/w/%E7%BD%97%E5%BE%B7%E5%B2%9B%E5%9F%BA%E5%BB%BA/%E5%88%B6%E9%80%A0%E7%AB%99",
+      "retrieved_at": "2026-07-29",
+      "scope": "每名工作干员提供 1% 基础效率、递增生产力与特别订单规则；贸易站分项链接见 mechanic-sources.md"
+    },
+    {
+      "name": "PRTS 基建技能注释模板与泡泡",
+      "url": "https://prts.wiki/w/%E6%A8%A1%E6%9D%BF:BaseSkill/info",
+      "retrieved_at": "2026-07-29",
+      "scope": "仓库容量转生产力、同站工作范围及大就是好！覆盖回收利用；泡泡分项链接见 mechanic-sources.md"
     }
   ],
   "notes": "The public repository excludes the original owned-roster export and removes source account levels, elite states and source line numbers. Structured rules preserve source descriptions and use explicit effects, variant groups and special rules. The snapshot is not a complete game database."

@@ -45,8 +45,26 @@ def load_mechanics() -> dict:
 
 
 @lru_cache(maxsize=1)
+def operator_group_index() -> dict[str, set[str]]:
+    result: dict[str, set[str]] = {}
+    for item in load_operator_data()["operators"]:
+        result.setdefault(item["name"], set()).update(str(group) for group in item.get("groups", []))
+    for group, names in (load_json("operator-groups.json").get("groups") or {}).items():
+        for name in names:
+            result.setdefault(str(name), set()).add(str(group))
+    return result
+
+
+@lru_cache(maxsize=1)
 def operator_index() -> dict[str, dict]:
-    return {item["name"]: item for item in load_operator_data()["operators"]}
+    index = {
+        item["name"]: {**item, "groups": list(item.get("groups", []))}
+        for item in load_operator_data()["operators"]
+    }
+    for name, groups in operator_group_index().items():
+        if name in index:
+            index[name]["groups"] = sorted(groups)
+    return index
 
 
 def normalize_elite(value: str | int | None) -> int:

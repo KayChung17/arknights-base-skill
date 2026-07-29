@@ -27,6 +27,7 @@ from scipy.optimize import Bounds, LinearConstraint
 from scipy.sparse import coo_matrix
 
 from data_loader import load_mechanics
+from efficiency_calculator import production_bonus_for_duration
 from drone_model import drone_metrics_per_drone, drone_rules, recovery_rate_per_hour
 from optimizer_common import (
     context_roster,
@@ -51,6 +52,15 @@ class ModelBundle:
 
 def _segment_metrics(combo: dict[str, Any], hours: float) -> dict[str, float]:
     metrics = {key: float(value) * hours for key, value in (combo.get("metrics_per_hour") or {}).items()}
+    result = combo.get("efficiency_result") or {}
+    profiles = result.get("time_dependent_bonus_profiles") or []
+    if profiles and combo.get("facility_id") == "factory":
+        # `metrics_per_hour` is the library's 8-hour scoring rate. Rescale it
+        # to the actual segment integral before multiplying by segment hours.
+        bonus_8 = production_bonus_for_duration(result, 8.0)
+        bonus_duration = production_bonus_for_duration(result, hours)
+        ratio = (1.0 + bonus_duration / 100.0) / max(1e-9, 1.0 + bonus_8 / 100.0)
+        metrics = {key: value * ratio for key, value in metrics.items()}
     product = combo.get("product_id")
     units_key = {
         "pure_gold": "pure_gold",

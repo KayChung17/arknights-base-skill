@@ -20,10 +20,10 @@ from typing import Any
 from drone_model import (
     drone_metrics_per_drone,
     drone_rules,
-    natural_lmd_metrics_per_hour,
     recovered_drones,
+    simulate_lmd_order_queue,
 )
-from efficiency_calculator import EfficiencyCalculator
+from efficiency_calculator import EfficiencyCalculator, production_bonus_for_duration
 from dormitory_planner import plan_dormitories
 from optimizer_common import (
     context_rooms,
@@ -53,10 +53,15 @@ def _metrics_from_result(
     result: dict[str, Any],
     fallback_metrics: dict[str, float],
     fallback_bonus: float,
+    hours: float = 8.0,
 ) -> dict[str, float]:
     if result.get("error"):
         return dict(fallback_metrics)
-    bonus = _effective_bonus(result, fallback_bonus)
+    bonus = production_bonus_for_duration(result, hours)
+    if not result.get("time_dependent_bonus_profiles"):
+        bonus = _effective_bonus(result, fallback_bonus) + float(
+            result.get("staffing_base_bonus_pct", 0.0) or 0.0
+        )
     multiplier = max(0.0, 1.0 + bonus / 100.0)
     if facility == "trading_post":
         base = trading_base_metrics(product)
@@ -146,6 +151,9 @@ def simulate_assignment(
     operator_hours: dict[str, float] = defaultdict(float)
     selected_combo_by_segment_room: dict[tuple[str, str], dict[str, Any]] = {}
     power_bonus_by_segment: dict[str, float] = defaultdict(float)
+    trade_queue_states: dict[str, dict[str, Any]] = {}
+    queue_drone_metrics: dict[tuple[str, str], dict[str, float]] = {}
+    queue_drone_details: dict[tuple[str, str], dict[str, Any]] = {}
 
     trading_post_count = sum(1 for value in rooms.values() if value["facility_id"] == "trading_post")
     power_plant_count = sum(1 for value in rooms.values() if value["facility_id"] == "power_plant")
@@ -163,6 +171,8 @@ def simulate_assignment(
                 for op in (combo.get("operators") or [])
             )
         working_names = {item["name"] for item in all_operators}
+        dormitory_capacity = len((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1]) * 5
+        dormitory_occupant_count = min(dormitory_capacity, max(0, len(roster) - len(working_names)))
         segment_morale_costs = {name: 0.0 for name in roster}
         for name in roster:
             operator_work[name].append(name in working_names)
@@ -184,7 +194,11 @@ def simulate_assignment(
                     power_plant_count=power_plant_count,
                     drone_capacity=drone_capacity,
                     facility_level=int(room.get("level", 1)),
+                    training_room_level=int(
+                        (((context.get("base_state") or {}).get("right_side_levels") or {}).get("training_room", 3))
+                    ),
                     dormitory_levels=list((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1]),
+                    dormitory_occupant_count=dormitory_occupant_count,
                     global_operators=all_operators,
                 )
                 calculated = calculator.compute()
@@ -193,6 +207,7 @@ def simulate_assignment(
             else:
                 calculated = {"error": f"calculator_unsupported:{room['facility_id']}", "warnings": []}
             fallback_bonus = float((combo.get("efficiency_result") or {}).get("estimated_efficiency_bonus_pct", 0) or 0)
+            trade_queue_result = None
 
             if not operators and room["facility_id"] in {"factory", "trading_post", "power_plant", "control_center"}:
                 # Production, order acquisition, and staffed power-plant bonuses
@@ -209,12 +224,39 @@ def simulate_assignment(
                 )
                 metrics_per_hour = {}
             elif room["facility_id"] == "trading_post" and room["product_id"] == "lmd_order":
-                bonus = _effective_bonus(calculated, fallback_bonus)
-                metrics_per_hour = natural_lmd_metrics_per_hour(
+                bonus = _effective_bonus(calculated, fallback_bonus) + float(
+                    calculated.get("staffing_base_bonus_pct", 0.0) or 0.0
+                )
+                node_drones = sum(
+                    float(allocation.get("drones", 0.0) or 0.0)
+                    for allocation in allocations_by_segment.get(segment.segment_id, [])
+                    if str(allocation.get("room_id") or "") == room_id
+                )
+                crew_signature = "|".join(
+                    f"{index}:{op.get('name', '')}@E{op.get('elite', 0)}"
+                    for index, op in enumerate(operators)
+                )
+                queue_result = simulate_lmd_order_queue(
                     int(room.get("level", 1)),
                     combo,
-                    bonus,
+                    elapsed_hours=segment.hours,
+                    base_efficiency_bonus_pct=(
+                        bonus - float(calculated.get("jaye_e0_proxy_bonus_pct", 0.0) or 0.0)
+                    ),
+                    order_capacity=int(calculated.get("order_capacity", 10) or 10),
+                    state=trade_queue_states.get(room_id),
+                    collect_at_start=True,
+                    drone_count=node_drones,
+                    crew_signature=crew_signature,
                 )
+                trade_queue_states[room_id] = queue_result["state"]
+                trade_queue_result = queue_result
+                queue_drone_metrics[(segment.segment_id, room_id)] = queue_result["drone_metrics"]
+                queue_drone_details[(segment.segment_id, room_id)] = queue_result
+                metrics_per_hour = {
+                    key: value / segment.hours if segment.hours > 0 else 0.0
+                    for key, value in queue_result["natural_metrics"].items()
+                }
             else:
                 metrics_per_hour = _metrics_from_result(
                     room["facility_id"],
@@ -222,6 +264,7 @@ def simulate_assignment(
                     calculated,
                     combo.get("metrics_per_hour") or {},
                     fallback_bonus,
+                    segment.hours,
                 )
 
             raw_metrics = {key: value * segment.hours for key, value in metrics_per_hour.items()}
@@ -275,6 +318,7 @@ def simulate_assignment(
                     "raw_metrics": raw_metrics,
                     "effective_metrics": effective_metrics,
                     "warehouse_overflow": overflow,
+                    "trade_queue": trade_queue_result,
                 }
             )
         for name in roster:
@@ -311,9 +355,26 @@ def simulate_assignment(
                 combo_id = str(allocation.get("combination_id") or "")
                 combo = lookup.get((room_id, combo_id)) or selected_combo_by_segment_room.get((segment.segment_id, room_id))
                 room = rooms[room_id]
-                metrics_per_drone = drone_metrics_per_drone(room, combo)
                 count = float(allocation["drones"])
-                metrics = {key: value * count for key, value in metrics_per_drone.items()}
+                queue_key = (segment.segment_id, room_id)
+                if queue_key in queue_drone_metrics:
+                    total_allocated = sum(
+                        float(item["drones"])
+                        for item in allocations
+                        if str(item.get("room_id") or "") == room_id
+                    )
+                    ratio = count / total_allocated if total_allocated > 0 else 0.0
+                    metrics = {
+                        key: value * ratio
+                        for key, value in queue_drone_metrics[queue_key].items()
+                    }
+                    metrics_per_drone = {
+                        key: value / count if count > 0 else 0.0
+                        for key, value in metrics.items()
+                    }
+                else:
+                    metrics_per_drone = drone_metrics_per_drone(room, combo)
+                    metrics = {key: value * count for key, value in metrics_per_drone.items()}
                 for key, value in metrics.items():
                     drone_aggregate[key] += float(value)
                 drone_allocation_results.append({
@@ -328,6 +389,7 @@ def simulate_assignment(
                     "metrics_per_drone": metrics_per_drone,
                     "metrics": metrics,
                     "collection_assumption": "节点内加速后立即收取，可重复操作，不占用跨节点仓库容量",
+                    "trade_queue": queue_drone_details.get(queue_key),
                 })
             bonus_pct = power_bonus_by_segment.get(segment.segment_id, 0.0)
             recovered = recovered_drones(segment.hours, bonus_pct)
@@ -469,7 +531,7 @@ def simulate_assignment(
 
     return {
         "schema_version": 2,
-        "simulation_type": "segment_global_recalculation_with_drone_inventory",
+        "simulation_type": "segment_global_recalculation_with_trade_queue_and_drone_inventory",
         "simulated_at": utc_now(),
         "actual_objective_score": actual_score,
         "objective_weights": objective_profile(context),
