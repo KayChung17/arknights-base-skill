@@ -13,10 +13,12 @@ from typing import Any
 
 from audit_result import audit_result
 from build_combinations import build_library
-from coverage_report import build_coverage_report
+from coverage_report import build_coverage_report, build_relevant_unmodeled_report
+from export_schedule_template import export_schedule
 from generate_report import generate_report
+from layout_profiles import facility_configuration_power_summary, fixed_right_power_consumption
 from normalize_input import build_decision_packet
-from optimizer_common import write_json
+from optimizer_common import read_json, write_json
 from pareto_frontier import build_pareto_frontier
 from preflight import PreflightError, canonical_config, config_sha256, preflight_project
 from reproducibility import build_manifest
@@ -46,6 +48,7 @@ def _solver_options(config: dict[str, Any]) -> dict[str, Any]:
         "operator_pool_size": int(search.get("operator_pool_size", 12)),
         "time_limit": float(search.get("time_limit_seconds", 12.0)),
         "max_proxy_attempts": int(search.get("max_proxy_attempts", 4)),
+        "mip_rel_gap": float(search.get("mip_rel_gap", 0.01)),
     }
 
 
@@ -74,7 +77,9 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "initial_drone_stock": float(base_state["initial_drone_stock"]),
         "max_orundum_trading_posts": objective.get("max_orundum_trading_posts"),
         "max_shard_factories": objective.get("max_shard_factories"),
+        "minimum_battle_record_factories": int(objective.get("minimum_battle_record_factories", 0)),
         "lmd_proxy_floor_slack": float(search.get("lmd_proxy_floor_slack", 0.0)),
+        "operator_overrides": config.get("operator_overrides"),
     })
     return kwargs
 
@@ -86,11 +91,20 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
     preferences = dict(config.get("preferences") or {})
     solver = dict(preferences.get("solver") or {})
     base_state = config["base_state"]
+    power = facility_configuration_power_summary(
+        config["facility_configuration"],
+        right_side_levels=base_state["right_side_levels"],
+        expected_layout=layout,
+    )
+    if power["spare_power"] < -1e-9:
+        raise ValueError(f"固定排班缺电 {-power['spare_power']:.0f}，不能进入求解器")
     solver["max_daily_work_hours"] = float(objective["max_daily_work_hours"])
     solver["drone_capacity"] = float(base_state["drone_capacity"])
     solver["initial_drone_stock"] = float(base_state["initial_drone_stock"])
     solver.setdefault("allocate_drones", True)
     solver.setdefault("drone_repeating_day_balance", True)
+    solver.setdefault("require_dormitory_cycle", True)
+    solver.setdefault("forbid_drone_waste", True)
     preferences["solver"] = solver
     context = build_decision_packet(
         roster,
@@ -99,9 +113,16 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         len(online_times),
         preferences,
         online_times,
+        config.get("operator_overrides"),
+        online_schedule=objective.get("online_schedule"),
     )
     context["facility_configuration"] = config["facility_configuration"]
-    context["base_state"] = base_state
+    context["base_state"] = {
+        **base_state,
+        "power": power,
+        "fixed_right_side_levels": dict(base_state["right_side_levels"]),
+        "right_side_levels_immutable": True,
+    }
     context["horizon"] = config["horizon"]
     search = _solver_options(config)
     library = build_library(
@@ -110,7 +131,7 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         operator_pool_size=search["operator_pool_size"],
         allow_partial=False,
     )
-    return solve_hybrid(
+    result = solve_hybrid(
         context,
         library=library,
         top_k=search["top_k"],
@@ -120,6 +141,8 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         mip_rel_gap=float((config.get("search") or {}).get("mip_rel_gap", 0.001)),
         max_proxy_attempts=search["max_proxy_attempts"],
     )
+    result["fixed_schedule_power"] = power
+    return result
 
 
 def _sha256(path: Path) -> str:
@@ -176,6 +199,22 @@ def run_project(
     preflight["_run"] = {"run_id": run_id, "config_sha256": config_hash}
     write_json(preflight_path, preflight)
 
+    unmodeled = build_relevant_unmodeled_report(roster, config)
+    unmodeled["_run"] = {"run_id": run_id, "config_sha256": config_hash}
+    unmodeled_path = destination / "unmodeled-relevant-skills.json"
+    write_json(unmodeled_path, unmodeled)
+    if unmodeled.get("policy") == "block" and int(unmodeled.get("blocking_count", 0) or 0) > 0:
+        blocked = dict(preflight)
+        blocked["status"] = "execution_blocked"
+        blocked.setdefault("conflicts", []).append({
+            "path": "/verification/relevant_unmodeled_skill_policy",
+            "code": "relevant_unmodeled_skills",
+            "message": f"本次设施与产品范围仍有 {unmodeled['blocking_count']} 条高风险未结构化技能。",
+            "report": str(unmodeled_path),
+        })
+        write_json(preflight_path, blocked)
+        raise PreflightError(blocked)
+
     mode = str(config["mode"])
     if mode == "layout_search":
         kwargs = _layout_kwargs(config, roster)
@@ -213,11 +252,21 @@ def run_project(
     else:  # preflight already rejects this; retain defensive branch.
         raise ValueError("mode 必须是 layout_search、upgrade_search 或 fixed_schedule")
 
+    selected_power = (
+        ((result.get("selected") or {}).get("power") or {})
+        if mode != "fixed_schedule"
+        else (result.get("fixed_schedule_power") or {})
+    )
     result["project"] = {
         "name": config.get("project_name") or path.stem,
         "mode": mode,
         "configuration_file": path.name,
         "horizon": config["horizon"],
+        "right_side_levels": dict(config["base_state"]["right_side_levels"]),
+        "right_side_levels_confirmed": bool(config["base_state"]["right_side_levels_confirmed"]),
+        "right_side_levels_immutable": True,
+        "fixed_right_power_consumption": fixed_right_power_consumption(config["base_state"]["right_side_levels"]),
+        "selected_power": selected_power,
     }
     result["project_execution"] = {
         "run_id": run_id,
@@ -230,11 +279,17 @@ def run_project(
         extra={"output_dir": destination.name, "run_id": run_id, "config_sha256": config_hash},
     )
 
-    coverage = build_coverage_report(roster)
+    coverage = build_coverage_report(roster, config.get("operator_overrides"))
     coverage["_run"] = {"run_id": run_id, "config_sha256": config_hash}
     result["project_data_coverage"] = {
         "roster": coverage["roster"],
         "unlocked_skill_coverage": coverage["unlocked_skill_coverage"],
+        "relevant_unmodeled_skills": {
+            "policy": unmodeled["policy"],
+            "unmodeled_count": unmodeled["unmodeled_count"],
+            "blocking_count": unmodeled["blocking_count"],
+            "warning_count": unmodeled["warning_count"],
+        },
     }
     pareto = build_pareto_frontier(result)
     audit = audit_result(result)
@@ -250,6 +305,7 @@ def run_project(
     summary_path = destination / "summary.json"
     manifest_path = destination / "run-manifest.json"
     verification_path = destination / "verification.json"
+    schedule_path = destination / "schedule.json"
 
     resolved = canonical_config(config)
     resolved["_resolution"] = {
@@ -266,6 +322,7 @@ def run_project(
     write_json(coverage_path, coverage)
     write_json(pareto_path, pareto)
     write_json(config_copy, resolved)
+    write_json(schedule_path, export_schedule(result))
     report_path.write_text(report, encoding="utf-8")
     summary = {
         "project_name": result["project"]["name"],
@@ -274,6 +331,7 @@ def run_project(
         "config_sha256": config_hash,
         "result": str(result_path),
         "report": str(report_path),
+        "schedule": str(schedule_path),
         "audit": str(audit_path),
         "coverage": str(coverage_path),
         "pareto": str(pareto_path),
@@ -281,6 +339,7 @@ def run_project(
         "preflight": str(preflight_path),
         "manifest": str(manifest_path),
         "verification": str(verification_path),
+        "unmodeled_relevant_skills": str(unmodeled_path),
         "audit_status": audit["status"],
         "operator_data_coverage_ratio": coverage["roster"]["operator_coverage_ratio"],
         "verification_status": "not_run",
@@ -290,7 +349,10 @@ def run_project(
         destination,
         run_id,
         config_hash,
-        ["preflight.json", "result.json", "audit.json", "coverage.json", "pareto.json", "report.md", "config.resolved.json"],
+        [
+            "preflight.json", "result.json", "audit.json", "coverage.json", "pareto.json",
+            "report.md", "schedule.json", "config.resolved.json", "unmodeled-relevant-skills.json",
+        ],
     )
     write_json(manifest_path, manifest)
 
@@ -330,8 +392,13 @@ def main() -> int:
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     if summary["audit_status"] == "failed":
         return 2
-    if not args.skip_verify and summary["verification_status"] != "passed":
-        return 5
+    if not args.skip_verify:
+        verification_policy = (read_json(args.config).get("verification") or {})
+        allowed = {"passed"}
+        if not bool(verification_policy.get("strict_warnings", True)):
+            allowed.add("passed_with_warnings")
+        if summary["verification_status"] not in allowed:
+            return 5
     return 0
 
 

@@ -317,6 +317,8 @@ def warehouse_capacity(room: dict[str, Any], operators: Iterable[Any] = ()) -> f
     base = float(factory.get(str(room.get("level")), {1: 24, 2: 36, 3: 54}.get(room.get("level"), 24)))
     index = operator_index()
     extra = 0.0
+    rhine_skill_count = 0
+    selected_skills: list[dict[str, Any]] = []
     product = str(room.get("product_id") or "")
     for item in operators:
         if isinstance(item, dict):
@@ -328,13 +330,19 @@ def warehouse_capacity(room: dict[str, Any], operators: Iterable[Any] = ()) -> f
             elite = 2
             level = 90
         record = index.get(name) or {}
-        for skill in select_available_skills(record, "factory", elite, product, level):
+        skills = select_available_skills(record, "factory", elite, product, level)
+        selected_skills.extend(skills)
+        rhine_skill_count += sum(str(skill.get("skill_name") or "").startswith("莱茵科技") for skill in skills)
+        for skill in skills:
             for tag in skill.get("tags", []):
                 if isinstance(tag, str) and tag.startswith("warehouse_capacity_"):
                     try:
                         extra += float(tag.rsplit("_", 1)[1])
                     except ValueError:
                         pass
+    for skill in selected_skills:
+        if "warehouse_per_rhine_skill_5" in skill.get("tags", []):
+            extra += rhine_skill_count * 5.0
     return base + extra
 
 

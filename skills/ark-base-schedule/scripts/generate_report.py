@@ -22,6 +22,7 @@ def _project_sections(value: dict[str, Any]) -> list[str]:
     coverage = value.get("project_data_coverage") or {}
     roster = coverage.get("roster") or {}
     skills = coverage.get("unlocked_skill_coverage") or {}
+    relevant = coverage.get("relevant_unmodeled_skills") or {}
     if coverage:
         lines += [
             "", "## 数据覆盖", "",
@@ -31,6 +32,12 @@ def _project_sections(value: dict[str, Any]) -> list[str]:
             f"- 当前解锁技能：{skills.get('unlocked_skill_count', '—')}",
             f"- 直接数值 / 复杂标签 / 仅描述：{skills.get('direct_numeric_skill_count', '—')} / {skills.get('tagged_complex_skill_count', '—')} / {skills.get('description_only_skill_count', '—')}",
         ]
+        if relevant:
+            lines += [
+                f"- 本次范围未结构化技能：{relevant.get('unmodeled_count', '—')}",
+                f"- 其中高风险动态/数值技能：{relevant.get('blocking_count', '—')}",
+                f"- 门禁策略：{relevant.get('policy', 'warn')}",
+            ]
     profile = value.get("profile_search") or {}
     selected = value.get("selected") or {}
     solver_result = selected.get("solver_result") or {}

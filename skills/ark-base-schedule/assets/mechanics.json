@@ -125,6 +125,16 @@
       "facility": "dormitory"
     }
   },
+  "morale_model": {
+    "dormitory_base_recovery_per_hour": "1.5 + 0.1 * level + 0.0004 * ambience",
+    "dormitory_ambience_cap_by_level": {"1": 1000, "2": 2000, "3": 3000, "4": 4000, "5": 5000},
+    "workstation_base_consumption_per_hour": 1.0,
+    "trading_factory_staffing_reduction": {"1": 0.0, "2": 0.05, "3": 0.1},
+    "control_center_global_reduction_per_occupied_slot": 0.05,
+    "control_center_global_reduction_cap": 0.25,
+    "dormitory_capacity": 5,
+    "external_automation_rules_used": false
+  },
   "layouts": {
     "243": {
       "trading_post": 2,
@@ -478,6 +488,8 @@
   },
   "power_model": {
     "source_version": "PRTS-2026-07-28",
+    "right_side_facilities_irreversible": true,
+    "full_right_side_consumption": 190,
     "power_plant_supply_by_level": {
       "1": 60,
       "2": 130,
@@ -537,7 +549,8 @@
     ],
     "notes": [
       "无人机持有上限由已清理区域决定，与发电站数量和等级无关。",
-      "发电站等级只影响供电；进驻干员与技能影响无人机恢复速度。"
+      "发电站等级只影响供电；进驻干员与技能影响无人机恢复速度。",
+      "会客室、办公室、训练室和加工站不可降级；全部三级时固定耗电 190。"
     ]
   }
 }

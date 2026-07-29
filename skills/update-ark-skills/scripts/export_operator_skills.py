@@ -54,19 +54,44 @@ def main() -> int:
         parsed_tags = list(record.get("tags", []))
         parsed_products = list(record.get("products", []))
         parsed_bonus = record.get("base_bonus_pct")
+        parsed_mechanism = record.get("mechanism")
+        parsed_status = record.get("model_status")
+        resolved_bonus = (
+            float(parsed_bonus)
+            if parsed_bonus not in (None, "") and (float(parsed_bonus) != 0 or not existing_match)
+            else float(existing_match.get("base_bonus_pct", 0))
+        )
+        resolved_tags = parsed_tags or list(existing_match.get("tags", []))
+        resolved_mechanism = parsed_mechanism or existing_match.get("mechanism")
+        resolved_effects = record.get("effects") or existing_match.get("effects")
+        resolved_special_rules = record.get("special_rules") or existing_match.get("special_rules")
+        resolved_status = parsed_status or existing_match.get("model_status")
+        if not resolved_status:
+            resolved_status = (
+                "structured"
+                if abs(resolved_bonus) > 1e-12 or resolved_tags or resolved_mechanism or resolved_effects or resolved_special_rules
+                else ("description_only" if record.get("description") or existing_match.get("description") else "verified_zero")
+            )
         replacement = {
             "facility": record.get("facility", ""),
             "elite": int(record.get("elite", 0)),
+            "required_level": int(record.get("required_level", existing_match.get("required_level", 1)) or 1),
             "skill_name": record.get("skill_name", ""),
+            "variant_group": record.get("variant_group") or existing_match.get("variant_group") or f"{record.get('facility', '')}:skill:{record.get('skill_name', '')}",
             "description": record.get("description", "") or existing_match.get("description", ""),
-            "base_bonus_pct": (
-                float(parsed_bonus)
-                if parsed_bonus not in (None, "") and (float(parsed_bonus) != 0 or not existing_match)
-                else float(existing_match.get("base_bonus_pct", 0))
-            ),
-            "tags": parsed_tags or list(existing_match.get("tags", [])),
+            "base_bonus_pct": resolved_bonus,
+            "model_status": resolved_status,
+            "tags": resolved_tags,
             "products": parsed_products or list(existing_match.get("products", [])),
         }
+        if resolved_mechanism:
+            replacement["mechanism"] = resolved_mechanism
+        if resolved_effects:
+            replacement["effects"] = resolved_effects
+        if resolved_special_rules:
+            replacement["special_rules"] = resolved_special_rules
+        if record.get("source_line") is not None:
+            replacement["source_line"] = record["source_line"]
         filtered = [
             skill for skill in operator.get("skills", [])
             if (

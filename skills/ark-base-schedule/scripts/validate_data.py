@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from data_loader import ASSETS_DIR, load_mechanics, load_operator_data
+from coverage_report import skill_structure_issues
 
 
 def validate() -> list[str]:
@@ -15,10 +17,38 @@ def validate() -> list[str]:
     operator_data = load_operator_data()
     mechanics = load_mechanics()
 
+    version_path = ASSETS_DIR / "data-version.json"
+    if not version_path.exists():
+        errors.append("缺少 data-version.json")
+    else:
+        version_data = json.loads(version_path.read_text(encoding="utf-8"))
+        if version_data.get("data_version") != operator_data.get("data_version"):
+            errors.append("data-version.json 与 operator-skills.json 的 data_version 不一致")
+        operators = operator_data.get("operators", [])
+        skill_count = sum(len(operator.get("skills", [])) for operator in operators)
+        if int(version_data.get("canonical_operator_count", -1)) != len(operators):
+            errors.append("data-version.json 的 canonical_operator_count 与数据不一致")
+        if int(version_data.get("canonical_skill_count", -1)) != skill_count:
+            errors.append("data-version.json 的 canonical_skill_count 与数据不一致")
+
     if operator_data.get("schema_version") != 1:
         errors.append("operator-skills.json schema_version 必须为 1")
     if mechanics.get("schema_version") not in (2, 3, 4, 5, 6):
         errors.append("mechanics.json schema_version 必须为 2 至 6")
+
+    power_model = mechanics.get("power_model") or {}
+    if power_model.get("right_side_facilities_irreversible") is not True:
+        errors.append("mechanics.json 必须标记右侧功能设施不可降级")
+    full_right = {"reception_room": 3, "office": 3, "training_room": 3, "workshop": 3}
+    fixed_model = power_model.get("fixed_facility_consumption_by_level") or {}
+    calculated_full_right = sum(
+        float((fixed_model.get(name) or {}).get(str(level), 0.0) or 0.0)
+        for name, level in full_right.items()
+    )
+    if abs(calculated_full_right - float(power_model.get("full_right_side_consumption", -1))) > 1e-9:
+        errors.append("mechanics.json 右满耗电声明与分设施数据不一致")
+    if abs(calculated_full_right - 190.0) > 1e-9:
+        errors.append(f"mechanics.json 右满耗电应为 190，当前为 {calculated_full_right}")
 
 
     if mechanics.get("schema_version") >= 3:
@@ -38,6 +68,9 @@ def validate() -> list[str]:
     ids = set()
     facilities = set(mechanics.get("facilities", {}))
     products = mechanics.get("products", {})
+    valid_model_statuses = {"structured", "verified_zero", "conservative_zero", "description_only", "unsupported"}
+    supported_mechanisms = {"step_bonus"}
+    supported_stacking = {"add", "max", "replace", "multiply", "exclusive"}
     for operator in operator_data.get("operators", []):
         name = operator.get("name")
         operator_id = operator.get("id")
@@ -65,6 +98,55 @@ def validate() -> list[str]:
                     errors.append(
                         f"{name}/{skill.get('skill_name')}: 产品 {product} 与设施 {facility} 不匹配"
                     )
+            status = skill.get("model_status")
+            mechanism = skill.get("mechanism")
+            bonus = float(skill.get("base_bonus_pct", 0.0) or 0.0)
+            tags = list(skill.get("tags") or [])
+            effects = list(skill.get("effects") or [])
+            special_rules = list(skill.get("special_rules") or [])
+            if status is not None and status not in valid_model_statuses:
+                errors.append(f"{name}/{skill.get('skill_name')}: 未知 model_status {status}")
+            if mechanism is not None:
+                mechanism_type = mechanism.get("type") if isinstance(mechanism, dict) else None
+                if mechanism_type not in supported_mechanisms:
+                    errors.append(f"{name}/{skill.get('skill_name')}: 未支持 mechanism.type {mechanism_type}")
+                if status != "structured":
+                    errors.append(f"{name}/{skill.get('skill_name')}: mechanism 要求 model_status=structured")
+                if mechanism_type == "step_bonus":
+                    if mechanism.get("input") != "drone_capacity":
+                        errors.append(f"{name}/{skill.get('skill_name')}: step_bonus 使用未知 input")
+                    if float(mechanism.get("step", 0.0) or 0.0) <= 0:
+                        errors.append(f"{name}/{skill.get('skill_name')}: step_bonus.step 必须大于0")
+                    if float(mechanism.get("cap_pct", -1.0)) < 0:
+                        errors.append(f"{name}/{skill.get('skill_name')}: step_bonus.cap_pct 必须非负")
+            if status == "structured" and abs(bonus) <= 1e-12 and not tags and mechanism is None and not effects and not special_rules:
+                errors.append(f"{name}/{skill.get('skill_name')}: structured 技能缺少数值、标签或机制")
+            if status == "verified_zero" and (abs(bonus) > 1e-12 or tags or mechanism is not None or effects or special_rules):
+                errors.append(f"{name}/{skill.get('skill_name')}: verified_zero 技能不得携带收益机制")
+            for issue in skill_structure_issues(skill):
+                errors.append(f"{name}/{skill.get('skill_name')}: {issue}")
+            for effect in effects:
+                if not str(effect.get("effect_key") or ""):
+                    errors.append(f"{name}/{skill.get('skill_name')}: effect_key 不能为空")
+                if effect.get("stacking") not in supported_stacking:
+                    errors.append(f"{name}/{skill.get('skill_name')}: 未支持 stacking {effect.get('stacking')}")
+                if effect.get("value_pct") is None and not effect.get("mechanism"):
+                    errors.append(f"{name}/{skill.get('skill_name')}: effect 缺少 value_pct 或 mechanism")
+            for rule in special_rules:
+                if rule.get("type") not in {"group_factory_bonus", "amplifier_exclusion"}:
+                    errors.append(f"{name}/{skill.get('skill_name')}: 未支持 special rule {rule.get('type')}")
+
+        variant_sets: dict[tuple[str, str], set[str]] = {}
+        for skill in operator.get("skills", []):
+            skill_name = str(skill.get("skill_name") or "")
+            normalized = re.sub(r"[·・._-]?[αβγ]$", "", skill_name, flags=re.IGNORECASE)
+            if normalized == skill_name:
+                continue
+            key = (str(skill.get("facility") or ""), normalized)
+            variant_sets.setdefault(key, set()).add(str(skill.get("variant_group") or skill_name))
+        for (facility, normalized), groups in variant_sets.items():
+            if len(groups) > 1:
+                errors.append(f"{name}/{facility}/{normalized}: αβγ升级技能必须使用同一 variant_group")
 
     for layout_id, layout in mechanics.get("layouts", {}).items():
         total = sum(int(layout.get(key, 0)) for key in ("trading_post", "factory", "power_plant"))

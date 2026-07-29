@@ -24,6 +24,7 @@ from drone_model import (
     recovered_drones,
 )
 from efficiency_calculator import EfficiencyCalculator
+from dormitory_planner import plan_dormitories
 from optimizer_common import (
     context_rooms,
     context_roster,
@@ -141,20 +142,28 @@ def simulate_assignment(
     aggregate_fixed: dict[str, float] = defaultdict(float)
     warnings: list[str] = []
     operator_work: dict[str, list[bool]] = {name: [] for name in roster}
+    operator_morale_costs: dict[str, list[float]] = {name: [] for name in roster}
     operator_hours: dict[str, float] = defaultdict(float)
     selected_combo_by_segment_room: dict[tuple[str, str], dict[str, Any]] = {}
     power_bonus_by_segment: dict[str, float] = defaultdict(float)
 
     trading_post_count = sum(1 for value in rooms.values() if value["facility_id"] == "trading_post")
     power_plant_count = sum(1 for value in rooms.values() if value["facility_id"] == "power_plant")
+    settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
+    drone_capacity = float(settings.get("drone_capacity", drone_rules()["default_capacity"]))
 
     for segment in segments:
         selected = by_segment.get(segment.segment_id, [])
         all_operators: list[dict[str, Any]] = []
         for item in selected:
             combo = lookup[(item["room_id"], item["combination_id"])]
-            all_operators.extend(combo.get("operators") or [])
+            facility_id = rooms[item["room_id"]]["facility_id"]
+            all_operators.extend(
+                dict(op, assigned_facility=facility_id, assigned_room_id=item["room_id"])
+                for op in (combo.get("operators") or [])
+            )
         working_names = {item["name"] for item in all_operators}
+        segment_morale_costs = {name: 0.0 for name in roster}
         for name in roster:
             operator_work[name].append(name in working_names)
             if name in working_names:
@@ -173,9 +182,14 @@ def simulate_assignment(
                     room["product_id"],
                     trading_post_count=trading_post_count,
                     power_plant_count=power_plant_count,
+                    drone_capacity=drone_capacity,
+                    facility_level=int(room.get("level", 1)),
+                    dormitory_levels=list((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1]),
                     global_operators=all_operators,
                 )
                 calculated = calculator.compute()
+                for name, rate in calculator.morale_cost_rates().items():
+                    segment_morale_costs[name] = rate
             else:
                 calculated = {"error": f"calculator_unsupported:{room['facility_id']}", "warnings": []}
             fallback_bonus = float((combo.get("efficiency_result") or {}).get("estimated_efficiency_bonus_pct", 0) or 0)
@@ -263,11 +277,11 @@ def simulate_assignment(
                     "warehouse_overflow": overflow,
                 }
             )
+        for name in roster:
+            operator_morale_costs[name].append(segment_morale_costs[name])
 
     # Drone recovery and operation-node allocation.
-    settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
     allocate_drones = bool(settings.get("allocate_drones", True))
-    drone_capacity = float(settings.get("drone_capacity", drone_rules()["default_capacity"]))
     cyclic = bool(settings.get("drone_repeating_day_balance", True))
     drone_timeline: list[dict[str, Any]] = []
     drone_allocation_results: list[dict[str, Any]] = []
@@ -365,9 +379,9 @@ def simulate_assignment(
         initial = float(roster_item.get("morale") if roster_item.get("morale") is not None else max_morale)
         morale = initial
         minimum = morale
-        for state, segment in zip(states, segments):
+        for state, cost_rate, segment in zip(states, operator_morale_costs[name], segments):
             if state:
-                morale -= segment.hours
+                morale -= cost_rate * segment.hours
             else:
                 morale = min(max_morale, morale + rest_recovery * segment.hours)
             minimum = min(minimum, morale)
@@ -395,6 +409,29 @@ def simulate_assignment(
             "max_continuous_work_hours": max_continuous,
             "working_segments": [segment.segment_id for state, segment in zip(states, segments) if state],
         }
+
+    settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
+    require_dormitory_cycle = bool(settings.get("require_dormitory_cycle", False))
+    dormitories = (context.get("facility_configuration") or {}).get("dormitories") or []
+    dormitory_plan = plan_dormitories(
+        segments,
+        dormitories,
+        operator_work,
+        operator_morale_costs,
+        ambience=(context.get("base_state") or {}).get("dormitory_ambience"),
+        max_morale=max_morale,
+    ) if require_dormitory_cycle else {
+        "enabled": False,
+        "feasible": True,
+        "repeating_day_verified": False,
+        "assignments": [],
+        "operator_flows": {},
+    }
+    if require_dormitory_cycle and not dormitory_plan.get("feasible"):
+        warnings.append("宿舍床位或恢复能力不足，重复日心情无法闭环")
+    for name, flow in (dormitory_plan.get("operator_flows") or {}).items():
+        if name in morale_results:
+            morale_results[name].update(flow)
 
     continuity_matches = 0
     for left, right in zip(segments, segments[1:]):
@@ -459,6 +496,7 @@ def simulate_assignment(
             "allocations": drone_allocation_results,
         },
         "morale": morale_results,
+        "dormitory_plan": dormitory_plan,
         "warnings": warnings,
         "assumptions": {
             "collection_at_every_operation_node": True,
@@ -467,6 +505,8 @@ def simulate_assignment(
             "lmd_drone_output_uses_expected_order_distribution_when_current_order_unknown": True,
             "rest_recovery_per_hour": rest_recovery,
             "initial_morale_default": max_morale,
+            "dormitory_base_recovery_formula": "1.5 + 0.1 * level + 0.0004 * ambience",
+            "dormitory_manager_bonus_included": False,
             "random_lmd_order_sequence_not_simulated": True,
         },
     }

@@ -4,17 +4,26 @@
   "mode": "layout_search",
   "roster": "../roster.example.tsv",
   "objective": {
+    "goal": "赚钱+搓玉",
     "online_times": ["08:00", "14:00", "20:00"],
     "minimum_net_lmd_per_day": -10000,
-    "minimum_orundum_shard_balance": 0,
+    "minimum_originium_shard_balance": 0,
     "minimum_pure_gold_balance": 0,
     "max_daily_work_hours": 24
   },
   "base_state": {
     "drone_capacity": 235,
     "initial_drone_stock": 235,
-    "dormitory_levels": [1, 1, 1, 1]
+    "dormitory_levels": [1, 1, 1, 1],
+    "right_side_levels": {
+      "reception_room": 3,
+      "office": 3,
+      "training_room": 3,
+      "workshop": 3
+    },
+    "right_side_levels_confirmed": true
   },
+  "horizon": {"mode": "steady_state"},
   "profiles": {
     "mode": "representative",
     "ids": ["252-output"]
@@ -24,5 +33,8 @@
     "operator_pool_size": 6,
     "time_limit_seconds": 1,
     "max_proxy_attempts": 1
+  },
+  "verification": {
+    "strict_warnings": false
   }
 }

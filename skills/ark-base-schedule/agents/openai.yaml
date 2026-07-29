@@ -1,4 +1,4 @@
 interface:
   display_name: "明日方舟基建排班优化"
-  short_description: "枚举房间组合、全局求解布局排班、分配无人机并复算经济"
-  default_prompt: "使用 $ark-base-schedule 读取我的干员池、建筑状态、上线时间和经济目标。先把攻略作为比较候选，再枚举合法房间组合，运行全局MILP和无人机闭环，复算仓库、资源与心情，执行结果审计，并用中文说明当前最高分候选、培养建议和最优性范围。"
+  short_description: "全局求解基建排班并导出可用的独立排班 JSON"
+  default_prompt: "使用 $ark-base-schedule 读取我的干员池、建筑状态、上线时间和经济目标，运行完整求解与验证，并交付兼容 template.json 的 schedule.json 排班文件。"

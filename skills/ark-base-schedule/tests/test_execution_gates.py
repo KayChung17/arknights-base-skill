@@ -46,7 +46,8 @@ class PreflightTests(unittest.TestCase):
                     "office": 3,
                     "training_room": 3,
                     "workshop": 3
-                }
+                },
+                "right_side_levels_confirmed": True,
             },
             "horizon": {"mode": "steady_state"},
             "profiles": {"mode": "representative"}
@@ -76,6 +77,36 @@ class PreflightTests(unittest.TestCase):
             self.assertEqual(report["status"], "ready")
             self.assertEqual(report["resolved_config"]["objective"]["minimum_originium_shard_balance"], value)
             self.assertTrue(report["deprecations"])
+
+    def test_resource_balances_default_to_steady_state_zero_floor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["objective"].pop("minimum_originium_shard_balance")
+            config["objective"].pop("minimum_pure_gold_balance")
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "ready")
+            objective = report["resolved_config"]["objective"]
+            self.assertEqual(objective["minimum_originium_shard_balance"], 0.0)
+            self.assertEqual(objective["minimum_pure_gold_balance"], 0.0)
+            self.assertEqual(report["source_map"]["/objective/minimum_originium_shard_balance"], "repository_default")
+            self.assertEqual(report["source_map"]["/objective/minimum_pure_gold_balance"], "repository_default")
+
+    def test_right_side_levels_require_explicit_irreversible_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["base_state"].pop("right_side_levels_confirmed")
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "needs_input")
+            self.assertIn(
+                "/base_state/right_side_levels_confirmed",
+                {item["path"] for item in report["missing"]},
+            )
 
     def test_conflicting_shard_fields_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -126,7 +157,26 @@ class VerificationTests(unittest.TestCase):
                 "operators": [{"operator": "测试", "known": True}],
                 "_run": {"run_id": run_id}
             })
+            self._write_json(root / "unmodeled-relevant-skills.json", {
+                "blocking_count": 0,
+                "unmodeled_count": 0,
+                "skills": [],
+                "_run": {"run_id": run_id, "config_sha256": config_hash}
+            })
             self._write_json(root / "pareto.json", {"frontier": []})
+            self._write_json(root / "schedule.json", {
+                "author": "test", "description": "test", "id": 1, "title": "test", "planTimes": "1班",
+                "plans": [{
+                    "name": "第01班", "description": "", "description_post": "",
+                    "Fiammetta": {"enable": False, "target": "", "order": "pre"},
+                    "drones": {"room": "trading", "index": 1, "enable": False, "order": "pre"},
+                    "rooms": {
+                        "trading": [], "manufacture": [], "power": [], "dormitory": [],
+                        "control": [], "meeting": [], "hire": [], "processing": [],
+                    },
+                }],
+                "scheduleType": {"planTimes": 1, "trading": 0, "manufacture": 0, "power": 0, "dormitory": 0},
+            })
             (root / "report.md").write_text("# 报告\n" + "有效内容" * 60, encoding="utf-8")
             self._write_json(root / "config.resolved.json", {"verification": {}, "_resolution": {"run_id": run_id, "config_sha256": config_hash}})
             summary = {
@@ -134,14 +184,16 @@ class VerificationTests(unittest.TestCase):
                 "config_sha256": config_hash,
                 "result": str(root / "result.json"),
                 "report": str(root / "report.md"),
+                "schedule": str(root / "schedule.json"),
                 "audit": str(root / "audit.json"),
                 "coverage": str(root / "coverage.json"),
                 "pareto": str(root / "pareto.json"),
                 "configuration": str(root / "config.resolved.json"),
-                "preflight": str(root / "preflight.json")
+                "preflight": str(root / "preflight.json"),
+                "unmodeled_relevant_skills": str(root / "unmodeled-relevant-skills.json")
             }
             self._write_json(root / "summary.json", summary)
-            names = ["preflight.json", "result.json", "audit.json", "coverage.json", "pareto.json", "report.md", "config.resolved.json"]
+            names = ["preflight.json", "result.json", "audit.json", "coverage.json", "pareto.json", "report.md", "schedule.json", "config.resolved.json", "unmodeled-relevant-skills.json"]
             self._write_json(root / "run-manifest.json", {"run_id": run_id, "config_sha256": config_hash, "artifacts": {name: self._hash(root / name) for name in names}})
             passed = verify_output(root, strict_warnings=False)
             self.assertIn(passed["status"], {"passed", "passed_with_warnings"})
@@ -159,6 +211,8 @@ class SkillContractTests(unittest.TestCase):
             "最终方案必须来自仓库完整入口",
             "求解后必须验证输出",
             "执行失败时停止给结论",
+            "schedule.json",
+            "assets/template.json",
             "needs_input",
             "execution_blocked",
         ):

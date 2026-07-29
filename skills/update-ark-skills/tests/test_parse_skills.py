@@ -40,6 +40,24 @@ class ParseTests(unittest.TestCase):
                         "skill_name": "违约体验·β",
                         "description": "旧描述",
                         "base_bonus_pct": 0,
+                        "model_status": "structured",
+                        "mechanism": {
+                            "type": "step_bonus",
+                            "input": "drone_capacity",
+                            "step": 10,
+                            "bonus_pct_per_step": 1,
+                            "cap_pct": 25,
+                        },
+                        "effects": [{
+                            "effect_key": "global_trading_order_efficiency_pct",
+                            "stacking": "max",
+                            "value_pct": 7,
+                        }],
+                        "special_rules": [{
+                            "rule_id": "test_rule",
+                            "type": "amplifier_exclusion",
+                            "excluded_amplifier_skill_names": ["测试技能"],
+                        }],
                         "tags": ["multiplier_1_556"],
                         "products": ["lmd_order"],
                     }],
@@ -70,12 +88,16 @@ class ParseTests(unittest.TestCase):
                 "--existing", str(existing_path),
                 "--output", str(output_path),
                 "--data-version", "new",
-            ], check=True, capture_output=True, text=True)
+            ], check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
             output = json.loads(output_path.read_text(encoding="utf-8"))
             skill = output["operators"][0]["skills"][0]
             self.assertEqual(skill["tags"], ["multiplier_1_556"])
             self.assertEqual(skill["products"], ["lmd_order"])
             self.assertEqual(skill["description"], "新描述")
+            self.assertEqual(skill["model_status"], "structured")
+            self.assertEqual(skill["mechanism"]["type"], "step_bonus")
+            self.assertEqual(skill["effects"][0]["stacking"], "max")
+            self.assertEqual(skill["special_rules"][0]["rule_id"], "test_rule")
 
 
 class OwnedSkillTableImportTests(unittest.TestCase):

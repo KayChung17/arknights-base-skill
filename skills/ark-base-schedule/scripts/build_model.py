@@ -271,7 +271,7 @@ def build_milp(
                     "kind": "drone_waste",
                     "segment_id": segment.segment_id,
                     "objective_coefficient": 0.0,
-                    "max_value": float(settings["drone_capacity"]) + recovery_rate_per_hour(100.0) * segment.hours,
+                    "max_value": 0.0 if settings.get("forbid_drone_waste") else float(settings["drone_capacity"]) + recovery_rate_per_hour(100.0) * segment.hours,
                 }
             )
             drone_waste_indices.append(index)

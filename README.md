@@ -2,7 +2,7 @@
 
 面向中文用户的明日方舟基建布局、排班、无人机与培养决策工具。仓库将单房间组合枚举、全局混合整数规划、逐区间模拟和大模型解释组合为一条可审计、可复现的求解链路。
 
-当前版本：**1.0.0** · [发布说明](RELEASE_NOTES-1.0.0.md)
+当前版本：**2.0.0** · [发布说明](RELEASE_NOTES-2.0.0.md) · [迁移指南](MIGRATION-2.0.0.md)
 
 > 本项目是非官方社区工具。游戏名称、角色名称与相关素材权利归其权利人所有。内置数据是版本化快照，不保证覆盖游戏中的全部干员或未来更新。
 
@@ -13,8 +13,9 @@
 - 以合成玉、龙门币、赤金、经验、低操作量或自定义权重为目标。
 - 把无人机恢复、持有上限、节点分配、资源成本和重复日库存闭环纳入模型。
 - 检查同一时间重复进驻、工时、仓库封顶、赤金与碎片收支、龙门币下限和心情风险。
+- 长期重复日默认要求赤金与源石碎片日净变化均不低于 0，并在同收益候选中优先更接近收支平衡的方案。
 - 比较当前练度、基建技能全解锁上限和定向培养方案。
-- 输出结构化 JSON、中文 Markdown 报告、审计结果和可复现清单。
+- 输出可直接导入排班工具的 `schedule.json`、中文报告、审计结果和可复现清单。
 - 将攻略模板作为比较基线，不把模板限制成唯一搜索空间。
 
 ## 方法概览
@@ -68,15 +69,21 @@ python arkbase.py run project.json \
 输出目录包含：
 
 ```text
-result.json           完整结构化结果
-report.md             中文摘要与排班报告
-audit.json            硬约束和最优性措辞审计
-coverage.json         干员与技能结构化覆盖报告
-summary.json          文件位置与运行状态
-config.resolved.json  本次使用的配置副本
+schedule.json                   template.json 兼容的独立排班表
+result.json                     完整结构化结果
+report.md                       中文摘要与排班报告
+audit.json                      硬约束和最优性措辞审计
+coverage.json                   干员与技能结构化覆盖报告
+pareto.json                     多目标候选前沿
+preflight.json                  输入门禁结果
+unmodeled-relevant-skills.json  本次范围内未结构化技能
+config.resolved.json            本次使用的配置副本
+run-manifest.json               同次运行产物哈希
+verification.json               发布验证结果
+summary.json                    文件位置与运行状态
 ```
 
-配置字段见 [配置说明](docs/配置说明.md)。
+配置字段见 [配置说明](docs/配置说明.md)。排班文件可参考 [2.0 脱敏样例](skills/ark-base-schedule/samples/sample_schedule_v2.json)，完整字段骨架见 [导出模板](skills/ark-base-schedule/assets/template.json)。
 
 ## 常用模式
 
@@ -123,6 +130,12 @@ config.resolved.json  本次使用的配置副本
 # 完整项目流程
 python arkbase.py run project.json
 
+# 严格输入预检
+python arkbase.py preflight project.json
+
+# 验证同次运行产物
+python arkbase.py verify output/my-project
+
 # 环境与数据诊断
 python arkbase.py doctor
 
@@ -134,6 +147,13 @@ python arkbase.py report result.json --output report.md
 
 # 检查自己的干员池数据覆盖
 python arkbase.py coverage --roster roster.xlsx --output coverage.json
+```
+
+已有 `result.json` 可以补导排班表：
+
+```bash
+python skills/ark-base-schedule/scripts/export_schedule_template.py \
+  result.json --output schedule.json
 ```
 
 底层脚本仍可独立调用，详见 `skills/ark-base-schedule/SKILL.md` 与 `references/script-contracts.md`。

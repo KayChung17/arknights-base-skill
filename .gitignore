@@ -16,6 +16,8 @@ work/
 *.local.tsv
 *.local.csv
 *.local.xlsx
+project.json
+project.*.json
 roster.tsv
 roster.csv
 roster.xlsx

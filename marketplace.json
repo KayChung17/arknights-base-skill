@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/KayChung17/arknights-base-skill/main/marketplace.schema.json",
   "name": "arknights-base-skill",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "repository": "https://github.com/KayChung17/arknights-base-skill",
   "skills": [
     {

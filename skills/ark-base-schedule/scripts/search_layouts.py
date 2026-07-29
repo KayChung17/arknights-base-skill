@@ -42,11 +42,14 @@ def product_splits(
     *,
     max_orundum_trading_posts: int | None = None,
     max_shard_factories: int | None = None,
-) -> list[tuple[int, int]]:
-    """Return feasible ``(orundum trading rooms, shard factories)`` choices.
+    minimum_battle_record_factories: int = 0,
+) -> list[tuple[int, int, int]]:
+    """Return feasible product choices for trading posts and factories.
 
     At least one LMD trading post and one pure-gold factory are retained. Only
-    level-3 rooms can host orundum orders/source-shard recipes.
+    level-3 rooms can host orundum orders/source-shard recipes. Battle-record
+    factories remain disabled by default for backward compatibility; setting a
+    positive minimum enables their enumeration.
     """
 
     profile = normalize_profile(profile)
@@ -60,14 +63,25 @@ def product_splits(
         max_tp = min(max_tp, max(0, int(max_orundum_trading_posts)))
     if max_shard_factories is not None:
         max_f = min(max_f, max(0, int(max_shard_factories)))
+    minimum_battle = max(0, int(minimum_battle_record_factories))
     return [
-        (origin_rooms, shard_factories)
+        (origin_rooms, shard_factories, battle_record_factories)
         for origin_rooms in range(1, max_tp + 1)
         for shard_factories in range(1, max_f + 1)
+        for battle_record_factories in (
+            range(minimum_battle, factory_count - shard_factories)
+            if minimum_battle > 0
+            else (0,)
+        )
     ]
 
 
-def facility_configuration(profile: dict[str, Any], origin_rooms: int, shard_factories: int) -> dict[str, Any]:
+def facility_configuration(
+    profile: dict[str, Any],
+    origin_rooms: int,
+    shard_factories: int,
+    battle_record_factories: int = 0,
+) -> dict[str, Any]:
     profile = normalize_profile(profile)
     rooms: dict[str, dict[str, Any]] = {}
     tp_levels = sorted(profile["trading_levels"], reverse=True)
@@ -78,11 +92,20 @@ def facility_configuration(profile: dict[str, Any], origin_rooms: int, shard_fac
         if product == "orundum_order":
             origin_remaining -= 1
         rooms[f"trading_post_{index}"] = {"facility_id": "trading_post", "level": level, "product_id": product}
+    factory_products = ["pure_gold"] * len(f_levels)
     shard_remaining = int(shard_factories)
-    for index, level in enumerate(f_levels, start=1):
-        product = "orundum_shard" if level == 3 and shard_remaining > 0 else "pure_gold"
-        if product == "orundum_shard":
+    for index, level in enumerate(f_levels):
+        if level == 3 and shard_remaining > 0:
+            factory_products[index] = "orundum_shard"
             shard_remaining -= 1
+    battle_remaining = int(battle_record_factories)
+    for index in range(len(f_levels) - 1, -1, -1):
+        if factory_products[index] == "pure_gold" and battle_remaining > 0:
+            factory_products[index] = "battle_record"
+            battle_remaining -= 1
+    if shard_remaining or battle_remaining:
+        raise ValueError("制造站产品数量超过当前布局可承载范围")
+    for index, (level, product) in enumerate(zip(f_levels, factory_products), start=1):
         rooms[f"factory_{index}"] = {"facility_id": "factory", "level": level, "product_id": product}
     for index, level in enumerate(profile["power_plant_levels"], start=1):
         rooms[f"power_plant_{index}"] = {"facility_id": "power_plant", "level": level, "product_id": "drone_recovery"}
@@ -102,6 +125,7 @@ def build_context(
     profile: dict[str, Any],
     origin_rooms: int,
     shard_factories: int,
+    battle_record_factories: int,
     online_times: list[str],
     lmd_floor: float,
     max_daily_work_hours: float,
@@ -112,6 +136,7 @@ def build_context(
     right_side_levels: dict[str, int] | None = None,
     minimum_shard_balance: float = 0.0,
     minimum_gold_balance: float = 0.0,
+    operator_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     profile = normalize_profile(profile)
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
@@ -137,7 +162,9 @@ def build_context(
             "initial_drone_stock": initial_stock,
             "max_drone_use_per_node": float(drone_capacity),
             "drone_target_products": ["lmd_order", "orundum_order", "pure_gold", "orundum_shard"],
+            "forbid_drone_waste": True,
             "repeat_day_continuity": False,
+            "require_dormitory_cycle": True,
         },
     }
     context = build_decision_packet(
@@ -147,16 +174,22 @@ def build_context(
         len(online_times),
         preferences,
         online_times,
+        operator_overrides,
     )
     context["baseline"] = None
-    context["facility_configuration"] = facility_configuration(profile, origin_rooms, shard_factories)
+    context["facility_configuration"] = facility_configuration(
+        profile,
+        origin_rooms,
+        shard_factories,
+        battle_record_factories,
+    )
     context["objective"]["layout_profile"] = profile_id
     context["objective"]["product_split"] = {
         "orundum_trading_posts": origin_rooms,
         "lmd_trading_posts": len(profile["trading_levels"]) - origin_rooms,
         "orundum_shard_factories": shard_factories,
-        "pure_gold_factories": len(profile["factory_levels"]) - shard_factories,
-        "battle_record_factories": 0,
+        "pure_gold_factories": len(profile["factory_levels"]) - shard_factories - battle_record_factories,
+        "battle_record_factories": battle_record_factories,
     }
     context["base_state"] = {
         "drone_capacity": float(drone_capacity),
@@ -173,7 +206,7 @@ def build_context(
 def compact_result(
     profile_id: str,
     profile: dict[str, Any],
-    split: tuple[int, int],
+    split: tuple[int, int, int],
     result: dict[str, Any],
     *,
     right_side_levels: dict[str, int] | None = None,
@@ -181,6 +214,8 @@ def compact_result(
     selected = result["selected_solution"]
     simulation = selected["simulation"]
     aggregate = simulation["aggregate_metrics"]
+    shard_balance = float(simulation.get("orundum_shard_balance", 0.0))
+    gold_balance = float(simulation.get("pure_gold_balance", 0.0))
     return {
         "profile_id": profile_id,
         "layout": profile["layout"],
@@ -193,19 +228,21 @@ def compact_result(
             "orundum_trading_posts": split[0],
             "lmd_trading_posts": len(profile["trading_levels"]) - split[0],
             "orundum_shard_factories": split[1],
-            "pure_gold_factories": len(profile["factory_levels"]) - split[1],
-            "battle_record_factories": 0,
+            "pure_gold_factories": len(profile["factory_levels"]) - split[1] - split[2],
+            "battle_record_factories": split[2],
         },
         "orundum_per_day": float(aggregate.get("orundum", 0.0)),
         "gross_lmd_per_day": float(aggregate.get("lmd", 0.0)),
         "shard_lmd_cost_per_day": float(aggregate.get("lmd_cost", 0.0)),
         "net_lmd_per_day": float(simulation.get("net_lmd_balance", 0.0)),
-        "orundum_shard_balance": float(simulation.get("orundum_shard_balance", 0.0)),
-        "pure_gold_balance": float(simulation.get("pure_gold_balance", 0.0)),
+        "orundum_shard_balance": shard_balance,
+        "pure_gold_balance": gold_balance,
+        "resource_balance_deviation": abs(shard_balance) + abs(gold_balance),
         "orundum_shard_produced": float(aggregate.get("orundum_shard", 0.0)),
         "orundum_shard_consumed": float(aggregate.get("orundum_shard_consumption", 0.0)),
         "pure_gold_produced": float(aggregate.get("pure_gold", 0.0)),
         "pure_gold_consumed": float(aggregate.get("pure_gold_consumption", 0.0)),
+        "battle_record_exp_per_day": float(aggregate.get("battle_record_exp", 0.0)),
         "drones_recovered": float((simulation.get("drone_plan") or {}).get("total_recovered", 0.0)),
         "drones_used": float((simulation.get("drone_plan") or {}).get("total_used", 0.0)),
         "drones_wasted": float((simulation.get("drone_plan") or {}).get("total_wasted", 0.0)),
@@ -256,6 +293,7 @@ def search_layouts(
     operator_pool_size: int = 12,
     time_limit: float = 12.0,
     max_proxy_attempts: int = 4,
+    mip_rel_gap: float = 0.01,
     profiles: list[str] | None = None,
     lmd_proxy_floor_slack: float = 0.0,
     profile_mode: str = "representative",
@@ -270,6 +308,8 @@ def search_layouts(
     minimum_gold_balance: float = 0.0,
     max_orundum_trading_posts: int | None = None,
     max_shard_factories: int | None = None,
+    minimum_battle_record_factories: int = 0,
+    operator_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
     right.update(right_side_levels or {})
@@ -295,6 +335,7 @@ def search_layouts(
             profile,
             max_orundum_trading_posts=max_orundum_trading_posts,
             max_shard_factories=max_shard_factories,
+            minimum_battle_record_factories=minimum_battle_record_factories,
         )
         if not splits:
             failures.append({
@@ -312,6 +353,7 @@ def search_layouts(
                 profile,
                 split[0],
                 split[1],
+                split[2],
                 online_times,
                 lmd_floor,
                 max_daily_work_hours,
@@ -321,6 +363,7 @@ def search_layouts(
                 right_side_levels=right,
                 minimum_shard_balance=minimum_shard_balance,
                 minimum_gold_balance=minimum_gold_balance,
+                operator_overrides=operator_overrides,
             )
             try:
                 library = build_library(context, top_k=top_k, operator_pool_size=operator_pool_size, allow_partial=True)
@@ -331,7 +374,7 @@ def search_layouts(
                     operator_pool_size=operator_pool_size,
                     top_solutions=1,
                     time_limit=time_limit,
-                    mip_rel_gap=0.01,
+                    mip_rel_gap=mip_rel_gap,
                     max_proxy_attempts=max_proxy_attempts,
                 )
                 rows.append(compact_result(profile_id, profile, split, result, right_side_levels=right))
@@ -339,20 +382,30 @@ def search_layouts(
                 failures.append({
                     "profile_id": profile_id,
                     "layout": profile["layout"],
-                    "split": {"orundum_trading_posts": split[0], "orundum_shard_factories": split[1]},
+                    "split": {
+                        "orundum_trading_posts": split[0],
+                        "orundum_shard_factories": split[1],
+                        "battle_record_factories": split[2],
+                    },
                     "reason": str(exc),
                 })
-    rows.sort(key=lambda item: (-item["orundum_per_day"], -item["net_lmd_per_day"], -item["actual_objective_score"]))
+    rows.sort(key=lambda item: (
+        -item["orundum_per_day"],
+        -item["net_lmd_per_day"],
+        item["resource_balance_deviation"],
+        -item["actual_objective_score"],
+    ))
     result = {
         "schema_version": 2,
         "search_type": "outer_layout_configuration_plus_inner_hybrid_schedule_solver",
         "objective": {
             "primary": "maximize_orundum",
+            "default_resource_balance_policy": "nonnegative_daily_balance_then_minimize_surplus_on_primary_ties",
             "constraints": {
                 "minimum_net_lmd_per_day": lmd_floor,
                 "minimum_orundum_shard_balance": minimum_shard_balance,
                 "minimum_pure_gold_balance": minimum_gold_balance,
-                "battle_record_factories": 0,
+                "minimum_battle_record_factories": minimum_battle_record_factories,
                 "max_daily_work_hours": max_daily_work_hours,
             },
         },
@@ -369,6 +422,7 @@ def search_layouts(
             "operator_pool_size": operator_pool_size,
             "time_limit_per_proxy_model_seconds": time_limit,
             "max_proxy_attempts_per_configuration": max_proxy_attempts,
+            "mip_rel_gap": mip_rel_gap,
             "lmd_proxy_floor_slack": lmd_proxy_floor_slack,
             "attempted_configurations": attempted_configurations,
         },
@@ -424,6 +478,7 @@ def main() -> int:
     parser.add_argument("--operator-pool-size", type=int, default=12)
     parser.add_argument("--time-limit", type=float, default=12.0)
     parser.add_argument("--max-proxy-attempts", type=int, default=4)
+    parser.add_argument("--mip-rel-gap", type=float, default=0.01)
     parser.add_argument("--profile-mode", choices=["representative", "level_grid"], default="representative")
     parser.add_argument("--profiles", help="逗号分隔的profile id")
     parser.add_argument("--profiles-file", help="自定义profile JSON文件")
@@ -435,6 +490,7 @@ def main() -> int:
     parser.add_argument("--initial-drone-stock", type=float)
     parser.add_argument("--max-orundum-trading-posts", type=int)
     parser.add_argument("--max-shard-factories", type=int)
+    parser.add_argument("--minimum-battle-record-factories", type=int, default=0)
     parser.add_argument("--lmd-proxy-floor-slack", type=float, default=0.0, help="MILP代理龙门币下限相对实际下限的放宽量")
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
@@ -449,6 +505,7 @@ def main() -> int:
         operator_pool_size=args.operator_pool_size,
         time_limit=args.time_limit,
         max_proxy_attempts=args.max_proxy_attempts,
+        mip_rel_gap=args.mip_rel_gap,
         profiles=[item.strip() for item in args.profiles.split(",") if item.strip()] if args.profiles else None,
         lmd_proxy_floor_slack=args.lmd_proxy_floor_slack,
         profile_mode=args.profile_mode,
@@ -461,6 +518,7 @@ def main() -> int:
         initial_drone_stock=args.initial_drone_stock,
         max_orundum_trading_posts=args.max_orundum_trading_posts,
         max_shard_factories=args.max_shard_factories,
+        minimum_battle_record_factories=args.minimum_battle_record_factories,
     )
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)

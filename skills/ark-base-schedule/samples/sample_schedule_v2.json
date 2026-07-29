@@ -1,0 +1,547 @@
+{
+  "author": "ark-base-schedule",
+  "description": "由 ark-base-schedule 求解、模拟并验证后导出",
+  "id": 895285474944330,
+  "title": "混合枚举与MILP求解候选",
+  "planTimes": "3班",
+  "plans": [
+    {
+      "name": "第01班 08:00",
+      "description": "08:00 上线执行，覆盖 08:00–14:00",
+      "description_post": "完成换班后运行至 14:00",
+      "Fiammetta": {
+        "enable": false,
+        "target": "",
+        "order": "pre"
+      },
+      "drones": {
+        "room": "manufacture",
+        "index": 3,
+        "enable": true,
+        "order": "pre"
+      },
+      "rooms": {
+        "trading": [
+          {
+            "skip": false,
+            "operators": [
+              "龙舌兰",
+              "拜松",
+              "月见夜"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "巫恋",
+              "但书",
+              "摩根"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "空爆"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          }
+        ],
+        "manufacture": [
+          {
+            "skip": false,
+            "operators": [
+              "斑点",
+              "温米",
+              "温蒂"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Pure Gold"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "清流",
+              "砾",
+              "夜烟"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Pure Gold"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "森蚺",
+              "地灵"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Originium Shard"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "幽灵鲨",
+              "斯卡蒂"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Battle Record"
+          }
+        ],
+        "power": [
+          {
+            "skip": false,
+            "operators": [
+              "深靛"
+            ],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [
+              "格雷伊"
+            ],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "dormitory": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "control": [
+          {
+            "skip": false,
+            "operators": [
+              "望",
+              "凯尔希",
+              "戴菲恩",
+              "杜宾",
+              "歌蕾蒂娅"
+            ],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "meeting": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "hire": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "processing": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "第02班 14:00",
+      "description": "14:00 上线执行，覆盖 14:00–20:00",
+      "description_post": "完成换班后运行至 20:00",
+      "Fiammetta": {
+        "enable": false,
+        "target": "",
+        "order": "pre"
+      },
+      "drones": {
+        "room": "trading",
+        "index": 1,
+        "enable": false,
+        "order": "pre"
+      },
+      "rooms": {
+        "trading": [
+          {
+            "skip": false,
+            "operators": [
+              "龙舌兰",
+              "拜松",
+              "月见夜"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "巫恋",
+              "但书",
+              "摩根"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "空爆"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          }
+        ],
+        "manufacture": [
+          {
+            "skip": false,
+            "operators": [
+              "斑点",
+              "温米",
+              "温蒂"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Pure Gold"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "清流",
+              "砾",
+              "夜烟"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Pure Gold"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "森蚺",
+              "地灵"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Originium Shard"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "幽灵鲨",
+              "斯卡蒂"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Battle Record"
+          }
+        ],
+        "power": [
+          {
+            "skip": false,
+            "operators": [
+              "深靛"
+            ],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [
+              "格雷伊"
+            ],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "dormitory": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "control": [
+          {
+            "skip": false,
+            "operators": [
+              "望",
+              "凯尔希",
+              "戴菲恩",
+              "杜宾",
+              "歌蕾蒂娅"
+            ],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "meeting": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "hire": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "processing": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "第03班 20:00",
+      "description": "20:00 上线执行，覆盖 20:00–08:00",
+      "description_post": "完成换班后运行至 08:00",
+      "Fiammetta": {
+        "enable": false,
+        "target": "",
+        "order": "pre"
+      },
+      "drones": {
+        "room": "manufacture",
+        "index": 3,
+        "enable": true,
+        "order": "pre"
+      },
+      "rooms": {
+        "trading": [
+          {
+            "skip": false,
+            "operators": [
+              "龙舌兰",
+              "拜松",
+              "月见夜"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "巫恋",
+              "但书",
+              "摩根"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "空爆"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "LMD"
+          }
+        ],
+        "manufacture": [
+          {
+            "skip": false,
+            "operators": [
+              "森蚺",
+              "斑点",
+              "温米"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Pure Gold"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "清流",
+              "砾",
+              "夜烟"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Pure Gold"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "冬时",
+              "多萝西"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Originium Shard"
+          },
+          {
+            "skip": false,
+            "operators": [
+              "温蒂",
+              "野鬃"
+            ],
+            "sort": false,
+            "autofill": false,
+            "product": "Battle Record"
+          }
+        ],
+        "power": [
+          {
+            "skip": false,
+            "operators": [
+              "深靛"
+            ],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [
+              "格雷伊"
+            ],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "dormitory": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "control": [
+          {
+            "skip": false,
+            "operators": [
+              "望",
+              "凯尔希",
+              "戴菲恩",
+              "杜宾",
+              "歌蕾蒂娅"
+            ],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "meeting": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "hire": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "processing": [
+          {
+            "skip": true,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ]
+      }
+    }
+  ],
+  "scheduleType": {
+    "planTimes": 3,
+    "trading": 3,
+    "manufacture": 4,
+    "power": 2,
+    "dormitory": 4
+  }
+}

@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass, asdict
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 ASSETS_DIR = SKILL_ROOT / "assets"
@@ -121,10 +121,13 @@ def read_roster(path: str | Path) -> list[OwnedOperator]:
         try:
             headers = [str(item).strip() if item is not None else "" for item in next(iterator)]
         except StopIteration:
+            workbook.close()
             return []
+        raw_rows = list(iterator)
+        workbook.close()
         rows = (
             {headers[index]: item[index] if index < len(item) else None for index in range(len(headers))}
-            for item in iterator
+            for item in raw_rows
         )
     else:
         text = roster_path.read_text(encoding="utf-8-sig")
@@ -157,6 +160,26 @@ def read_roster(path: str | Path) -> list[OwnedOperator]:
             )
         )
     return result
+
+
+def apply_roster_overrides(
+    roster: list[OwnedOperator],
+    overrides: dict[str, dict[str, Any]] | None,
+) -> list[OwnedOperator]:
+    """Apply explicit scenario-only operator state without rewriting the roster file."""
+    if not overrides:
+        return roster
+    result: list[OwnedOperator] = []
+    for op in roster:
+        override = overrides.get(op.name) or {}
+        result.append(OwnedOperator(
+            name=op.name,
+            elite=normalize_elite(override.get("elite", op.elite)),
+            level=max(1, int(override.get("level", op.level) or op.level)),
+            recruited=normalize_bool(override.get("recruited", op.recruited), op.recruited),
+            morale=(float(override["morale"]) if override.get("morale") is not None else op.morale),
+        ))
+    return [op for op in result if op.recruited]
 
 
 def select_available_skills(

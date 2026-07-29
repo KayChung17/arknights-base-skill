@@ -51,12 +51,21 @@ EXTRA_GROUPS = {
     },
     "work_platform": {"Friston-3", "GALLUS²", "Lancet-2", "THRM-EX", "Castle-3"},
     "penguin_logistics": {"能天使", "德克萨斯", "可颂", "空", "莫斯提马"},
-    "karlan_trade": {"银灰", "讯使", "崖心", "初雪", "圣聆初雪", "凛御银灰"},
+    "karlan_trade": {
+        "银灰", "灵知", "初雪", "圣聆初雪", "崖心", "角峰", "讯使", "耶拉", "极光", "锏", "雪猎", "凛御银灰",
+    },
+    "monster_hunter": {"火龙S黑角", "麒麟R夜刀", "泰拉大陆调查团"},
+    "sui": {"年", "夕", "令", "重岳", "黍", "望", "余"},
+    "siracusa": {
+        "安洁莉娜", "拉普兰德", "普罗旺斯", "红云", "布洛卡", "巫恋", "铃兰", "贾维", "奥斯塔",
+        "斥罪", "子月", "伺夜", "阿罗玛", "忍冬", "裁度", "荒芜拉普兰德", "贝洛内", "复奏",
+    },
 }
 
 KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
     ("三角初华", "偶像光环"): ["ave_dorm_heat_1"],
     ("八幡海铃", "可靠伙伴"): ["ave_heat_10"],
+    ("八幡海铃", "家族认可"): ["siracusa_center"],
     ("祐天寺若麦", "勤学苦练"): ["ave_heat_10"],
     ("若叶睦", "演技的怪物"): ["ave_heat_20", "ave_trade_per_8_heat_1"],
     ("丰川祥子", "丰富工作经验"): ["ave_gold_base_1_per_20_heat_1"],
@@ -254,6 +263,8 @@ def parse_table(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
                 continue
             skill_name = match.group(3).strip()
             description = match.group(4).strip()
+            base_bonus = first_direct_percent(description, facility)
+            tags = infer_tags(current["name"], skill_name, description)
             current["skills"].append({
                 "facility": facility,
                 "elite": elite,
@@ -261,8 +272,9 @@ def parse_table(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
                 "skill_name": skill_name,
                 "variant_group": variant_group(current["name"], facility, skill_name),
                 "description": description,
-                "base_bonus_pct": first_direct_percent(description, facility),
-                "tags": infer_tags(current["name"], skill_name, description),
+                "base_bonus_pct": base_bonus,
+                "model_status": "structured" if abs(base_bonus) > 1e-12 or tags else "description_only",
+                "tags": tags,
                 "products": products_for(facility, description, current["name"], skill_name),
                 "source_line": line_no,
             })
@@ -293,7 +305,39 @@ def merge_existing(parsed: list[dict[str, Any]], existing_path: Path | None) -> 
         target["groups"] = sorted(set(target.get("groups", [])) | set(old.get("groups", [])))
         for old_skill in old.get("skills", []):
             tags = list(old_skill.get("tags", []))
-            if not tags:
+            mechanism = old_skill.get("mechanism")
+            effects = old_skill.get("effects")
+            special_rules = old_skill.get("special_rules")
+            model_status = old_skill.get("model_status")
+            if not tags and not mechanism and not effects and not special_rules and model_status is None:
+                continue
+            exact = next((
+                skill for skill in target["skills"]
+                if skill.get("facility") == old_skill.get("facility")
+                and skill.get("skill_name") == old_skill.get("skill_name")
+                and int(skill.get("elite", 0)) == int(old_skill.get("elite", 0))
+            ), None)
+            if exact is not None:
+                exact["tags"] = sorted(set(exact.get("tags", [])) | set(tags))
+                if float(exact.get("base_bonus_pct", 0) or 0) == 0 and float(old_skill.get("base_bonus_pct", 0) or 0):
+                    exact["base_bonus_pct"] = float(old_skill["base_bonus_pct"])
+                if old_skill.get("products"):
+                    exact["products"] = list(old_skill["products"])
+                if mechanism:
+                    exact["mechanism"] = mechanism
+                if effects:
+                    exact["effects"] = effects
+                if special_rules:
+                    exact["special_rules"] = special_rules
+                if model_status:
+                    exact["model_status"] = model_status
+                continue
+            if mechanism or effects or special_rules or model_status in {"structured", "verified_zero", "unsupported"}:
+                copied = dict(old_skill)
+                copied.setdefault("required_level", 1)
+                copied.setdefault("variant_group", variant_group(old["name"], str(copied.get("facility", "")), str(copied.get("skill_name", ""))))
+                copied["source_line"] = None
+                target["skills"].append(copied)
                 continue
             same_facility = [
                 skill for skill in target["skills"]

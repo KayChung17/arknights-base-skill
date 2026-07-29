@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "data_version": "2026-07-27-sanitized-community-snapshot",
-  "source": "Sanitized community base-skill snapshot; personal roster level/elite state and raw export removed",
+  "data_version": "2026-07-29-structured-mechanisms-v2",
+  "source": "Sanitized community base-skill snapshot with PRTS cross-checks; personal roster level/elite state and raw export removed",
   "operators": [
     {
       "id": "op_7910f86865b3",
@@ -446,7 +446,11 @@
           "variant_group": "trading_post:skill:“愿者上钩”",
           "description": "进驻贸易站时，宿舍内每有1名干员则人间烟火+1，同时每有1点人间烟火，则订单获取效率+1%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "human_fireworks_per_dorm_occupant_1",
+            "trade_per_human_fireworks_1"
+          ],
+          "model_status": "structured",
           "products": [
             "lmd_order",
             "orundum_order"
@@ -840,9 +844,7 @@
       "id": "op_5f010cd0ca8f",
       "name": "八幡海铃",
       "rarity": 5,
-      "groups": [
-        "siracusa"
-      ],
+      "groups": [],
       "skills": [
         {
           "facility": "control_center",
@@ -852,7 +854,10 @@
           "variant_group": "control_center:skill:家族认可",
           "description": "进驻控制中枢时，每个进驻在贸易站的叙拉古干员，订单获取效率+5%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "siracusa_center"
+          ],
+          "model_status": "structured",
           "products": [
             "base_management"
           ]
@@ -867,8 +872,7 @@
           "base_bonus_pct": 0.0,
           "tags": [
             "ave_heat_10",
-            "non_stacking_max",
-            "siracusa_center"
+            "non_stacking_max"
           ],
           "products": [
             "base_management"
@@ -957,7 +961,10 @@
           "variant_group": "control_center:skill:商业版图",
           "description": "进驻控制中枢时，每个存在3名谢拉格干员的贸易站，订单获取效率+10%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "karlan_full_trade_10"
+          ],
+          "model_status": "structured",
           "products": [
             "base_management"
           ]
@@ -1015,6 +1022,14 @@
           "tags": [
             "all_factory_bonus_2",
             "non_stacking_max"
+          ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_factory_productivity_pct",
+              "stacking": "max",
+              "value_pct": 2.0
+            }
           ],
           "products": [
             "base_management"
@@ -1333,7 +1348,10 @@
           "variant_group": "control_center:skill:总工程师",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "room_morale_recovery_0.05"
+          ],
+          "model_status": "structured",
           "products": [
             "base_management"
           ]
@@ -1466,7 +1484,10 @@
           "variant_group": "trading_post:name:勤俭经营",
           "description": "进驻贸易站时，贸易站内除自身以外每名处于工作状态的干员+20%订单获取效率",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "trade_per_other_worker_20"
+          ],
+          "model_status": "structured",
           "products": [
             "lmd_order",
             "orundum_order"
@@ -1480,7 +1501,10 @@
           "variant_group": "trading_post:name:勤俭经营",
           "description": "进驻贸易站时，贸易站内除自身以外每名处于工作状态的干员+10%订单获取效率",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "trade_per_other_worker_10"
+          ],
+          "model_status": "structured",
           "products": [
             "lmd_order",
             "orundum_order"
@@ -1812,7 +1836,7 @@
       "id": "op_918af8b92f90",
       "name": "复奏",
       "rarity": 5,
-      "groups": [],
+      "groups": ["siracusa"],
       "skills": [
         {
           "facility": "reception_room",
@@ -2095,7 +2119,10 @@
           "variant_group": "factory:skill:齐心沙盗",
           "description": "进驻制造站时，每间宿舍每级为贵金属类配方的生产力+1%",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "dorm_level_sum_gold_1"
+          ],
+          "model_status": "structured",
           "products": [
             "pure_gold"
           ]
@@ -2146,7 +2173,7 @@
       "id": "op_fd4468f3fa13",
       "name": "子月",
       "rarity": 5,
-      "groups": [],
+      "groups": ["siracusa"],
       "skills": [
         {
           "facility": "workshop",
@@ -2190,6 +2217,18 @@
           "base_bonus_pct": 0.0,
           "tags": [
             "jaye_order_count_4"
+          ],
+          "model_status": "structured",
+          "special_rules": [
+            {
+              "rule_id": "jaye_marketplace_snowant",
+              "type": "amplifier_exclusion",
+              "excluded_amplifier_skill_names": [
+                "天道酬勤·α",
+                "天道酬勤·β"
+              ],
+              "priority": 100
+            }
           ],
           "products": [
             "lmd_order",
@@ -2431,11 +2470,12 @@
           "facility": "control_center",
           "elite": 0,
           "required_level": 1,
-          "skill_name": "异格者",
-          "variant_group": "control_center:skill:异格者",
-          "description": "进驻控制中枢时，控制中枢内每个异格干员可使控制中枢内所有干员的心情每小时恢复+0.05",
-          "base_bonus_pct": 0.0,
-          "tags": [],
+      "skill_name": "异格者",
+      "variant_group": "control_center:skill:异格者",
+      "description": "进驻控制中枢时，控制中枢内每个异格干员可使控制中枢内所有干员的心情每小时恢复+0.05",
+      "base_bonus_pct": 0.0,
+      "model_status": "conservative_zero",
+      "tags": [],
           "products": [
             "base_management"
           ]
@@ -2612,7 +2652,7 @@
       "id": "op_50652f12079c",
       "name": "巫恋",
       "rarity": 5,
-      "groups": [],
+      "groups": ["siracusa"],
       "skills": [
         {
           "facility": "trading_post",
@@ -2653,7 +2693,9 @@
       "id": "op_62ef900a8f5d",
       "name": "年",
       "rarity": 6,
-      "groups": [],
+      "groups": [
+        "sui"
+      ],
       "skills": [
         {
           "facility": "workshop",
@@ -2925,6 +2967,7 @@
           "variant_group": "power_plant:skill:晨曦",
           "description": "进驻发电站时，如果其他发电站内没有进驻作业平台，则发电站额外+1(仅影响设施数量)",
           "base_bonus_pct": 0.0,
+          "model_status": "unsupported",
           "tags": [],
           "products": [
             "drone_recovery"
@@ -2938,6 +2981,14 @@
           "variant_group": "power_plant:skill:巡线框架",
           "description": "进驻发电站时，每10架无人机上限+1%无人机充能速度（最多+25%）",
           "base_bonus_pct": 0.0,
+          "model_status": "structured",
+          "mechanism": {
+            "type": "step_bonus",
+            "input": "drone_capacity",
+            "step": 10,
+            "bonus_pct_per_step": 1,
+            "cap_pct": 25
+          },
           "tags": [],
           "products": [
             "drone_recovery"
@@ -2979,7 +3030,7 @@
       "id": "op_8b1caef6d0ba",
       "name": "拉普兰德",
       "rarity": 5,
-      "groups": [],
+      "groups": ["siracusa"],
       "skills": [
         {
           "facility": "trading_post",
@@ -3413,6 +3464,14 @@
             "all_trading_bonus_7",
             "non_stacking_max"
           ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_trading_order_efficiency_pct",
+              "stacking": "max",
+              "value_pct": 7.0
+            }
+          ],
           "products": [
             "base_management"
           ]
@@ -3593,6 +3652,7 @@
           "variant_group": "control_center:skill:护卫",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
+          "model_status": "conservative_zero",
           "tags": [],
           "products": [
             "base_management"
@@ -3675,7 +3735,9 @@
       "id": "op_260bd8046266",
       "name": "望",
       "rarity": 6,
-      "groups": [],
+      "groups": [
+        "sui"
+      ],
       "skills": [
         {
           "facility": "training_room",
@@ -3699,6 +3761,25 @@
           "tags": [
             "non_stacking_max",
             "wang_layout_balance"
+          ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_trading_order_efficiency_pct",
+              "stacking": "max",
+              "value_pct": 7.0,
+              "condition": {
+                "type": "layout_external_gte_field"
+              }
+            },
+            {
+              "effect_key": "global_factory_productivity_pct",
+              "stacking": "max",
+              "value_pct": 2.0,
+              "condition": {
+                "type": "layout_field_gt_external"
+              }
+            }
           ],
           "products": [
             "base_management"
@@ -3803,7 +3884,10 @@
           "variant_group": "control_center:skill:左膀右臂",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "room_morale_recovery_0.05"
+          ],
+          "model_status": "structured",
           "products": [
             "base_management"
           ]
@@ -4259,7 +4343,29 @@
           "variant_group": "control_center:name:集群狩猎",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05；基建内（不包含副手及活动室使用者）深海猎人干员获得特殊加成（与部分技能有特殊叠加规则）",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "gladiia_abyssal_activation_10"
+          ],
+          "model_status": "structured",
+          "special_rules": [
+            {
+              "rule_id": "gladiia_abyssal_factory_beta",
+              "type": "group_factory_bonus",
+              "target_group": "abyssal_hunter",
+              "count_facility": "factory",
+              "bonus_pct_per_member": 10.0,
+              "cap_pct_per_operator": 90.0,
+              "non_stacking_skill_names": [
+                "自动化·α",
+                "自动化·β",
+                "仿生海龙"
+              ],
+              "non_amplifying_skill_names": [
+                "配合意识"
+              ],
+              "priority": 100
+            }
+          ],
           "products": [
             "base_management"
           ]
@@ -4273,8 +4379,28 @@
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05；基建内（不包含副手及活动室使用者）深海猎人干员获得特殊加成（与部分技能有特殊叠加规则）",
           "base_bonus_pct": 0.0,
           "tags": [
-            "gladiia_abyssal_activation",
+            "gladiia_abyssal_activation_5",
             "morale_cost_plus_0.5"
+          ],
+          "model_status": "structured",
+          "special_rules": [
+            {
+              "rule_id": "gladiia_abyssal_factory_alpha",
+              "type": "group_factory_bonus",
+              "target_group": "abyssal_hunter",
+              "count_facility": "factory",
+              "bonus_pct_per_member": 5.0,
+              "cap_pct_per_operator": 45.0,
+              "non_stacking_skill_names": [
+                "自动化·α",
+                "自动化·β",
+                "仿生海龙"
+              ],
+              "non_amplifying_skill_names": [
+                "配合意识"
+              ],
+              "priority": 100
+            }
           ],
           "products": [
             "base_management"
@@ -4535,7 +4661,9 @@
       "id": "op_6a008f70af8f",
       "name": "泰拉大陆调查团",
       "rarity": 1,
-      "groups": [],
+      "groups": [
+        "monster_hunter"
+      ],
       "skills": [
         {
           "facility": "factory",
@@ -5100,7 +5228,10 @@
           "variant_group": "factory:skill:勘探背包",
           "description": "进驻制造站时，当前制造站内每个莱茵科技类技能为自身+5的仓库上限容量",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "warehouse_per_rhine_skill_5"
+          ],
+          "model_status": "structured",
           "products": [
             "pure_gold",
             "battle_record",
@@ -5227,7 +5358,9 @@
       "id": "op_8723cb5bf94f",
       "name": "火龙S黑角",
       "rarity": 5,
-      "groups": [],
+      "groups": [
+        "monster_hunter"
+      ],
       "skills": [
         {
           "facility": "control_center",
@@ -5239,6 +5372,19 @@
           "base_bonus_pct": 0.0,
           "tags": [
             "non_stacking_max"
+          ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_trading_order_efficiency_pct",
+              "stacking": "max",
+              "value_pct": 7.0,
+              "condition": {
+                "type": "control_center_group_companion",
+                "group": "monster_hunter",
+                "minimum_count": 2
+              }
+            }
           ],
           "products": [
             "base_management"
@@ -5534,7 +5680,10 @@
           "variant_group": "trading_post:skill:钱不我待",
           "description": "进驻贸易站时，当前贸易站每级+1个订单上限",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "order_capacity_per_room_level_1"
+          ],
+          "model_status": "structured",
           "products": [
             "lmd_order",
             "orundum_order"
@@ -5917,7 +6066,7 @@
       "id": "op_6a07e86e90a2",
       "name": "红云",
       "rarity": 4,
-      "groups": [],
+      "groups": ["siracusa"],
       "skills": [
         {
           "facility": "factory",
@@ -6366,7 +6515,9 @@
       "id": "op_8ca84bab3448",
       "name": "耶拉",
       "rarity": 5,
-      "groups": [],
+      "groups": [
+        "karlan_trade"
+      ],
       "skills": [
         {
           "facility": "reception_room",
@@ -6693,7 +6844,10 @@
           "variant_group": "control_center:skill:互为半身",
           "description": "当与丰川祥子一起进驻控制中枢时，消除自身心情消耗的影响",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "cancel_ave_morale_cost_with_sakiko"
+          ],
+          "model_status": "structured",
           "products": [
             "base_management"
           ]
@@ -6711,6 +6865,19 @@
             "ave_trade_per_8_heat_1",
             "morale_cost_plus_0.01",
             "non_stacking_max"
+          ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_trading_order_efficiency_pct",
+              "stacking": "max",
+              "mechanism": {
+                "type": "step_bonus",
+                "input": "control_heat",
+                "step": 8.0,
+                "bonus_pct_per_step": 1.0
+              }
+            }
           ],
           "products": [
             "base_management"
@@ -7208,7 +7375,9 @@
       "id": "op_b2b2f7f7d113",
       "name": "角峰",
       "rarity": 4,
-      "groups": [],
+      "groups": [
+        "karlan_trade"
+      ],
       "skills": [
         {
           "facility": "training_room",
@@ -7305,6 +7474,14 @@
           "base_bonus_pct": 0.0,
           "tags": [
             "non_stacking_max"
+          ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_trading_order_efficiency_pct",
+              "stacking": "max",
+              "value_pct": 7.0
+            }
           ],
           "products": [
             "base_management"
@@ -7454,7 +7631,7 @@
       "id": "op_983423e4f81a",
       "name": "贾维",
       "rarity": 5,
-      "groups": [],
+      "groups": ["siracusa"],
       "skills": [
         {
           "facility": "workshop",
@@ -7757,7 +7934,9 @@
       "id": "op_c4b0f3071bab",
       "name": "重岳",
       "rarity": 6,
-      "groups": [],
+      "groups": [
+        "sui"
+      ],
       "skills": [
         {
           "facility": "control_center",
@@ -7781,8 +7960,10 @@
           "description": "进驻控制中枢时，自身心情每小时消耗+0.5；每个岁干员进驻在宿舍和活动室以外的设施则人间烟火+5（最多5名）",
           "base_bonus_pct": 0.0,
           "tags": [
+            "human_fireworks_per_sui_5_cap_25",
             "morale_cost_plus_0.5"
           ],
+          "model_status": "structured",
           "products": [
             "base_management"
           ]
@@ -8029,6 +8210,14 @@
             "all_trading_bonus_7",
             "non_stacking_max"
           ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_trading_order_efficiency_pct",
+              "stacking": "max",
+              "value_pct": 7.0
+            }
+          ],
           "products": [
             "base_management"
           ]
@@ -8114,6 +8303,14 @@
           "tags": [
             "non_stacking_max"
           ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_trading_order_efficiency_pct",
+              "stacking": "max",
+              "value_pct": 7.0
+            }
+          ],
           "products": [
             "base_management"
           ]
@@ -8138,7 +8335,7 @@
       "id": "op_4de6e9feec42",
       "name": "阿罗玛",
       "rarity": 5,
-      "groups": [],
+      "groups": ["siracusa"],
       "skills": [
         {
           "facility": "factory",
@@ -8210,7 +8407,9 @@
       "id": "op_f1de103c4a59",
       "name": "雪猎",
       "rarity": 5,
-      "groups": [],
+      "groups": [
+        "karlan_trade"
+      ],
       "skills": [
         {
           "facility": "factory",
@@ -8681,7 +8880,9 @@
       "id": "op_5b506269faef",
       "name": "麒麟R夜刀",
       "rarity": 6,
-      "groups": [],
+      "groups": [
+        "monster_hunter"
+      ],
       "skills": [
         {
           "facility": "control_center",
@@ -8693,6 +8894,19 @@
           "base_bonus_pct": 0.0,
           "tags": [
             "non_stacking_max"
+          ],
+          "model_status": "structured",
+          "effects": [
+            {
+              "effect_key": "global_factory_productivity_pct",
+              "stacking": "max",
+              "value_pct": 2.0,
+              "condition": {
+                "type": "control_center_group_companion",
+                "group": "monster_hunter",
+                "minimum_count": 2
+              }
+            }
           ],
           "products": [
             "base_management"
@@ -8749,7 +8963,9 @@
       "id": "op_cf46f3e1bced",
       "name": "黍",
       "rarity": 6,
-      "groups": [],
+      "groups": [
+        "sui"
+      ],
       "skills": [
         {
           "facility": "factory",
@@ -8759,7 +8975,10 @@
           "variant_group": "factory:skill:稻禾厚，顺秋收",
           "description": "进驻制造站时，每3点人间烟火+1%生产力",
           "base_bonus_pct": 0.0,
-          "tags": [],
+          "tags": [
+            "factory_per_3_human_fireworks_1"
+          ],
+          "model_status": "structured",
           "products": [
             "pure_gold",
             "battle_record",

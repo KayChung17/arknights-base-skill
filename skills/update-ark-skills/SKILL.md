@@ -14,7 +14,12 @@ description: 导入、解析、规范化、合并并校验明日方舟基建技�
 - 只提取能够确定的数值。
 - 无法解析或存在歧义的记录必须进入 warning，不得静默丢弃。
 - α/β、精英化升级和同组替换使用稳定 `variant_group`。
+- `variant_group` 表示技能槽：同组只启用已解锁的最高阶段，不同组技能同时生效；改名升级必须维护显式映射。
 - 非线性技能必须使用机制标签，并在效率计算器中实现对应规则。
+- 依赖用户配置数值的动态技能使用结构化 `mechanism`；不得以 `base_bonus_pct: 0` 代替待实现公式。
+- 带“同种效果取最高”的生产效果必须写入 `effects`，包含稳定 `effect_key` 和 `stacking: max`。
+- 带“与部分技能有特殊叠加规则”的技能必须写入 `special_rules`，记录排斥对象、优先级和结算类型。
+- `model_status` 必须区分 `structured`、`verified_zero`、`description_only` 和 `unsupported`。
 - 内置拥有干员表只是回归快照，不得宣传为游戏全部干员数据。
 
 ## 导入拥有干员技能表

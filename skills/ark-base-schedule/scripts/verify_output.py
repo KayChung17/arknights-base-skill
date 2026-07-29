@@ -12,6 +12,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from export_schedule_template import validate_exported_schedule
+
 CORE_FILES = (
     "preflight.json",
     "result.json",
@@ -19,9 +21,11 @@ CORE_FILES = (
     "coverage.json",
     "pareto.json",
     "report.md",
+    "schedule.json",
     "config.resolved.json",
     "summary.json",
     "run-manifest.json",
+    "unmodeled-relevant-skills.json",
 )
 
 
@@ -73,7 +77,7 @@ def _collect_selected_operator_names(result: dict[str, Any]) -> set[str]:
     names: set[str] = set()
 
     def walk(value: Any, key_hint: str = "", depth: int = 0) -> None:
-        if depth > 12:
+        if depth > 24:
             return
         hint = key_hint.lower()
         if isinstance(value, str):
@@ -88,11 +92,30 @@ def _collect_selected_operator_names(result: dict[str, Any]) -> set[str]:
                     walk(item, key_hint, depth + 1)
             return
         if isinstance(value, dict):
+            if any(token in hint for token in ("operator", "member", "worker", "staff", "team")):
+                name = value.get("name")
+                if isinstance(name, str) and name.strip():
+                    names.add(name.strip())
             for key, item in value.items():
                 walk(item, str(key), depth + 1)
 
     walk(root)
     return {name for name in names if name}
+
+
+def _collect_selected_facility_usage(result: dict[str, Any]) -> set[tuple[str, str]]:
+    selected = result.get("selected") or {}
+    solver_result = selected.get("solver_result") or result
+    solution = solver_result.get("selected_solution") or result.get("selected_solution") or {}
+    simulation = solution.get("simulation") or {}
+    usage: set[tuple[str, str]] = set()
+    for room in simulation.get("room_results") or []:
+        facility = str(room.get("facility_id") or "")
+        for operator in room.get("operators") or []:
+            name = str(operator.get("name") if isinstance(operator, dict) else operator or "")
+            if name and facility:
+                usage.add((name, facility))
+    return usage
 
 def _selected_present(result: dict[str, Any]) -> bool:
     if result.get("selected") is not None or result.get("selected_solution") is not None:
@@ -159,6 +182,8 @@ def verify_output(
     config = _load(root / "config.resolved.json")
     summary = _load(root / "summary.json")
     manifest = _load(root / "run-manifest.json")
+    unmodeled = _load(root / "unmodeled-relevant-skills.json")
+    schedule = _load(root / "schedule.json")
 
     _check(checks, "preflight_ready", preflight.get("status") == "ready", "预检状态必须为 ready。")
     _check(checks, "selected_candidate_present", _selected_present(result), "结果必须包含求解器选中的候选。")
@@ -172,6 +197,7 @@ def verify_output(
         (config.get("_resolution") or {}).get("run_id"),
         summary.get("run_id"),
         manifest.get("run_id"),
+        (unmodeled.get("_run") or {}).get("run_id"),
     }
     run_ids.discard(None)
     _check(checks, "single_run_binding", len(run_ids) == 1, f"运行产物必须绑定同一 run_id，当前为 {sorted(run_ids)}。")
@@ -198,18 +224,52 @@ def verify_output(
     known_rows = {str(item.get("operator")): bool(item.get("known")) for item in coverage.get("operators") or []}
     unknown_selected = sorted(name for name in selected_names if name in known_rows and not known_rows[name])
     _check(checks, "selected_operator_coverage", not unknown_selected, f"入选方案含未收录干员: {unknown_selected}")
-    description_ops = {str(item.get("operator")) for item in coverage.get("description_only_examples") or []}
-    unstructured_selected = sorted(selected_names & description_ops)
+    description_usages = {
+        (str(item.get("operator")), str(item.get("facility")))
+        for item in (coverage.get("description_only_skills") or coverage.get("description_only_examples") or [])
+    }
+    selected_usages = _collect_selected_facility_usage(result)
+    unstructured_selected = sorted(
+        f"{name}@{facility}" for name, facility in (selected_usages & description_usages)
+    )
     _check(checks, "selected_skill_structure_coverage", not unstructured_selected, f"入选方案涉及仅有描述、未结构化技能的干员: {unstructured_selected}")
     if not selected_names:
         _check(checks, "selected_operator_names_detected", False, "未能从结果结构中提取入选干员，无法执行选中范围技能覆盖门禁。", severity="warning")
     if bool(policy.get("require_all_unlocked_skills_structured", False)):
         description_only = int((coverage.get("unlocked_skill_coverage") or {}).get("description_only_skill_count", 0) or 0)
         _check(checks, "all_unlocked_skills_structured", description_only == 0, f"仍有 {description_only} 个仅描述、未结构化技能。")
+    relevant_policy = str(policy.get("relevant_unmodeled_skill_policy", "warn"))
+    blocking_count = int(unmodeled.get("blocking_count", 0) or 0)
+    _check(
+        checks,
+        "relevant_unmodeled_skill_coverage",
+        blocking_count == 0,
+        f"本次设施与产品范围仍有 {blocking_count} 条高风险未结构化技能，详见 unmodeled-relevant-skills.json。",
+        severity="warning" if relevant_policy == "warn" else "error",
+    )
 
-    for key in ("result", "report", "audit", "coverage", "pareto", "configuration", "preflight"):
+    for key in ("result", "report", "schedule", "audit", "coverage", "pareto", "configuration", "preflight", "unmodeled_relevant_skills"):
         value = summary.get(key)
         _check(checks, f"summary_path:{key}", bool(value) and Path(value).is_file(), f"summary.{key} 必须指向存在的文件。")
+
+    schedule_errors = validate_exported_schedule(schedule)
+    _check(checks, "schedule_template_contract", not schedule_errors, f"schedule.json 必须兼容 assets/template.json: {schedule_errors}")
+    dormitory_operators = [
+        name
+        for plan in schedule.get("plans") or []
+        for dormitory in ((plan.get("rooms") or {}).get("dormitory") or [])
+        for name in dormitory.get("operators") or []
+    ]
+    selected = result.get("selected") or {}
+    solver_result = selected.get("solver_result") or result
+    simulation = ((solver_result.get("selected_solution") or {}).get("simulation") or {})
+    dormitory_plan = simulation.get("dormitory_plan") or {}
+    _check(
+        checks,
+        "schedule_contains_dormitory_rotation",
+        not dormitory_plan or (dormitory_plan.get("repeating_day_verified") is True and bool(dormitory_operators)),
+        "长期排班的 schedule.json 必须写出宿舍轮换名单。",
+    )
 
     metrics = extract_core_metrics(result)
     _check(checks, "finite_core_metrics", all(math.isfinite(value) for value in metrics.values()), "核心收益指标必须是有限数值。")
@@ -260,7 +320,8 @@ def main() -> int:
     destination = Path(args.output) if args.output else Path(args.output_dir) / "verification.json"
     destination.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0 if report["status"] == "passed" else 5
+    allowed = {"passed", "passed_with_warnings"} if args.allow_warnings else {"passed"}
+    return 0 if report["status"] in allowed else 5
 
 
 if __name__ == "__main__":

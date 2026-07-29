@@ -5,9 +5,10 @@
   "roster": "../roster.example.tsv",
   "output_dir": "../../output/demo-layout",
   "objective": {
+    "goal": "赚钱+搓玉",
     "online_times": ["08:00", "14:00", "20:00"],
     "minimum_net_lmd_per_day": -10000,
-    "minimum_orundum_shard_balance": 0,
+    "minimum_originium_shard_balance": 0,
     "minimum_pure_gold_balance": 0,
     "max_daily_work_hours": 18
   },
@@ -20,8 +21,10 @@
       "office": 3,
       "training_room": 3,
       "workshop": 3
-    }
+    },
+    "right_side_levels_confirmed": true
   },
+  "horizon": {"mode": "steady_state"},
   "profiles": {
     "mode": "representative",
     "ids": ["252-output", "342-output", "333-max", "243-max"]

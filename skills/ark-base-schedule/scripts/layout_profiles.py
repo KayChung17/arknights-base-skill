@@ -24,6 +24,8 @@ DEFAULT_RIGHT_SIDE_LEVELS = {
     "workshop": 3,
 }
 
+RIGHT_SIDE_FACILITIES = tuple(DEFAULT_RIGHT_SIDE_LEVELS)
+
 REPRESENTATIVE_PROFILES: dict[str, dict[str, Any]] = {
     "153-max": {"layout": "153", "trading_levels": [3], "factory_levels": [3, 3, 3, 3, 3], "power_plant_levels": [3, 3, 3], "dorm_levels": [5, 5, 5, 5]},
     "243-max": {"layout": "243", "trading_levels": [3, 3], "factory_levels": [3, 3, 3, 3], "power_plant_levels": [3, 3, 3], "dorm_levels": [5, 5, 5, 5]},
@@ -103,6 +105,45 @@ def power_summary(
         "total_consumption": total,
         "spare_power": supply - total,
     }
+
+
+def fixed_right_power_consumption(right_side_levels: dict[str, int]) -> float:
+    """Return irreversible right-side power draw for explicitly confirmed levels."""
+    mechanics = load_mechanics()
+    model = mechanics["power_model"]["fixed_facility_consumption_by_level"]
+    if set(right_side_levels) != set(RIGHT_SIDE_FACILITIES):
+        raise ValueError("右侧设施必须完整提供会客室、办公室、训练室和加工站等级")
+    return sum(
+        float(model[name][str(int(right_side_levels[name]))])
+        for name in RIGHT_SIDE_FACILITIES
+    )
+
+
+def facility_configuration_power_summary(
+    facility_configuration: dict[str, Any],
+    *,
+    right_side_levels: dict[str, int],
+    expected_layout: str | None = None,
+) -> dict[str, float]:
+    """Calculate fixed-schedule power from its actual room configuration."""
+    rooms = (facility_configuration or {}).get("rooms") or {}
+    levels: dict[str, list[int]] = {"trading_post": [], "factory": [], "power_plant": []}
+    for room in rooms.values():
+        facility = str((room or {}).get("facility_id") or "")
+        if facility in levels:
+            levels[facility].append(int((room or {}).get("level", 0)))
+    layout = f"{len(levels['trading_post'])}{len(levels['factory'])}{len(levels['power_plant'])}"
+    if expected_layout and layout != str(expected_layout):
+        raise ValueError(f"逐房间配置是 {layout}，与 layout={expected_layout} 不一致")
+    dormitories = (facility_configuration or {}).get("dormitories") or []
+    profile = {
+        "layout": layout,
+        "trading_levels": levels["trading_post"],
+        "factory_levels": levels["factory"],
+        "power_plant_levels": levels["power_plant"],
+        "dorm_levels": [int((room or {}).get("level", 0)) for room in dormitories],
+    }
+    return power_summary(profile, right_side_levels=right_side_levels)
 
 
 def _level_multisets(count: int, values: Iterable[int] = (1, 2, 3)) -> list[list[int]]:

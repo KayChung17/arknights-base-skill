@@ -2,10 +2,36 @@
   "schema_version": 1,
   "source_type": "sanitized_community_structured_snapshot",
   "source_file": null,
-  "retrieved_at": "2026-07-27",
-  "data_version": "2026-07-27-sanitized-community-snapshot",
+  "retrieved_at": "2026-07-29",
+  "data_version": "2026-07-29-structured-mechanisms-v2",
   "canonical_operator_count": 248,
   "canonical_skill_count": 506,
   "personal_roster_state_removed": true,
-  "notes": "The public repository excludes the original owned-roster export and removes source account levels, elite states and source line numbers. The snapshot is not a complete game database."
+  "sources": [
+    {
+      "name": "PRTS 八幡海铃",
+      "url": "https://prts.wiki/w/%E5%85%AB%E5%B9%A1%E6%B5%B7%E9%93%83",
+      "retrieved_at": "2026-07-29",
+      "scope": "后勤技能解锁条件、家族认可描述与叙拉古计数名单"
+    },
+    {
+      "name": "PRTS 术语",
+      "url": "https://prts.wiki/w/%E6%9C%AF%E8%AF%AD",
+      "retrieved_at": "2026-07-29",
+      "scope": "阵营、热情值与技能术语交叉核对"
+    },
+    {
+      "name": "PRTS 右侧功能设施",
+      "url": "https://prts.wiki/w/%E6%96%B0%E4%BA%BA%E5%85%A5%E9%97%A8",
+      "retrieved_at": "2026-07-29",
+      "scope": "会客室、办公室、训练室、加工站不可降级"
+    },
+    {
+      "name": "PRTS 右侧设施分项电力",
+      "url": "https://prts.wiki/w/%E7%BD%97%E5%BE%B7%E5%B2%9B%E5%9F%BA%E5%BB%BA/%E4%BC%9A%E5%AE%A2%E5%AE%A4",
+      "retrieved_at": "2026-07-29",
+      "scope": "右满电力回归：会客室、办公室、训练室各 60，加工站 10，合计 190；其余分项链接见 mechanic-sources.md"
+    }
+  ],
+  "notes": "The public repository excludes the original owned-roster export and removes source account levels, elite states and source line numbers. Structured rules preserve source descriptions and use explicit effects, variant groups and special rules. The snapshot is not a complete game database."
 }

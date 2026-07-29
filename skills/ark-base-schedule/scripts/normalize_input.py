@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from data_loader import (
+    apply_roster_overrides,
     load_mechanics,
     load_operator_data,
     operator_index,
@@ -20,6 +21,7 @@ from data_loader import (
 )
 from schedule_generator import normalize_goal
 from timeline_utils import build_operation_timeline, facility_capacity, get_strategy_template
+from online_schedule import candidate_online_times
 
 
 def _parse_preferences(value: str | None) -> dict[str, Any]:
@@ -78,11 +80,13 @@ def build_decision_packet(
     online_count: int,
     preferences: dict[str, Any] | None = None,
     online_times: list[str] | None = None,
+    operator_overrides: dict[str, dict[str, Any]] | None = None,
+    online_schedule: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     mechanics = load_mechanics()
     data = load_operator_data()
     index = operator_index()
-    roster = read_roster(roster_path)
+    roster = apply_roster_overrides(read_roster(roster_path), operator_overrides)
     if not roster:
         raise ValueError("干员表中没有已招募干员")
 
@@ -100,6 +104,9 @@ def build_decision_packet(
         baseline["facility_configuration"] if baseline else _generic_facility_configuration(resolved_layout, goal, mechanics)
     )
 
+    schedule_policy = dict(online_schedule or {})
+    schedule_mode = str(schedule_policy.get("mode", "fixed"))
+    schedule_count = int(schedule_policy.get("count", online_count))
     times = online_times or list(
         mechanics.get("operation_node_templates", {}).get(str(online_count), {}).get("default_times", [])
     )
@@ -157,6 +164,19 @@ def build_decision_packet(
             "layout": resolved_layout,
             "online_count": online_count,
             "online_times": times,
+            "online_schedule": {
+                "mode": schedule_mode,
+                "count": schedule_count,
+                "candidate_step_minutes": int(schedule_policy.get("candidate_step_minutes", 60)),
+                "max_candidates": int(schedule_policy.get("max_candidates", 48)),
+                "candidates": candidate_online_times(
+                    schedule_count,
+                    mode=schedule_mode,
+                    fixed_times=times if schedule_mode == "fixed" else None,
+                    step_minutes=int(schedule_policy.get("candidate_step_minutes", 60)),
+                    max_candidates=int(schedule_policy.get("max_candidates", 48)),
+                ),
+            },
             "products": products,
             "preferences": preferences or {},
         },
@@ -212,7 +232,7 @@ def build_decision_packet(
         "capabilities": capabilities,
         "external_evidence": [],
         "instructions_for_model": [
-            "把上线次数理解为可操作节点，不自动拆成等长班次。",
+            "上线次数是固定的操作节点数量；online_schedule.mode=optimize 时，上线时刻属于候选搜索变量。",
             "读取当前版本攻略基线并把它作为比较候选；攻略模板不能成为搜索边界。",
             "优先运行单房间组合枚举、全局MILP和复算链路，再由模型解释与修订候选。",
             "为每个房间单独决定连续工作区间；同一队可跨相邻区间持续工作。",
@@ -230,7 +250,9 @@ def main() -> int:
     parser.add_argument("--goal", required=True)
     parser.add_argument("--layout")
     parser.add_argument("--online-count", type=int, choices=[1, 2, 3, 4], default=3)
-    parser.add_argument("--online-times", help="逗号分隔的上线时间，例如 08:00,14:00,20:00")
+    parser.add_argument("--online-times", help="固定模式下的上线时间；省略时使用 optimize 模式搜索候选")
+    parser.add_argument("--online-schedule-mode", choices=["fixed", "optimize"], default="fixed")
+    parser.add_argument("--candidate-step-minutes", type=int, default=60)
     parser.add_argument("--shifts", type=int, choices=[2, 3], help="兼容旧参数；等价于 --online-count")
     parser.add_argument("--preferences", help="JSON 文件路径或 JSON 字符串")
     parser.add_argument("--output")
@@ -245,6 +267,7 @@ def main() -> int:
         online_count,
         _parse_preferences(args.preferences),
         times,
+        online_schedule={"mode": args.online_schedule_mode, "count": online_count, "candidate_step_minutes": args.candidate_step_minutes},
     )
     text = json.dumps(packet, ensure_ascii=False, indent=2)
     if args.output:

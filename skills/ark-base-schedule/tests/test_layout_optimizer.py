@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPTS))
 from build_combinations import build_library, build_room_combinations
 from data_loader import load_mechanics
 from optimizer_common import context_rooms
+from layout_profiles import facility_configuration_power_summary, fixed_right_power_consumption
 from search_layouts import COMMON_PROFILES, facility_configuration, power_summary, product_splits
 from simulate_schedule import simulate_assignment
 
@@ -61,15 +62,57 @@ class LayoutOptimizerTests(unittest.TestCase):
         self.assertEqual(summary["spare_power"], 0)
         self.assertLess(power_summary(COMMON_PROFILES["351-min"])["spare_power"], 0)
 
-    def test_layout_product_search_excludes_battle_records(self):
+    def test_full_right_side_is_irreversible_190_power(self):
+        right_full = {"reception_room": 3, "office": 3, "training_room": 3, "workshop": 3}
+        self.assertEqual(fixed_right_power_consumption(right_full), 190)
+
+    def test_preferred_342_profile_is_80_power_short_with_full_right_side(self):
+        profile = {
+            "layout": "342",
+            "trading_levels": [3, 3, 2],
+            "factory_levels": [3, 3, 3, 3],
+            "power_plant_levels": [3, 3],
+            "dorm_levels": [1, 1, 1, 1],
+        }
+        summary = power_summary(profile)
+        self.assertEqual(summary["fixed_right_consumption"], 190)
+        self.assertEqual(summary["spare_power"], -80)
+
+    def test_fixed_configuration_power_uses_actual_rooms_and_right_side(self):
+        profile = {
+            "layout": "342",
+            "trading_levels": [3, 3, 2],
+            "factory_levels": [3, 3, 2, 1],
+            "power_plant_levels": [3, 3],
+            "dorm_levels": [1, 1, 1, 1],
+        }
+        config = facility_configuration(profile, 1, 1, 1)
+        summary = facility_configuration_power_summary(
+            config,
+            right_side_levels={"reception_room": 3, "office": 3, "training_room": 3, "workshop": 3},
+            expected_layout="342",
+        )
+        self.assertEqual(summary["spare_power"], 0)
+
+    def test_layout_product_search_excludes_battle_records_by_default(self):
         profile = COMMON_PROFILES["252-output"]
-        self.assertIn((1, 1), product_splits(profile))
+        self.assertIn((1, 1, 0), product_splits(profile))
         config = facility_configuration(profile, 1, 1)
         products = {room["product_id"] for room in config["rooms"].values()}
         self.assertNotIn("battle_record", products)
         self.assertIn("orundum_order", products)
         self.assertIn("lmd_order", products)
         self.assertIn("orundum_shard", products)
+        self.assertIn("pure_gold", products)
+
+    def test_layout_product_search_can_require_battle_records(self):
+        profile = COMMON_PROFILES["252-output"]
+        splits = product_splits(profile, minimum_battle_record_factories=1)
+        self.assertTrue(splits)
+        self.assertTrue(all(split[2] >= 1 for split in splits))
+        config = facility_configuration(profile, *splits[0])
+        products = [room["product_id"] for room in config["rooms"].values()]
+        self.assertIn("battle_record", products)
         self.assertIn("pure_gold", products)
 
     def test_candidate_pool_preserves_shard_specialists(self):

@@ -101,7 +101,146 @@ def _simulation_constraint_violations(context: dict[str, Any], simulation: dict[
     drone_plan = simulation.get("drone_plan")
     if settings.get("allocate_drones") and drone_plan is not None and not bool(drone_plan.get("feasible", False)):
         violations.append("drone_inventory_flow_not_feasible")
+    dormitory_plan = simulation.get("dormitory_plan") or {}
+    if settings.get("require_dormitory_cycle") and not bool(dormitory_plan.get("repeating_day_verified", False)):
+        violations.append("dormitory_repeating_day_morale_not_feasible")
     return violations
+
+
+def _battle_record_exp(simulation: dict[str, Any]) -> float:
+    return float((simulation.get("aggregate_metrics") or {}).get("battle_record_exp", 0.0) or 0.0)
+
+
+def _primary_metrics_not_worse(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    pairs = (
+        ((before.get("aggregate_metrics") or {}).get("orundum", 0.0), (after.get("aggregate_metrics") or {}).get("orundum", 0.0)),
+        (before.get("net_lmd_balance", 0.0), after.get("net_lmd_balance", 0.0)),
+        (before.get("orundum_shard_balance", 0.0), after.get("orundum_shard_balance", 0.0)),
+        (before.get("pure_gold_balance", 0.0), after.get("pure_gold_balance", 0.0)),
+    )
+    return all(float(new or 0.0) >= float(old or 0.0) - 1e-6 for old, new in pairs)
+
+
+def _apply_free_secondary_improvements(
+    context: dict[str, Any],
+    library: dict[str, Any],
+    assignments: list[dict[str, Any]],
+    simulation: dict[str, Any],
+    drone_allocations: list[dict[str, Any]],
+    drone_inventory: list[dict[str, Any]],
+    drone_waste: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+    """Lexicographically improve battle-record output without reducing primary metrics."""
+    current_assignments = [dict(item) for item in assignments]
+    current_simulation = simulation
+    segments = {item.segment_id: item for item in context_segments(context)}
+    max_hours = float(_solver_settings(context).get("max_daily_work_hours", 24.0))
+    drone_rooms = {(str(item.get("segment_id")), str(item.get("room_id"))) for item in drone_allocations}
+    improvements: list[dict[str, Any]] = []
+
+    for _ in range(max(1, len(current_assignments))):
+        assignment_map = {(item["segment_id"], item["room_id"]): item for item in current_assignments}
+        selected_ops: dict[str, set[str]] = {}
+        for key, item in assignment_map.items():
+            room = (library.get("rooms") or {}).get(item["room_id"]) or {}
+            combo = next((c for c in room.get("combinations") or [] if c.get("combination_id") == item.get("combination_id")), None)
+            selected_ops[key[0]] = selected_ops.get(key[0], set()) | {
+                str(op.get("name")) for op in (combo or {}).get("operators") or []
+            }
+        work_hours = {
+            str(name): float((state or {}).get("daily_work_hours", 0.0) or 0.0)
+            for name, state in (current_simulation.get("morale") or {}).items()
+        }
+        best: dict[str, Any] | None = None
+
+        for key, item in assignment_map.items():
+            segment_id, room_id = key
+            room_result = (library.get("rooms") or {}).get(room_id) or {}
+            room = room_result.get("room") or {}
+            if room.get("facility_id") != "factory" or room.get("product_id") != "battle_record":
+                continue
+            if key in drone_rooms:
+                continue
+            combos = room_result.get("combinations") or []
+            current_combo = next((c for c in combos if c.get("combination_id") == item.get("combination_id")), None)
+            if not current_combo:
+                continue
+            current_names = {str(op.get("name")) for op in current_combo.get("operators") or []}
+            busy_elsewhere = selected_ops.get(segment_id, set()) - current_names
+            hours = float(segments[segment_id].hours)
+            alternatives = sorted(
+                combos,
+                key=lambda combo: -float((combo.get("metrics_per_hour") or {}).get("battle_record_exp", 0.0) or 0.0),
+            )
+            for alternative in alternatives:
+                old_rate = float((current_combo.get("metrics_per_hour") or {}).get("battle_record_exp", 0.0) or 0.0)
+                new_rate = float((alternative.get("metrics_per_hour") or {}).get("battle_record_exp", 0.0) or 0.0)
+                if new_rate <= old_rate + 1e-9:
+                    break
+                alternative_names = {str(op.get("name")) for op in alternative.get("operators") or []}
+                if alternative_names & busy_elsewhere:
+                    continue
+                adjusted_hours = dict(work_hours)
+                for name in current_names - alternative_names:
+                    adjusted_hours[name] = adjusted_hours.get(name, 0.0) - hours
+                for name in alternative_names - current_names:
+                    adjusted_hours[name] = adjusted_hours.get(name, 0.0) + hours
+                if any(value > max_hours + 1e-6 for value in adjusted_hours.values()):
+                    continue
+                mutated = [dict(record) for record in current_assignments]
+                for record in mutated:
+                    if record["segment_id"] == segment_id and record["room_id"] == room_id:
+                        record["combination_id"] = alternative["combination_id"]
+                        break
+                candidate_simulation = simulate_assignment(
+                    context, library, mutated, drone_allocations, drone_inventory, drone_waste,
+                )
+                if _simulation_constraint_violations(context, candidate_simulation):
+                    continue
+                if any(float((state or {}).get("minimum", 0.0) or 0.0) < -1e-6 for state in (candidate_simulation.get("morale") or {}).values()):
+                    continue
+                if not _primary_metrics_not_worse(current_simulation, candidate_simulation):
+                    continue
+                gain = _battle_record_exp(candidate_simulation) - _battle_record_exp(current_simulation)
+                if gain <= 1e-6:
+                    continue
+                candidate = {
+                    "assignments": mutated,
+                    "simulation": candidate_simulation,
+                    "gain": gain,
+                    "segment_id": segment_id,
+                    "room_id": room_id,
+                    "from_combination_id": current_combo["combination_id"],
+                    "to_combination_id": alternative["combination_id"],
+                    "from_operators": sorted(current_names),
+                    "to_operators": sorted(alternative_names),
+                }
+                if best is None or gain > float(best["gain"]) + 1e-6:
+                    best = candidate
+                break
+        if best is None:
+            break
+        current_assignments = best.pop("assignments")
+        current_simulation = best.pop("simulation")
+        improvements.append(best)
+
+    return current_assignments, current_simulation, {
+        "checked": True,
+        "scope": {
+            "facility_id": "factory",
+            "product_id": "battle_record",
+            "drone_target_rooms": "skipped",
+        },
+        "skipped_drone_target_rooms": [
+            {"segment_id": segment_id, "room_id": room_id}
+            for segment_id, room_id in sorted(drone_rooms)
+        ],
+        "policy": "preserve_or_improve_orundum_lmd_shard_and_gold_then_maximize_battle_record_exp",
+        "improvement_count": len(improvements),
+        "battle_record_exp_gain": sum(float(item["gain"]) for item in improvements),
+        "improvements": improvements,
+        "remaining_dominated_empty_slots": [],
+    }
 
 def _candidate_plan(
     context: dict[str, Any],
@@ -171,8 +310,10 @@ def _candidate_plan(
         "operation_nodes": context.get("operation_nodes") or [],
         "segments": plan_segments,
         "recovery_plan": {
-            "events": [],
-            "repeating_day_verified": not any("心情" in warning for warning in warnings),
+            "events": (simulation.get("dormitory_plan") or {}).get("assignments") or [],
+            "repeating_day_verified": bool((simulation.get("dormitory_plan") or {}).get("repeating_day_verified", False)),
+            "model": (simulation.get("dormitory_plan") or {}).get("model"),
+            "automation_rules_used": False,
         },
         "economy_projection": {
             "source": "script",
@@ -257,6 +398,13 @@ def solve_hybrid(
             drone_waste,
         )
         violations = _simulation_constraint_violations(context, simulation)
+        secondary_postprocess: dict[str, Any] | None = None
+        if not violations:
+            assignments, simulation, secondary_postprocess = _apply_free_secondary_improvements(
+                context, library, assignments, simulation,
+                drone_allocations, drone_inventory, drone_waste,
+            )
+            violations = _simulation_constraint_violations(context, simulation)
         record = {
             "proxy_rank": attempt + 1,
             "proxy_objective": -float(result.fun),
@@ -273,6 +421,7 @@ def solve_hybrid(
             "drone_waste": drone_waste,
             "simulation": simulation,
             "actual_constraint_violations": violations,
+            "secondary_output_postprocess": secondary_postprocess,
         }
         if violations:
             rejected_after_simulation.append({
@@ -327,6 +476,7 @@ def solve_hybrid(
             "无人机已进入恢复、库存和分配模型；未知的当前龙门币订单仍使用期望值。",
             "未结构化特殊技能和随机订单序列不参与实际全局最优性证明。",
         ],
+        "secondary_output_policy": "primary_metrics_first_then_free_battle_record_exp",
     }
     plan = _candidate_plan(context, library, selected["assignments"], selected["simulation"], solver_meta)
     output = {

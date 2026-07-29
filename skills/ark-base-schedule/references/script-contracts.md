@@ -87,3 +87,14 @@ python scripts/simulate_schedule.py \
 ## schedule_generator.py
 
 旧式房间级贪心生成器，仅用于诊断与回归测试。
+
+## export_schedule_template.py
+
+把 `result.json`、`solver-result.json` 或 schema 4 候选排班导出为 `assets/template.json` 兼容文件：
+
+```bash
+python scripts/export_schedule_template.py result.json \
+  --output schedule.json
+```
+
+导出器动态写入班次数和设施数量，并校验顶层字段、房间键和 `scheduleType`。完整项目入口会自动调用该导出器。可供对照的脱敏产物是 `samples/sample_schedule_v2.json`。

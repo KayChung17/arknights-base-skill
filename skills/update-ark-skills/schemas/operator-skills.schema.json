@@ -99,6 +99,124 @@
                 },
                 "variant_group": {
                   "type": "string"
+                },
+                "model_status": {
+                  "enum": [
+                    "structured",
+                    "verified_zero",
+                    "conservative_zero",
+                    "description_only",
+                    "unsupported"
+                  ]
+                },
+                "mechanism": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "input",
+                    "step",
+                    "bonus_pct_per_step",
+                    "cap_pct"
+                  ],
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "step_bonus"
+                      ]
+                    },
+                    "input": {
+                      "enum": [
+                        "drone_capacity"
+                      ]
+                    },
+                    "step": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "bonus_pct_per_step": {
+                      "type": "number"
+                    },
+                    "cap_pct": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "effects": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["effect_key", "stacking"],
+                    "properties": {
+                      "effect_key": {"type": "string", "minLength": 1},
+                      "stacking": {"enum": ["add", "max", "replace", "multiply", "exclusive"]},
+                      "value_pct": {"type": "number"},
+                      "priority": {"type": "integer"},
+                      "mechanism": {
+                        "type": "object",
+                        "required": ["type", "input", "step", "bonus_pct_per_step"],
+                        "properties": {
+                          "type": {"const": "step_bonus"},
+                          "input": {"enum": ["control_heat"]},
+                          "step": {"type": "number", "exclusiveMinimum": 0},
+                          "bonus_pct_per_step": {"type": "number"},
+                          "cap_pct": {"type": "number", "minimum": 0}
+                        },
+                        "additionalProperties": false
+                      },
+                      "condition": {
+                        "type": "object",
+                        "required": ["type"],
+                        "properties": {
+                          "type": {
+                            "enum": [
+                              "layout_external_gte_field",
+                              "layout_field_gt_external",
+                              "control_center_group_companion"
+                            ]
+                          },
+                          "group": {"type": "string"},
+                          "minimum_count": {"type": "integer", "minimum": 1}
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "oneOf": [
+                      {"required": ["value_pct"]},
+                      {"required": ["mechanism"]}
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "special_rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["rule_id", "type"],
+                    "properties": {
+                      "rule_id": {"type": "string", "minLength": 1},
+                      "type": {"enum": ["group_factory_bonus", "amplifier_exclusion"]},
+                      "target_group": {"type": "string"},
+                      "count_facility": {"type": "string"},
+                      "bonus_pct_per_member": {"type": "number"},
+                      "cap_pct_per_operator": {"type": "number", "minimum": 0},
+                      "non_stacking_skill_names": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                      },
+                      "non_amplifying_skill_names": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                      },
+                      "excluded_amplifier_skill_names": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                      },
+                      "priority": {"type": "integer"}
+                    },
+                    "additionalProperties": false
+                  }
                 }
               }
             }

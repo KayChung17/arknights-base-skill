@@ -6,19 +6,31 @@ SCHEDULE_SKILL="$ROOT_DIR/skills/ark-base-schedule"
 UPDATE_SKILL="$ROOT_DIR/skills/update-ark-skills"
 
 python "$ROOT_DIR/scripts/quick_validate.py" "$SCHEDULE_SKILL" "$UPDATE_SKILL"
-python "$ROOT_DIR/scripts/repository_check.py"
 python "$SCHEDULE_SKILL/scripts/doctor.py" >/dev/null
 python "$ROOT_DIR/arkbase.py" doctor >/dev/null
 python "$SCHEDULE_SKILL/scripts/validate_data.py"
 python -m compileall -q "$ROOT_DIR/skills"
 python - <<'PY' "$ROOT_DIR"
 import json
+import re
 import sys
 from pathlib import Path
 root = Path(sys.argv[1])
+excluded = {".git", ".venv", "__pycache__", "output", "release", "work", "arkbase-output"}
 for path in root.rglob("*.json"):
+    if any(part in excluded for part in path.relative_to(root).parts):
+        continue
     json.loads(path.read_text(encoding="utf-8"))
-print("JSON 文件解析通过")
+pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+version = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, re.M).group(1)
+marketplace = json.loads((root / "marketplace.json").read_text(encoding="utf-8"))
+assert marketplace["version"] == version
+assert (root / f"RELEASE_NOTES-{version}.md").is_file()
+assert (root / f"MIGRATION-{version}.md").is_file()
+canonical_schema = json.loads((root / "skills/ark-base-schedule/schemas/project-config.schema.json").read_text(encoding="utf-8"))
+sample_schema = json.loads((root / "skills/ark-base-schedule/samples/project-config.schema.json").read_text(encoding="utf-8"))
+assert canonical_schema == sample_schema
+print(f"JSON 与发布元数据通过：v{version}")
 PY
 python -m unittest discover -s "$SCHEDULE_SKILL/tests" -p "test_*.py"
 python -m unittest discover -s "$UPDATE_SKILL/tests" -p "test_*.py"
@@ -225,6 +237,29 @@ test -s "$TMP_DIR/project-smoke/result.json"
 test -s "$TMP_DIR/project-smoke/report.md"
 test -s "$TMP_DIR/project-smoke/audit.json"
 test -s "$TMP_DIR/project-smoke/coverage.json"
+test -s "$TMP_DIR/project-smoke/schedule.json"
+test -s "$TMP_DIR/project-smoke/verification.json"
+test -s "$TMP_DIR/project-smoke/run-manifest.json"
+test -s "$TMP_DIR/project-smoke/summary.json"
+python - <<'PYEXPORT' "$SCHEDULE_SKILL" "$TMP_DIR/project-smoke/schedule.json" "$TMP_DIR/project-smoke/result.json"
+import json
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / "scripts"))
+from export_schedule_template import validate_exported_schedule
+
+schedule = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+result = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+assert validate_exported_schedule(schedule) == []
+selected = result.get("selected") or {}
+solver_result = selected.get("solver_result") or result
+secondary = (((solver_result.get("selected_solution") or {}).get("secondary_output_postprocess")) or {})
+assert secondary.get("checked") is True
+assert secondary.get("remaining_dominated_empty_slots") == []
+verification = json.loads((Path(sys.argv[3]).parent / "verification.json").read_text(encoding="utf-8"))
+assert verification.get("status") in {"passed", "passed_with_warnings"}
+print("排班导出契约与经验站空位门禁通过")
+PYEXPORT
 echo "项目配置端到端自检通过"
 
 if command -v skills-ref >/dev/null 2>&1; then

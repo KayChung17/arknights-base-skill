@@ -1,0 +1,445 @@
+{
+  "author": "文件作者",
+  "description": "文件描述",
+  "id": 1785249347286557,
+  "title": "文件标题",
+  "planTimes": "3班",
+  "plans": [
+    {
+      "name": "第01班",
+      "description": "第01班的描述",
+      "description_post": "第01班完成后的描述",
+      "Fiammetta": {
+        "enable": false,
+        "target": "",
+        "order": "pre"
+      },
+      "drones": {
+        "room": "trading",
+        "index": 1,
+        "enable": true,
+        "order": "pre"
+      },
+      "rooms": {
+        "trading": [
+          {
+            "skip": false,
+            "product": "LMD",
+            "operators": [
+              "雷狼龙S空爆",
+              "焰狐龙梓兰"
+            ],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Orundum",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "manufacture": [
+          {
+            "skip": false,
+            "product": "Battle Record",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Pure Gold",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Originium Shard",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Pure Gold",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "power": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "dormitory": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "control": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "meeting": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "hire": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "processing": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "第11班",
+      "description": "第11班的描述",
+      "description_post": "第11班完成后的描述",
+      "Fiammetta": {
+        "enable": false,
+        "target": "",
+        "order": "pre"
+      },
+      "drones": {
+        "room": "trading",
+        "index": 1,
+        "enable": true,
+        "order": "post"
+      },
+      "rooms": {
+        "trading": [
+          {
+            "skip": true,
+            "product": "LMD",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Orundum",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "manufacture": [
+          {
+            "skip": false,
+            "product": "Battle Record",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Pure Gold",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Originium Shard",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Pure Gold",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "power": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "dormitory": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "control": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "meeting": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "hire": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "processing": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "第21班",
+      "description": "第21班的描述",
+      "description_post": "第21班完成后的描述",
+      "Fiammetta": {
+        "enable": true,
+        "target": "",
+        "order": "pre"
+      },
+      "drones": {
+        "room": "trading",
+        "index": 1,
+        "enable": false,
+        "order": "pre"
+      },
+      "rooms": {
+        "trading": [
+          {
+            "skip": false,
+            "product": "LMD",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Orundum",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "manufacture": [
+          {
+            "skip": false,
+            "product": "Battle Record",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Pure Gold",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Originium Shard",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "product": "Pure Gold",
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "power": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "dormitory": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          },
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "control": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "meeting": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "hire": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ],
+        "processing": [
+          {
+            "skip": false,
+            "operators": [],
+            "sort": false,
+            "autofill": false
+          }
+        ]
+      }
+    }
+  ],
+  "scheduleType": {
+    "planTimes": 3,
+    "trading": 2,
+    "manufacture": 4,
+    "power": 3,
+    "dormitory": 4
+  }
+}

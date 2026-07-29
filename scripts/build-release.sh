@@ -14,18 +14,33 @@ DEST="${1:-$ROOT_DIR/release}"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
-bash "$ROOT_DIR/scripts/validate-all.sh" | tee "$DEST.validation.tmp"
 mkdir -p "$DEST" "$STAGE/$NAME"
+DEST="$(cd "$DEST" && pwd)"
+bash "$ROOT_DIR/scripts/validate-all.sh" | tee "$DEST/${NAME}-validation.txt"
 rsync -a \
   --exclude '.git/' \
   --exclude '.venv/' \
+  --exclude '.env' \
   --exclude '__pycache__/' \
   --exclude 'output/' \
+  --exclude 'arkbase-output/' \
+  --exclude 'work/' \
   --exclude 'release/' \
+  --exclude 'dist/' \
+  --exclude 'build/' \
   --exclude '*.local.*' \
+  --exclude 'project.json' \
+  --exclude 'project.*.json' \
+  --exclude '*.xlsx' \
+  --exclude '*.xls' \
+  --exclude 'roster.xlsx' \
+  --exclude 'roster.tsv' \
+  --exclude 'roster.csv' \
+  --exclude '干员练度表*.xlsx' \
+  --exclude '干员练度表*.txt' \
   "$ROOT_DIR/" "$STAGE/$NAME/"
 
-mv "$DEST.validation.tmp" "$DEST/${NAME}-validation.txt"
+bash "$STAGE/$NAME/scripts/validate-all.sh" | tee "$DEST/${NAME}-staged-validation.txt"
 (
   cd "$STAGE"
   zip -qr "$DEST/${NAME}.zip" "$NAME"
@@ -33,7 +48,11 @@ mv "$DEST.validation.tmp" "$DEST/${NAME}-validation.txt"
 )
 (
   cd "$DEST"
-  sha256sum "${NAME}.zip" "${NAME}.tar.gz" "${NAME}-validation.txt" > "${NAME}.sha256"
+  sha256sum \
+    "${NAME}.zip" \
+    "${NAME}.tar.gz" \
+    "${NAME}-validation.txt" \
+    "${NAME}-staged-validation.txt" > "${NAME}.sha256"
 )
 
 echo "发布包已生成：$DEST"

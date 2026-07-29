@@ -15,7 +15,7 @@ from data_loader import read_roster
 from build_model import build_milp
 from scipy.optimize import milp
 from simulate_schedule import simulate_assignment
-from solve_schedule import _simulation_constraint_violations, solve_hybrid
+from solve_schedule import _apply_free_secondary_improvements, _simulation_constraint_violations, solve_hybrid
 
 
 class HybridSolverTests(unittest.TestCase):
@@ -196,6 +196,51 @@ class HybridSolverTests(unittest.TestCase):
         self.assertIn("candidate_library", result["solver"]["optimality_claim"])
         self.assertFalse(result["solver"]["actual_simulation_global_optimality_proven"])
         self.assertEqual(result["candidate_plan"]["plan_status"], "candidate")
+
+    def test_free_battle_record_slots_are_lexicographically_improved(self):
+        rooms = {"factory_1": {"facility_id": "factory", "level": 3, "product_id": "battle_record"}}
+        segments = {
+            "segment_1": {"name": "早班", "start": "08:00", "end": "14:00", "hours": 6.0, "rooms": {}},
+            "segment_2": {"name": "中班", "start": "14:00", "end": "20:00", "hours": 6.0, "rooms": {}},
+            "segment_3": {"name": "晚班", "start": "20:00", "end": "08:00", "hours": 12.0, "rooms": {}},
+        }
+        context = self._context(
+            rooms,
+            segments=segments,
+            roster=[
+                {"name": "流星", "elite": 0, "level": 1, "recruited": True, "morale": 24},
+                {"name": "酒神", "elite": 2, "level": 80, "recruited": True, "morale": 24},
+                {"name": "断罪者", "elite": 1, "level": 1, "recruited": True, "morale": 24},
+                {"name": "红豆", "elite": 0, "level": 1, "recruited": True, "morale": 24},
+            ],
+            solver={"max_daily_work_hours": 18, "allocate_drones": False},
+        )
+        context["objective"]["preferences"]["priority"] = "orundum_lmd_balance"
+        library = build_library(context, top_k=60, operator_pool_size=4, allow_partial=True)
+        combos = library["rooms"]["factory_1"]["combinations"]
+
+        def combo_id(names):
+            target = set(names)
+            return next(item["combination_id"] for item in combos if {op["name"] for op in item["operators"]} == target)
+
+        assignments = [
+            {"segment_id": "segment_1", "room_id": "factory_1", "combination_id": combo_id(["流星"])},
+            {"segment_id": "segment_2", "room_id": "factory_1", "combination_id": combo_id(["流星"])},
+            {"segment_id": "segment_3", "room_id": "factory_1", "combination_id": combo_id(["红豆"])},
+        ]
+        before = simulate_assignment(context, library, assignments)
+        improved, after, metadata = _apply_free_secondary_improvements(
+            context, library, assignments, before, [], [], [],
+        )
+        late = next(item for item in improved if item["segment_id"] == "segment_3")
+        selected = next(item for item in combos if item["combination_id"] == late["combination_id"])
+        self.assertEqual({op["name"] for op in selected["operators"]}, {"酒神", "断罪者", "红豆"})
+        self.assertGreater(after["aggregate_metrics"]["battle_record_exp"], before["aggregate_metrics"]["battle_record_exp"])
+        self.assertGreater(metadata["battle_record_exp_gain"], 0)
+        self.assertEqual(metadata["scope"]["product_id"], "battle_record")
+        self.assertEqual(metadata["scope"]["drone_target_rooms"], "skipped")
+        self.assertEqual(metadata["skipped_drone_target_rooms"], [])
+        self.assertEqual(metadata["remaining_dominated_empty_slots"], [])
 
 
     def test_drone_inventory_is_closed_and_allocated(self):

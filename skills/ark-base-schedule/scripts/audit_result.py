@@ -99,6 +99,35 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
     coverage = value.get("project_data_coverage")
     is_project_output = bool(value.get("project") or value.get("project_reproducibility"))
     if is_project_output:
+        project = value.get("project") or {}
+        _check(
+            checks,
+            "right_side_levels_explicitly_confirmed",
+            not project or project.get("right_side_levels_confirmed") is True,
+            "右侧功能设施不可降级，项目必须确认游戏内实际等级。",
+        )
+        _check(
+            checks,
+            "right_side_levels_immutable",
+            not project or project.get("right_side_levels_immutable") is True,
+            "布局搜索必须把右侧设施等级作为不可变基建状态。",
+        )
+        selected_power = project.get("selected_power") or {}
+        _check(
+            checks,
+            "selected_layout_power_feasible",
+            not project or (_finite(selected_power.get("spare_power")) and float(selected_power.get("spare_power")) >= -TOLERANCE),
+            f"选中布局必须不缺电，当前电力余量为 {selected_power.get('spare_power')}。",
+        )
+        expected_right_power = project.get("fixed_right_power_consumption")
+        _check(
+            checks,
+            "right_side_power_bound_to_selected_layout",
+            not project or (_finite(expected_right_power)
+            and _finite(selected_power.get("fixed_right_consumption"))
+            and abs(float(expected_right_power) - float(selected_power.get("fixed_right_consumption"))) <= TOLERANCE),
+            "选中布局的右侧耗电必须与用户确认的不可逆设施等级一致。",
+        )
         _check(checks, "data_coverage_present", isinstance(coverage, dict), "项目结果应包含干员与技能结构化覆盖摘要。", severity="warning")
         if isinstance(coverage, dict):
             roster_coverage = coverage.get("roster") or {}
@@ -108,6 +137,15 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
                 "operator_data_coverage_complete",
                 ratio >= 1.0 - TOLERANCE,
                 f"干员名称数据覆盖率为{ratio:.2%}；未知干员可能造成假性无解或漏解。",
+                severity="warning",
+            )
+            relevant = coverage.get("relevant_unmodeled_skills") or {}
+            blocking_count = int(relevant.get("blocking_count", 0) or 0)
+            _check(
+                checks,
+                "relevant_unmodeled_skill_coverage",
+                blocking_count == 0,
+                f"本次设施与产品范围仍有{blocking_count}条高风险未结构化技能，可能造成候选被低估。",
                 severity="warning",
             )
 
@@ -161,6 +199,24 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
         )
         simulation = ((solver_result.get("selected_solution") or {}).get("simulation") or {})
         _audit_drone_plan(simulation.get("drone_plan"), checks)
+        dormitory_plan = simulation.get("dormitory_plan") or {}
+        _check(
+            checks,
+            "dormitory_repeating_day_morale",
+            not is_project_output or dormitory_plan.get("repeating_day_verified") is True,
+            "长期排班必须包含固定宿舍床位安排，并证明逐干员重复日心情闭环。",
+        )
+        _check(
+            checks,
+            "dormitory_automation_independent",
+            not is_project_output or dormitory_plan.get("automation_rules_used") is False,
+            "宿舍计划只能使用游戏机制，不得依赖外部自动化脚本或副表规则。",
+        )
+        secondary = ((solver_result.get("selected_solution") or {}).get("secondary_output_postprocess"))
+        if secondary is not None:
+            _check(checks, "secondary_output_dominance_checked", secondary.get("checked") is True, "必须执行免费副产出支配检查。")
+            remaining = secondary.get("remaining_dominated_empty_slots") or []
+            _check(checks, "no_dominated_empty_slot", not remaining, f"仍存在可免费提高产出的空位: {remaining}")
 
     errors = [item for item in checks if not item["ok"] and item["severity"] == "error"]
     warnings = [item for item in checks if not item["ok"] and item["severity"] == "warning"]

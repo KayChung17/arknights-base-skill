@@ -42,16 +42,23 @@ def _compute_efficiency(
     operators: list[dict[str, Any]],
     trading_count: int,
     power_count: int,
+    drone_capacity: float = 235.0,
+    facility_level: int = 1,
+    dormitory_levels: list[int] | None = None,
 ) -> dict[str, Any]:
     if facility not in {"trading_post", "factory", "power_plant", "control_center"}:
         return {"error": f"calculator_unsupported:{facility}", "warnings": []}
+    assigned = [dict(op, assigned_facility=facility) for op in operators]
     return EfficiencyCalculator(
         facility,
-        operators,
+        assigned,
         product,
         trading_post_count=trading_count,
         power_plant_count=power_count,
-        global_operators=operators,
+        drone_capacity=drone_capacity,
+        facility_level=facility_level,
+        dormitory_levels=dormitory_levels,
+        global_operators=assigned,
     ).compute()
 
 def _effective_bonus(result: dict[str, Any]) -> float:
@@ -134,10 +141,17 @@ def build_room_combinations(
     eligible = eligible_operators(context, facility, product)
     trading_count = sum(1 for value in context_rooms(context).values() if value["facility_id"] == "trading_post")
     power_count = sum(1 for value in context_rooms(context).values() if value["facility_id"] == "power_plant")
+    drone_capacity = float(
+        (((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}).get("drone_capacity", 235.0)
+    )
+    dormitory_levels = list((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1])
 
     individual_records: list[dict[str, Any]] = []
     for op in eligible:
-        result = _compute_efficiency(facility, product, [op], trading_count, power_count)
+        result = _compute_efficiency(
+            facility, product, [op], trading_count, power_count, drone_capacity,
+            int(room.get("level", 1)), dormitory_levels,
+        )
         metrics, fixed = _metrics_per_hour(room, result, [op])
         score = metric_score(metrics, objective_profile(context)) + fixed["fixed_lmd_per_trigger"] * 0.001
         individual_records.append({"score": score, "operator": op, "metrics": metrics})
@@ -188,7 +202,10 @@ def build_room_combinations(
         for selected_tuple in itertools.combinations(pool, size):
             enumerated += 1
             selected = [dict(op) for op in selected_tuple]
-            result = _compute_efficiency(facility, product, selected, trading_count, power_count)
+            result = _compute_efficiency(
+                facility, product, selected, trading_count, power_count, drone_capacity,
+                int(room.get("level", 1)), dormitory_levels,
+            )
             metrics, fixed = _metrics_per_hour(room, result, selected)
             score = metric_score(metrics, objective_profile(context))
             score += fixed["fixed_lmd_per_trigger"] * objective_profile(context).get("fixed_lmd", 0)
