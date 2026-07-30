@@ -137,6 +137,7 @@ def build_context(
     minimum_shard_balance: float = 0.0,
     minimum_gold_balance: float = 0.0,
     operator_overrides: dict[str, dict[str, Any]] | None = None,
+    right_side_schedule: list[dict[str, list[str]]] | None = None,
 ) -> dict[str, Any]:
     profile = normalize_profile(profile)
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
@@ -163,6 +164,7 @@ def build_context(
             "max_drone_use_per_node": float(drone_capacity),
             "drone_target_products": ["lmd_order", "orundum_order", "pure_gold", "orundum_shard"],
             "forbid_drone_waste": True,
+            "empty_drone_inventory_at_each_node": True,
             "repeat_day_continuity": False,
             "require_dormitory_cycle": True,
         },
@@ -200,6 +202,7 @@ def build_context(
         "dormitory_levels": profile["dorm_levels"],
         "power_plant_levels": profile["power_plant_levels"],
     }
+    context["right_side_schedule"] = list(right_side_schedule or [])
     return context
 
 
@@ -325,6 +328,7 @@ def search_layouts(
     max_shard_factories: int | None = None,
     minimum_battle_record_factories: int = 0,
     operator_overrides: dict[str, dict[str, Any]] | None = None,
+    right_side_schedule: list[dict[str, list[str]]] | None = None,
 ) -> dict[str, Any]:
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
     right.update(right_side_levels or {})
@@ -379,6 +383,7 @@ def search_layouts(
                 minimum_shard_balance=minimum_shard_balance,
                 minimum_gold_balance=minimum_gold_balance,
                 operator_overrides=operator_overrides,
+                right_side_schedule=right_side_schedule,
             )
             try:
                 library = build_library(context, top_k=top_k, operator_pool_size=operator_pool_size, allow_partial=True)

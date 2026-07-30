@@ -28,11 +28,7 @@ PRODUCT_NAMES = {
     "pure_gold": "Pure Gold",
     "orundum_shard": "Originium Shard",
 }
-FACILITY_LABELS = {
-    "trading_post": "贸易站",
-    "factory": "制造站",
-    "power_plant": "发电站",
-}
+ROOM_DISPLAY_NAMES = {"trading": "贸易站", "manufacture": "制造站"}
 
 
 def _stable_numeric_id(value: Any) -> int:
@@ -95,10 +91,19 @@ def export_schedule(value: dict[str, Any], template: dict[str, Any] | None = Non
         if float(item.get("drones", 0) or 0) <= 0:
             continue
         drone_allocations.setdefault(str(item.get("segment_id")), []).append(item)
+    invalid_segments = sorted(segment_id for segment_id, items in drone_allocations.items() if len(items) > 1)
+    if invalid_segments:
+        raise ValueError(f"同一上线节点存在多个无人机目标: {invalid_segments}")
     dormitory_assignments = {
         (str(item.get("segment_id")), str(item.get("dormitory_id"))): item
         for item in ((plan.get("recovery_plan") or {}).get("events") or [])
     }
+    right_side_assignments = {
+        str(item.get("segment_id")): item.get("rooms") or {}
+        for item in ((plan.get("right_side_plan") or {}).get("assignments") or [])
+    }
+    if set(right_side_assignments) != set(segments):
+        raise ValueError("输入缺少逐班次 right_side_plan，不能导出空会客室或办公室")
     exported_plans: list[dict[str, Any]] = []
     for ordinal, (segment_id, segment) in enumerate(segments.items(), 1):
         assignments = segment.get("rooms") or {}
@@ -118,8 +123,11 @@ def export_schedule(value: dict[str, Any], template: dict[str, Any] | None = Non
             exported_dorm = _empty_room(skip=False)
             exported_dorm["operators"] = [str(name) for name in recovery.get("operators") or []]
             rooms["dormitory"].append(exported_dorm)
-        rooms["meeting"] = [_empty_room(skip=True)]
-        rooms["hire"] = [_empty_room(skip=True)]
+        fixed_right = right_side_assignments[segment_id]
+        rooms["meeting"] = [_empty_room(skip=False)]
+        rooms["meeting"][0]["operators"] = [str(name) for name in fixed_right.get("meeting") or []]
+        rooms["hire"] = [_empty_room(skip=False)]
+        rooms["hire"][0]["operators"] = [str(name) for name in fixed_right.get("hire") or []]
         rooms["processing"] = [_empty_room(skip=True)]
 
         allocations = drone_allocations.get(segment_id, [])
@@ -135,22 +143,22 @@ def export_schedule(value: dict[str, Any], template: dict[str, Any] | None = Non
             })
         start = str(segment.get("start") or "")
         end = str(segment.get("end") or "")
-        drone_instruction = ""
-        if allocations:
-            parts = []
-            for item in sorted(allocations, key=lambda value: str(value.get("room_id") or "")):
-                facility = str(item.get("facility_id") or "")
-                room_id = str(item.get("room_id") or "")
-                count = float(item.get("drones", 0) or 0)
-                rendered_count = str(int(count)) if count.is_integer() else f"{count:g}"
-                parts.append(
-                    f"{FACILITY_LABELS.get(facility, facility)}{_room_index(room_id)} {rendered_count}架"
-                )
-            drone_instruction = f"无人机分配：{'、'.join(parts)}；"
+        drone_description = f"完成换班后运行至 {end}"
+        if allocation:
+            count = float(allocation.get("drones", 0) or 0)
+            count_text = str(int(round(count))) if abs(count - round(count)) < 1e-6 else f"{count:.2f}"
+            room_key = FACILITY_KEYS.get(str(allocation.get("facility_id") or ""), "trading")
+            room_text = f"{ROOM_DISPLAY_NAMES.get(room_key, room_key)}{_room_index(str(allocation.get('room_id') or ''))}"
+            drone_description = f"无人机全部加速{room_text}，长期稳态使用{count_text}架；{drone_description}"
+            if ordinal == 1:
+                initial = float(((value.get("base_state") or {}).get("initial_drone_stock", count)) or count)
+                if initial > count + 1e-6:
+                    initial_text = str(int(round(initial))) if abs(initial - round(initial)) < 1e-6 else f"{initial:.2f}"
+                    drone_description = f"无人机全部加速{room_text}；首次用完当前{initial_text}架，长期稳态约{count_text}架；完成换班后运行至 {end}"
         exported_plans.append({
             "name": f"第{ordinal:02d}班 {start}",
             "description": f"{start} 上线执行，覆盖 {start}–{end}",
-            "description_post": f"{drone_instruction}完成换班后运行至 {end}",
+            "description_post": drone_description,
             "Fiammetta": {"enable": False, "target": "", "order": "pre"},
             "drones": drone,
             "rooms": rooms,
@@ -201,6 +209,35 @@ def validate_exported_schedule(value: dict[str, Any]) -> list[str]:
             if len(rooms.get(key) or []) != expected:
                 errors.append(f"第 {index} 班 {key} 房间数与 scheduleType 不一致")
     return errors
+
+
+def validate_schedule_matches_result(result: dict[str, Any], schedule: dict[str, Any]) -> list[str]:
+    """Require the delivered schedule to be the deterministic export of result."""
+    try:
+        expected = export_schedule(result)
+    except (KeyError, TypeError, ValueError) as exc:
+        return [f"result.json 无法确定性导出排班: {exc}"]
+    if schedule == expected:
+        return []
+
+    def first_difference(left: Any, right: Any, path: str = "$") -> str:
+        if type(left) is not type(right):
+            return f"{path} 类型不同"
+        if isinstance(left, dict):
+            if set(left) != set(right):
+                return f"{path} 字段不同: expected={sorted(left)}, actual={sorted(right)}"
+            for key in left:
+                if left[key] != right[key]:
+                    return first_difference(left[key], right[key], f"{path}.{key}")
+        elif isinstance(left, list):
+            if len(left) != len(right):
+                return f"{path} 长度不同: expected={len(left)}, actual={len(right)}"
+            for index, item in enumerate(left):
+                if item != right[index]:
+                    return first_difference(item, right[index], f"{path}[{index}]")
+        return f"{path} 值不同: expected={left!r}, actual={right!r}"
+
+    return [first_difference(expected, schedule)]
 
 
 def main() -> int:

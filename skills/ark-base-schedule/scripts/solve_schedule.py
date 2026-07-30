@@ -320,6 +320,7 @@ def _candidate_plan(
             "model": (simulation.get("dormitory_plan") or {}).get("model"),
             "automation_rules_used": False,
         },
+        "right_side_plan": simulation.get("right_side_plan") or {},
         "economy_projection": {
             "source": "script",
             "daily": economy,

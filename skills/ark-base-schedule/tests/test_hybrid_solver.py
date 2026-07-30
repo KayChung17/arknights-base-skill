@@ -122,6 +122,27 @@ class HybridSolverTests(unittest.TestCase):
         }
         self.assertEqual(selected, {"f1_gravel", "f2_haze"})
 
+    def test_fixed_right_side_workers_are_reserved_from_production(self):
+        rooms = {
+            "factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+            "factory_2": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+        }
+        roster = [
+            {"name": name, "elite": 2, "recruited": True, "morale": 24}
+            for name in ("砾", "斑点", "夜烟", "甲", "乙")
+        ]
+        context = self._context(rooms, roster=roster)
+        context["right_side_schedule"] = [{"meeting": ["砾", "甲"], "hire": ["乙"]}]
+        bundle = build_milp(context, self._manual_library())
+        result = milp(bundle.c, integrality=bundle.integrality, bounds=bundle.bounds, constraints=bundle.constraints)
+        self.assertTrue(result.success)
+        selected = {
+            record["combination_id"]
+            for record, value in zip(bundle.variable_records, result.x)
+            if record["kind"] == "assignment" and value > 0.5
+        }
+        self.assertEqual(selected, {"f1_spot", "f2_haze"})
+
     def test_combination_builder_uses_verified_skills(self):
         rooms = {
             "factory_1": {"facility_id": "factory", "level": 3, "product_id": "pure_gold"},
@@ -283,6 +304,7 @@ class HybridSolverTests(unittest.TestCase):
                 "allocate_drones": True,
                 "drone_repeating_day_balance": True,
                 "drone_capacity": 235,
+                "empty_drone_inventory_at_each_node": True,
                 "require_resource_balance": False,
             },
         )
@@ -300,6 +322,39 @@ class HybridSolverTests(unittest.TestCase):
             simulation["drone_plan"]["total_recovered"],
             places=5,
         )
+
+    def test_each_operation_node_uses_at_most_one_drone_target(self):
+        rooms = {
+            "factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+            "factory_2": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+        }
+        context = self._context(
+            rooms,
+            solver={
+                "max_daily_work_hours": 24,
+                "allocate_drones": True,
+                "drone_repeating_day_balance": True,
+                "drone_capacity": 235,
+                "empty_drone_inventory_at_each_node": True,
+                "require_resource_balance": False,
+                "require_pure_gold_balance": False,
+            },
+        )
+        result = solve_hybrid(
+            context,
+            library=self._manual_library(),
+            top_solutions=1,
+            time_limit=5,
+        )
+        allocations = result["selected_solution"]["drone_allocations"]
+        counts: dict[str, int] = {}
+        for allocation in allocations:
+            segment_id = allocation["segment_id"]
+            counts[segment_id] = counts.get(segment_id, 0) + 1
+        self.assertTrue(allocations)
+        self.assertTrue(all(count <= 1 for count in counts.values()))
+        timeline = result["selected_solution"]["simulation"]["drone_plan"]["timeline"]
+        self.assertTrue(all(item["start_inventory"] - item["used_at_start"] < 1.0 for item in timeline))
 
     def _manual_library_with_one_room(self):
         base = self._manual_library()

@@ -14,6 +14,8 @@ from typing import Any
 
 from layout_profiles import facility_configuration_power_summary
 from online_schedule import candidate_online_times
+from data_loader import apply_roster_overrides, read_roster
+from right_side_schedule import validate_right_side_schedule
 
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -53,6 +55,7 @@ CRITICAL_PATHS = (
     "/base_state/dormitory_levels",
     "/base_state/right_side_levels",
     "/base_state/right_side_levels_confirmed",
+    "/right_side_schedule",
     "/horizon/mode",
 )
 
@@ -226,11 +229,12 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
         })
 
     roster_value = config.get("roster")
+    roster_path: Path | None = None
     if isinstance(roster_value, str) and roster_value:
-        roster = Path(roster_value)
-        roster = roster if roster.is_absolute() else (path.parent / roster).resolve()
-        if not roster.exists():
-            conflicts.append({"path": "/roster", "code": "file_not_found", "message": f"干员表不存在: {roster}"})
+        roster_path = Path(roster_value)
+        roster_path = roster_path if roster_path.is_absolute() else (path.parent / roster_path).resolve()
+        if not roster_path.exists():
+            conflicts.append({"path": "/roster", "code": "file_not_found", "message": f"干员表不存在: {roster_path}"})
     elif "roster" in config:
         conflicts.append({"path": "/roster", "code": "invalid_roster", "message": "roster 必须是非空路径字符串。"})
 
@@ -273,6 +277,25 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
                 assumptions.append({"path": "/objective/online_times", "value": candidates[0], "source": "derived_candidate_baseline"})
         except (TypeError, ValueError) as exc:
             conflicts.append({"path": "/objective/online_schedule", "code": "invalid_candidate_grid", "message": str(exc)})
+
+    right_side_schedule = config.get("right_side_schedule")
+    if right_side_schedule is not None and isinstance(count, int):
+        known_names: set[str] | None = None
+        if roster_path is not None and roster_path.exists():
+            known_names = {
+                item.name
+                for item in apply_roster_overrides(read_roster(roster_path), config.get("operator_overrides"))
+            }
+        for message in validate_right_side_schedule(
+            right_side_schedule,
+            segment_count=count,
+            known_names=known_names,
+        ):
+            conflicts.append({
+                "path": "/right_side_schedule",
+                "code": "invalid_right_side_schedule",
+                "message": message,
+            })
 
     capacity = _get(config, "/base_state/drone_capacity")
     stock = _get(config, "/base_state/initial_drone_stock")

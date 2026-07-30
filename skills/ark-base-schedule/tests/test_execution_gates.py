@@ -20,7 +20,11 @@ from verify_output import verify_output  # noqa: E402
 class PreflightTests(unittest.TestCase):
     def _write_roster(self, root: Path) -> Path:
         path = root / "roster.tsv"
-        path.write_text("干员名称\t是否招募\t精英化\t等级\n测试\t是\t0\t1\n", encoding="utf-8")
+        path.write_text(
+            "干员名称\t是否招募\t精英化\t等级\n"
+            + "".join(f"测试{i}\t是\t0\t1\n" for i in range(1, 10)),
+            encoding="utf-8",
+        )
         return path
 
     def _complete(self, root: Path) -> dict:
@@ -50,7 +54,12 @@ class PreflightTests(unittest.TestCase):
                 "right_side_levels_confirmed": True,
             },
             "horizon": {"mode": "steady_state"},
-            "profiles": {"mode": "representative"}
+            "profiles": {"mode": "representative"},
+            "right_side_schedule": [
+                {"meeting": ["测试1", "测试2"], "hire": ["测试3"]},
+                {"meeting": ["测试4", "测试5"], "hire": ["测试6"]},
+                {"meeting": ["测试7", "测试8"], "hire": ["测试9"]}
+            ]
         }
 
     def test_missing_inputs_stop_execution(self) -> None:
@@ -107,6 +116,24 @@ class PreflightTests(unittest.TestCase):
                 "/base_state/right_side_levels_confirmed",
                 {item["path"] for item in report["missing"]},
             )
+
+    def test_right_side_schedule_is_required_and_roster_checked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config.pop("right_side_schedule")
+            path = root / "missing.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertIn("/right_side_schedule", {item["path"] for item in report["missing"]})
+
+            config = self._complete(root)
+            config["right_side_schedule"][0]["hire"] = ["不存在"]
+            path = root / "unknown.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "conflict")
+            self.assertTrue(any("练度表外干员" in item["message"] for item in report["conflicts"]))
 
     def test_conflicting_shard_fields_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

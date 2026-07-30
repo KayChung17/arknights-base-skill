@@ -9,6 +9,8 @@
 - Git 提交（可获取时）；
 - 求解范围与截断信息。
 
+项目必须在求解前以 `right_side_schedule` 固定每班会客室与办公室人员。右侧人员进入同班互斥、每日工时、全局联动和宿舍恢复计算，导出后不得人工补写。
+
 ## 审计级别
 
 - `passed`：已实现的硬约束和一致性检查全部通过。
@@ -22,6 +24,14 @@
 `proxy_optimal_within_complete_candidate_library` 只说明代理模型在完整候选库内达到声明 gap。除非代理目标与最终模拟完全一致，并且所有相关机制都在模型内，否则 `actual_simulation_global_optimality_proven` 必须为 `false`。
 
 ## 发布门禁
+
+最终 `schedule.json` 必须同时满足：
+
+- 与 `result.json` 的确定性导出结果逐值一致；
+- 文件哈希与 `run-manifest.json` 一致；
+- `meeting`、`hire`、`dormitory` 和生产房间都来自同次运行。
+
+任何导出后修改都会使发布验证失败。
 
 发布前至少执行：
 

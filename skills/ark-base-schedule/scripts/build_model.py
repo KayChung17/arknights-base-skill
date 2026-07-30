@@ -38,6 +38,7 @@ from optimizer_common import (
     utc_now,
     write_json,
 )
+from right_side_schedule import fixed_hours_by_operator, fixed_work_by_segment
 
 
 @dataclass
@@ -214,6 +215,8 @@ def build_milp(
     # Combinations with identical per-drone yield share one integer variable,
     # which keeps the MILP small while retaining special-order distinctions.
     drone_allocation_records: list[tuple[int, list[int]]] = []  # (drone var, eligible assignment vars)
+    drone_target_records: list[tuple[int, list[int]]] = []  # (target binary, allocation vars)
+    drone_targets_by_segment: dict[str, list[int]] = {segment.segment_id: [] for segment in segments}
     drone_allocation_by_segment: dict[str, list[int]] = {segment.segment_id: [] for segment in segments}
     target_products = {str(value) for value in settings.get("drone_target_products") or []}
     max_drone_use = float(settings.get("max_drone_use_per_node", drone_rules()["default_capacity"]))
@@ -233,6 +236,7 @@ def build_milp(
                     signature = tuple(sorted((str(key), round(float(value), 12)) for key, value in metrics.items()))
                     profile = profiles.setdefault(signature, {"metrics": metrics, "combos": []})
                     profile["combos"].append(combo)
+                room_drone_indices: list[int] = []
                 for profile_number, profile in enumerate(profiles.values(), start=1):
                     combos = profile["combos"]
                     eligible_ids = [combo["combination_id"] for combo in combos]
@@ -253,6 +257,19 @@ def build_milp(
                     )
                     drone_allocation_records.append((d_index, x_indices))
                     drone_allocation_by_segment[segment.segment_id].append(d_index)
+                    room_drone_indices.append(d_index)
+                if room_drone_indices:
+                    target_index = len(variable_records)
+                    variable_records.append(
+                        {
+                            "kind": "drone_target",
+                            "segment_id": segment.segment_id,
+                            "room_id": room_id,
+                            "objective_coefficient": 0.0,
+                        }
+                    )
+                    drone_target_records.append((target_index, room_drone_indices))
+                    drone_targets_by_segment[segment.segment_id].append(target_index)
 
     # Drone stock and overflow variables. In repeating-day mode there is one
     # inventory state at every operation node and the final segment wraps to the
@@ -325,6 +342,8 @@ def build_milp(
             )
 
     roster_names = [item["name"] for item in roster]
+    right_side_work = fixed_work_by_segment(context)
+    right_side_hours = fixed_hours_by_operator(context)
 
     # Same-time operator exclusivity.
     for segment in segments:
@@ -338,14 +357,23 @@ def build_milp(
                 add_constraint(
                     coeff,
                     -np.inf,
-                    1.0,
-                    {"type": "operator_exclusivity", "segment_id": segment.segment_id, "operator": operator},
+                    0.0 if operator in right_side_work.get(segment.segment_id, set()) else 1.0,
+                    {
+                        "type": "operator_exclusivity",
+                        "segment_id": segment.segment_id,
+                        "operator": operator,
+                        "fixed_right_side": operator in right_side_work.get(segment.segment_id, set()),
+                    },
                 )
 
     # Daily work-hour limit.
     default_max_hours = float(settings.get("max_daily_work_hours", 12.0))
     overrides = settings.get("operator_max_daily_hours") or {}
     for operator in roster_names:
+        max_hours = float(overrides.get(operator, default_max_hours))
+        fixed_hours = float(right_side_hours.get(operator, 0.0))
+        if fixed_hours > max_hours + 1e-9:
+            raise ValueError(f"{operator} 的右侧固定工时 {fixed_hours:.2f} 超过每日上限 {max_hours:.2f}")
         coeff: dict[int, float] = {}
         for segment in segments:
             for room_id, room_result in rooms.items():
@@ -353,12 +381,16 @@ def build_milp(
                     if operator in {item["name"] for item in combo.get("operators") or []}:
                         coeff[x_lookup[(segment.segment_id, room_id, combo["combination_id"])]] = segment.hours
         if coeff:
-            max_hours = float(overrides.get(operator, default_max_hours))
             add_constraint(
                 coeff,
                 -np.inf,
-                max_hours,
-                {"type": "daily_work_hours", "operator": operator, "max_hours": max_hours},
+                max_hours - fixed_hours,
+                {
+                    "type": "daily_work_hours",
+                    "operator": operator,
+                    "max_hours": max_hours,
+                    "fixed_right_side_hours": fixed_hours,
+                },
             )
 
     # Link drone allocation to the selected combination.
@@ -372,6 +404,31 @@ def build_milp(
             0.0,
             {"type": "drone_allocation_link", "drone_variable": drone_index, "eligible_assignment_count": len(assignment_indices)},
         )
+
+    # One operation node maps to one template drone target. Several yield
+    # profiles may exist for that room, but all allocation must stay in it.
+    for target_index, allocation_indices in drone_target_records:
+        coefficients = {target_index: -max_drone_use}
+        coefficients.update({index: 1.0 for index in allocation_indices})
+        add_constraint(
+            coefficients,
+            -np.inf,
+            0.0,
+            {
+                "type": "drone_target_link",
+                "target_variable": target_index,
+                "allocation_variable_count": len(allocation_indices),
+            },
+        )
+    for segment in segments:
+        target_indices = drone_targets_by_segment.get(segment.segment_id) or []
+        if target_indices:
+            add_constraint(
+                {index: 1.0 for index in target_indices},
+                -np.inf,
+                1.0,
+                {"type": "one_drone_target_per_node", "segment_id": segment.segment_id},
+            )
 
     # Closed drone inventory flow.
     if settings.get("allocate_drones"):
@@ -401,6 +458,15 @@ def build_milp(
                     0.0,
                     {"type": "drone_use_available_at_node", "segment_id": segment.segment_id},
                 )
+                if settings.get("empty_drone_inventory_at_each_node"):
+                    # Recovery is continuous in the model while allocations are integer.
+                    # Less than one drone is an unusable rounding residue.
+                    add_constraint(
+                        {**{index: 1.0 for index in use_indices}, current_inventory: -1.0},
+                        -1.0 + 1e-6,
+                        np.inf,
+                        {"type": "empty_drone_inventory_at_node", "segment_id": segment.segment_id},
+                    )
 
             # I_next = I_current - use + base_recovery + bonus_recovery - waste
             coeff: dict[int, float] = {}
@@ -539,7 +605,7 @@ def build_milp(
     integrality = np.ones(n, dtype=int)
     for index, record in enumerate(variable_records):
         kind = record.get("kind")
-        if kind in {"assignment", "continuity"}:
+        if kind in {"assignment", "continuity", "drone_target"}:
             ub[index] = 1.0
             integrality[index] = 1
         elif kind == "drone_allocation":
@@ -561,6 +627,7 @@ def build_milp(
         "assignment_variable_count": sum(1 for item in variable_records if item["kind"] == "assignment"),
         "continuity_variable_count": sum(1 for item in variable_records if item["kind"] == "continuity"),
         "drone_allocation_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_allocation"),
+        "drone_target_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_target"),
         "drone_inventory_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_inventory"),
         "constraint_count": len(lower),
         "constraint_summary": {

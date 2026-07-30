@@ -38,6 +38,7 @@ from optimizer_common import (
     warehouse_capacity,
     write_json,
 )
+from right_side_schedule import FACILITIES as RIGHT_SIDE_FACILITIES, assignments_for_context
 
 
 def _effective_bonus(result: dict[str, Any], fallback: float = 0.0) -> float:
@@ -159,6 +160,10 @@ def simulate_assignment(
     power_plant_count = sum(1 for value in rooms.values() if value["facility_id"] == "power_plant")
     settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
     drone_capacity = float(settings.get("drone_capacity", drone_rules()["default_capacity"]))
+    right_side_assignments = {
+        item["segment_id"]: item
+        for item in assignments_for_context(context)
+    }
 
     for segment in segments:
         selected = by_segment.get(segment.segment_id, [])
@@ -170,10 +175,18 @@ def simulate_assignment(
                 dict(op, assigned_facility=facility_id, assigned_room_id=item["room_id"])
                 for op in (combo.get("operators") or [])
             )
+        fixed_right_side = right_side_assignments[segment.segment_id]
+        for output_key, facility_id in RIGHT_SIDE_FACILITIES.items():
+            for name in fixed_right_side["rooms"][output_key]:
+                base = dict(roster[name])
+                base.update(assigned_facility=facility_id, assigned_room_id=output_key)
+                all_operators.append(base)
         working_names = {item["name"] for item in all_operators}
         dormitory_capacity = len((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1]) * 5
         dormitory_occupant_count = min(dormitory_capacity, max(0, len(roster) - len(working_names)))
         segment_morale_costs = {name: 0.0 for name in roster}
+        for name in {name for names in fixed_right_side["rooms"].values() for name in names}:
+            segment_morale_costs[name] = 1.0
         for name in roster:
             operator_work[name].append(name in working_names)
             if name in working_names:
@@ -349,6 +362,12 @@ def simulate_assignment(
                 drone_feasible = False
                 warnings.append(
                     f"{segment.segment_id} 无人机使用 {used:.2f} 超过节点库存 {current_inventory:.2f}"
+                )
+            remaining_after_use = current_inventory - used
+            if settings.get("empty_drone_inventory_at_each_node") and remaining_after_use >= 1.0 - 1e-5:
+                drone_feasible = False
+                warnings.append(
+                    f"{segment.segment_id} 上线后仍剩余 {remaining_after_use:.2f} 架无人机，未清空可用库存"
                 )
             for allocation in allocations:
                 room_id = str(allocation.get("room_id") or "")
@@ -548,6 +567,7 @@ def simulate_assignment(
             "enabled": allocate_drones,
             "capacity": drone_capacity,
             "repeating_day_balance": cyclic,
+            "empty_inventory_at_each_operation_node": bool(settings.get("empty_drone_inventory_at_each_node", False)),
             "base_recovery_minutes_per_drone": drone_rules()["base_recovery_minutes_per_drone"],
             "acceleration_minutes_per_drone": drone_rules()["acceleration_minutes_per_drone"],
             "total_recovered": total_recovered,
@@ -559,6 +579,10 @@ def simulate_assignment(
         },
         "morale": morale_results,
         "dormitory_plan": dormitory_plan,
+        "right_side_plan": {
+            "source": "project.right_side_schedule",
+            "assignments": list(right_side_assignments.values()),
+        },
         "warnings": warnings,
         "assumptions": {
             "collection_at_every_operation_node": True,

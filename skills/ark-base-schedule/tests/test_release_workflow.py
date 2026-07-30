@@ -72,6 +72,49 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("net_lmd_floor", failed)
         self.assertIn("optimality_claim_library_complete", failed)
 
+    def test_audit_rejects_multiple_drone_targets_at_one_operation_node(self):
+        value = {
+            "result_type": "hybrid_schedule_solution",
+            "selected_solution": {
+                "simulation": {
+                    "aggregate_metrics": {},
+                    "drone_plan": {
+                        "feasible": True,
+                        "allocations": [
+                            {"segment_id": "segment_1", "room_id": "factory_2", "drones": 22},
+                            {"segment_id": "segment_1", "room_id": "trading_post_3", "drones": 94},
+                        ],
+                    },
+                },
+            },
+            "solver": {"actual_simulation_global_optimality_proven": False},
+        }
+        audit = audit_result(value)
+        failed = {item["code"] for item in audit["checks"] if not item["ok"]}
+        self.assertIn("single_drone_target_per_operation_node", failed)
+
+    def test_audit_rejects_inventory_left_after_operation(self):
+        value = {
+            "result_type": "hybrid_schedule_solution",
+            "selected_solution": {
+                "simulation": {
+                    "aggregate_metrics": {},
+                    "drone_plan": {
+                        "feasible": True,
+                        "capacity": 235,
+                        "empty_inventory_at_each_operation_node": True,
+                        "timeline": [
+                            {"start_inventory": 116, "used_at_start": 91, "end_inventory": 137},
+                        ],
+                    },
+                },
+            },
+            "solver": {"actual_simulation_global_optimality_proven": False},
+        }
+        audit = audit_result(value)
+        failed = {item["code"] for item in audit["checks"] if not item["ok"]}
+        self.assertIn("drone_inventory_emptied_at_each_operation_node", failed)
+
     def test_chinese_report_for_layout_search(self):
         value = {
             "search_type": "outer_layout_configuration_plus_inner_hybrid_schedule_solver",
@@ -116,6 +159,15 @@ class ReleaseWorkflowTests(unittest.TestCase):
                         },
                     },
                     "simulation": {"drone_plan": {"allocations": []}},
+                    "right_side_plan": {
+                        "assignments": [
+                            {
+                                "segment_id": segment_id,
+                                "rooms": {"meeting": [f"会客{index}甲", f"会客{index}乙"], "hire": [f"办公室{index}"]},
+                            }
+                            for index, segment_id in enumerate(("segment_1", "segment_2", "segment_3"), 1)
+                        ],
+                    },
                 },
             },
             "results": [], "limitations": [],
@@ -177,6 +229,15 @@ class ReleaseWorkflowTests(unittest.TestCase):
                         "automation_rules_used": False,
                     },
                     "simulation": {"drone_plan": {"allocations": []}},
+                    "right_side_plan": {
+                        "assignments": [
+                            {
+                                "segment_id": segment_id,
+                                "rooms": {"meeting": [f"会客{index}甲", f"会客{index}乙"], "hire": [f"办公室{index}"]},
+                            }
+                            for index, segment_id in enumerate(("segment_1", "segment_2", "segment_3"), 1)
+                        ],
+                    },
                 },
                 "solver_result": {
                     "solver": {
@@ -190,6 +251,11 @@ class ReleaseWorkflowTests(unittest.TestCase):
                         "dormitory_plan": {
                             "repeating_day_verified": True,
                             "automation_rules_used": False,
+                            "operator_flows": {
+                                name: {"repeating_day_feasible": True}
+                                for index in range(1, 4)
+                                for name in (f"会客{index}甲", f"会客{index}乙", f"办公室{index}")
+                            },
                         },
                     }},
                 },
@@ -200,7 +266,15 @@ class ReleaseWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             roster = root / "roster.tsv"
-            roster.write_text("干员名称\t是否已招募\t等级\t精英化等级\n测试\tTRUE\t1\t0\n", encoding="utf-8")
+            roster.write_text(
+                "干员名称\t是否已招募\t等级\t精英化等级\n测试\tTRUE\t1\t0\n"
+                + "".join(
+                    f"{name}\tTRUE\t1\t0\n"
+                    for index in range(1, 4)
+                    for name in (f"会客{index}甲", f"会客{index}乙", f"办公室{index}")
+                ),
+                encoding="utf-8",
+            )
             config = root / "config.json"
             config.write_text(json.dumps({
                 "schema_version": 1,
@@ -228,6 +302,10 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 },
                 "horizon": {"mode": "steady_state"},
                 "profiles": {"mode": "representative"},
+                "right_side_schedule": [
+                    {"meeting": [f"会客{index}甲", f"会客{index}乙"], "hire": [f"办公室{index}"]}
+                    for index in range(1, 4)
+                ],
             }, ensure_ascii=False), encoding="utf-8")
             with patch("run_project.search_layouts", return_value=fake_result):
                 summary = run_project(config, output_dir=root / "output")

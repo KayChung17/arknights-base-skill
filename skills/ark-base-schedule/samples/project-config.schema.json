@@ -3,7 +3,7 @@
   "$id": "https://github.com/KayChung17/arknights-base-skill/blob/main/skills/ark-base-schedule/schemas/project-config.schema.json",
   "title": "明日方舟基建优化项目配置",
   "type": "object",
-  "required": ["schema_version", "mode", "roster", "objective", "base_state", "horizon"],
+  "required": ["schema_version", "mode", "roster", "objective", "base_state", "horizon", "right_side_schedule"],
   "properties": {
     "schema_version": {"const": 1},
     "project_name": {"type": "string"},
@@ -117,6 +117,20 @@
       "properties": {"marginal_limit": {"type": "integer", "minimum": 0}}
     },
     "preferences": {"type": "object"},
+    "right_side_schedule": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["meeting", "hire"],
+        "properties": {
+          "meeting": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string", "minLength": 1}},
+          "hire": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string", "minLength": 1}}
+        },
+        "additionalProperties": false
+      }
+    },
     "verification": {
       "type": "object",
       "properties": {

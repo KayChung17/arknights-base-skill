@@ -218,6 +218,7 @@ def run_upgrade_search(
     minimum_shard_balance: float = 0.0,
     minimum_gold_balance: float = 0.0,
     marginal_limit: int = 0,
+    right_side_schedule: list[dict[str, list[str]]] | None = None,
 ) -> dict[str, Any]:
     """Compare current, ceiling and targeted states under identical constraints.
 
@@ -258,6 +259,7 @@ def run_upgrade_search(
         initial_drone_stock=initial_drone_stock,
         minimum_shard_balance=minimum_shard_balance,
         minimum_gold_balance=minimum_gold_balance,
+        right_side_schedule=right_side_schedule,
     )
     current_search = search_layouts(roster_path, **kwargs)
     maxed_search = search_layouts(maxed_path, **kwargs)

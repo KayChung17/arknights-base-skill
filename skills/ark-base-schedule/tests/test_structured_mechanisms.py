@@ -547,7 +547,11 @@ class StructuredMechanismTests(unittest.TestCase):
     def test_relevant_unmodeled_report_deduplicates_and_flags_numeric_description(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             roster = Path(tmp) / "roster.tsv"
-            roster.write_text("干员名称\t是否已招募\t等级\t精英化等级\n测试干员\tTRUE\t1\t0\n", encoding="utf-8")
+            roster.write_text(
+                "干员名称\t是否已招募\t等级\t精英化等级\n"
+                "测试干员\tTRUE\t1\t0\n会客甲\tTRUE\t1\t0\n会客乙\tTRUE\t1\t0\n办公室\tTRUE\t1\t0\n",
+                encoding="utf-8",
+            )
             record = {
                 "name": "测试干员",
                 "skills": [{
@@ -573,7 +577,11 @@ class StructuredMechanismTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             roster = root / "roster.tsv"
-            roster.write_text("干员名称\t是否已招募\t等级\t精英化等级\n测试干员\tTRUE\t1\t0\n", encoding="utf-8")
+            roster.write_text(
+                "干员名称\t是否已招募\t等级\t精英化等级\n"
+                "测试干员\tTRUE\t1\t0\n会客甲\tTRUE\t1\t0\n会客乙\tTRUE\t1\t0\n办公室\tTRUE\t1\t0\n",
+                encoding="utf-8",
+            )
             config = root / "project.json"
             config.write_text(json.dumps({
                 "schema_version": 1,
@@ -596,6 +604,11 @@ class StructuredMechanismTests(unittest.TestCase):
                 },
                 "horizon": {"mode": "steady_state"},
                 "profiles": {"mode": "representative"},
+                "right_side_schedule": [
+                    {"meeting": ["会客甲", "会客乙"], "hire": ["办公室"]},
+                    {"meeting": ["会客甲", "会客乙"], "hire": ["办公室"]},
+                    {"meeting": ["会客甲", "会客乙"], "hire": ["办公室"]}
+                ],
                 "verification": {"relevant_unmodeled_skill_policy": "block"},
             }, ensure_ascii=False), encoding="utf-8")
             risk = {

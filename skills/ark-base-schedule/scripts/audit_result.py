@@ -31,6 +31,25 @@ def _audit_drone_plan(plan: dict[str, Any] | None, checks: list[dict[str, Any]])
         _check(checks, "drone_plan_present", False, "结果未包含无人机计划。", severity="warning")
         return
     _check(checks, "drone_plan_feasible", bool(plan.get("feasible", True)), "无人机计划必须标记为可行。")
+    targets_by_segment: dict[str, set[str]] = {}
+    for allocation in plan.get("allocations") or []:
+        drones = float(allocation.get("drones", 0.0) or 0.0)
+        if drones <= TOLERANCE:
+            continue
+        segment_id = str(allocation.get("segment_id") or "")
+        room_id = str(allocation.get("room_id") or "")
+        targets_by_segment.setdefault(segment_id, set()).add(room_id)
+    invalid_targets = {
+        segment_id: sorted(room_ids)
+        for segment_id, room_ids in targets_by_segment.items()
+        if len(room_ids) > 1
+    }
+    _check(
+        checks,
+        "single_drone_target_per_operation_node",
+        not invalid_targets,
+        f"每个上线操作节点只能选择一个无人机加速房间；多目标节点: {invalid_targets}",
+    )
     recovered = float(plan.get("total_recovered", 0.0) or 0.0)
     used = float(plan.get("total_used", 0.0) or 0.0)
     wasted = float(plan.get("total_wasted", 0.0) or 0.0)
@@ -55,6 +74,13 @@ def _audit_drone_plan(plan: dict[str, Any] | None, checks: list[dict[str, Any]])
             after_use.append(start - used_at_start)
         _check(checks, "drone_capacity_upper_bound", max(stocks) <= float(capacity) + TOLERANCE, f"无人机库存不得超过容量{capacity}。")
         _check(checks, "drone_inventory_nonnegative", min(after_use + stocks) >= -TOLERANCE, "无人机库存不得为负。")
+        if plan.get("empty_inventory_at_each_operation_node"):
+            _check(
+                checks,
+                "drone_inventory_emptied_at_each_operation_node",
+                max(after_use) < 1.0 + TOLERANCE,
+                f"每次上线后可用无人机库存必须清空；各节点余量: {[round(value, 3) for value in after_use]}",
+            )
 
 
 def _selected_layout_payload(value: dict[str, Any]) -> tuple[dict[str, Any] | None, dict[str, Any]]:
@@ -199,6 +225,47 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
         )
         simulation = ((solver_result.get("selected_solution") or {}).get("simulation") or {})
         _audit_drone_plan(simulation.get("drone_plan"), checks)
+        selected_plan = selected.get("plan") or solver_result.get("candidate_plan") or {}
+        right_side_assignments = ((selected_plan.get("right_side_plan") or {}).get("assignments") or [])
+        segment_records = selected_plan.get("segments") or {}
+        right_side_by_segment = {
+            str(item.get("segment_id")): item.get("rooms") or {}
+            for item in right_side_assignments
+        }
+        _check(
+            checks,
+            "right_side_plan_complete",
+            not is_project_output or set(right_side_by_segment) == set(segment_records),
+            "项目结果必须逐班次包含结构化会客室和办公室安排。",
+        )
+        right_side_shape_ok = True
+        right_side_conflicts: dict[str, list[str]] = {}
+        for segment_id, segment in segment_records.items():
+            fixed = right_side_by_segment.get(segment_id) or {}
+            meeting = list(fixed.get("meeting") or [])
+            hire = list(fixed.get("hire") or [])
+            right_side_shape_ok = right_side_shape_ok and len(meeting) == 2 and len(hire) == 1
+            fixed_names = set(meeting + hire)
+            production_names = {
+                str(operator.get("name"))
+                for room in (segment.get("rooms") or {}).values()
+                for operator in room.get("operators") or []
+            }
+            overlap = sorted(fixed_names & production_names)
+            if overlap:
+                right_side_conflicts[segment_id] = overlap
+        _check(
+            checks,
+            "right_side_room_capacities",
+            not is_project_output or right_side_shape_ok,
+            "每班会客室必须安排2人，办公室必须安排1人。",
+        )
+        _check(
+            checks,
+            "right_side_production_exclusivity",
+            not right_side_conflicts,
+            f"右侧人员与同班生产房间冲突: {right_side_conflicts}",
+        )
         dormitory_plan = simulation.get("dormitory_plan") or {}
         _check(
             checks,
@@ -211,6 +278,20 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
             "dormitory_automation_independent",
             not is_project_output or dormitory_plan.get("automation_rules_used") is False,
             "宿舍计划只能使用游戏机制，不得依赖外部自动化脚本或副表规则。",
+        )
+        right_side_names = {
+            name
+            for rooms in right_side_by_segment.values()
+            for key in ("meeting", "hire")
+            for name in rooms.get(key) or []
+        }
+        dorm_flows = dormitory_plan.get("operator_flows") or {}
+        missing_right_side_flows = sorted(name for name in right_side_names if name not in dorm_flows)
+        _check(
+            checks,
+            "right_side_morale_cycle_included",
+            not is_project_output or not missing_right_side_flows,
+            f"右侧工作人员未进入宿舍心情闭环: {missing_right_side_flows}",
         )
         secondary = ((solver_result.get("selected_solution") or {}).get("secondary_output_postprocess"))
         if secondary is not None:

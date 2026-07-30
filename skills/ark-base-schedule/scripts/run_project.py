@@ -80,6 +80,7 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "minimum_battle_record_factories": int(objective.get("minimum_battle_record_factories", 0)),
         "lmd_proxy_floor_slack": float(search.get("lmd_proxy_floor_slack", 0.0)),
         "operator_overrides": config.get("operator_overrides"),
+        "right_side_schedule": config["right_side_schedule"],
     })
     return kwargs
 
@@ -105,6 +106,7 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
     solver.setdefault("drone_repeating_day_balance", True)
     solver.setdefault("require_dormitory_cycle", True)
     solver.setdefault("forbid_drone_waste", True)
+    solver.setdefault("empty_drone_inventory_at_each_node", True)
     preferences["solver"] = solver
     context = build_decision_packet(
         roster,
@@ -124,6 +126,7 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "right_side_levels_immutable": True,
     }
     context["horizon"] = config["horizon"]
+    context["right_side_schedule"] = config["right_side_schedule"]
     search = _solver_options(config)
     library = build_library(
         context,
@@ -245,6 +248,7 @@ def run_project(
             initial_drone_stock=kwargs["initial_drone_stock"],
             minimum_shard_balance=kwargs["minimum_shard_balance"],
             minimum_gold_balance=kwargs["minimum_gold_balance"],
+            right_side_schedule=kwargs["right_side_schedule"],
             marginal_limit=int((config.get("upgrades") or {}).get("marginal_limit", 0)),
         )
     elif mode == "fixed_schedule":
@@ -267,6 +271,7 @@ def run_project(
         "right_side_levels_immutable": True,
         "fixed_right_power_consumption": fixed_right_power_consumption(config["base_state"]["right_side_levels"]),
         "selected_power": selected_power,
+        "right_side_schedule": config["right_side_schedule"],
     }
     result["project_execution"] = {
         "run_id": run_id,

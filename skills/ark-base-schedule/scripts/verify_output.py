@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from export_schedule_template import validate_exported_schedule
+from export_schedule_template import validate_exported_schedule, validate_schedule_matches_result
 
 CORE_FILES = (
     "preflight.json",
@@ -254,6 +254,14 @@ def verify_output(
 
     schedule_errors = validate_exported_schedule(schedule)
     _check(checks, "schedule_template_contract", not schedule_errors, f"schedule.json 必须兼容 assets/template.json: {schedule_errors}")
+    consistency_errors = validate_schedule_matches_result(result, schedule)
+    project_output = isinstance(result.get("project"), dict)
+    _check(
+        checks,
+        "schedule_exactly_matches_result",
+        not project_output or not consistency_errors,
+        f"schedule.json 必须由 result.json 确定性导出，禁止审计后人工改写: {consistency_errors}",
+    )
     dormitory_operators = [
         name
         for plan in schedule.get("plans") or []
