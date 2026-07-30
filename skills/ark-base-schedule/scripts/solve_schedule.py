@@ -553,7 +553,7 @@ def _candidate_plan(
         combo = combo_lookup[(item["room_id"], item["combination_id"])]
         plan_segments[item["segment_id"]]["rooms"][item["room_id"]] = {
             "facility_id": room["facility_id"],
-            "product_id": room["product_id"],
+            "product_id": combo.get("product_id", room["product_id"]),
             "operators": combo["operators"],
             "combination_id": combo["combination_id"],
         }
@@ -636,12 +636,56 @@ def solve_hybrid(
     mip_rel_gap: float = 0.001,
     max_proxy_attempts: int | None = None,
 ) -> dict[str, Any]:
+    settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
+    expansion_rounds = max(0, int(settings.get("adaptive_candidate_expansion_rounds", 2)))
+    expansion_factor = max(1.1, float(settings.get("adaptive_candidate_expansion_factor", 2.0)))
+    maximum_top_k = max(top_k, int(settings.get("adaptive_candidate_max_top_k", top_k * 4)))
+    maximum_pool = max(operator_pool_size, int(settings.get("adaptive_candidate_max_operator_pool_size", operator_pool_size + 8)))
     library = library or build_library(
         context,
         top_k=top_k,
         operator_pool_size=operator_pool_size,
         allow_partial=False,
     )
+    expansion_trace: list[dict[str, Any]] = []
+    current_top_k = int((library.get("parameters") or {}).get("top_k_per_room", top_k))
+    current_pool = int((library.get("parameters") or {}).get("operator_pool_size", operator_pool_size))
+    previous_signature: tuple[tuple[str, int], ...] | None = None
+    for round_index in range(expansion_rounds + 1):
+        completeness = library.get("search_completeness") or {}
+        signature = tuple(sorted(
+            (str(room_id), int(room.get("kept_count", 0) or 0))
+            for room_id, room in (library.get("rooms") or {}).items()
+        ))
+        expansion_trace.append({
+            "round": round_index,
+            "top_k_per_room": current_top_k,
+            "operator_pool_size": current_pool,
+            "all_rooms_untruncated": bool(completeness.get("all_rooms_untruncated")),
+            "room_kept_counts": dict(signature),
+        })
+        if completeness.get("all_rooms_untruncated"):
+            expansion_trace[-1]["stop_reason"] = "candidate_library_complete"
+            break
+        if round_index >= expansion_rounds:
+            expansion_trace[-1]["stop_reason"] = "expansion_round_limit"
+            break
+        next_top_k = min(maximum_top_k, max(current_top_k + 1, int(current_top_k * expansion_factor)))
+        next_pool = min(maximum_pool, max(current_pool + 2, int(current_pool * 1.25)))
+        if (next_top_k, next_pool) == (current_top_k, current_pool):
+            expansion_trace[-1]["stop_reason"] = "configured_size_limit"
+            break
+        if previous_signature == signature:
+            expansion_trace[-1]["stop_reason"] = "candidate_count_stable"
+            break
+        previous_signature = signature
+        current_top_k, current_pool = next_top_k, next_pool
+        library = build_library(
+            context,
+            top_k=current_top_k,
+            operator_pool_size=current_pool,
+            allow_partial=False,
+        )
     no_good: list[list[int]] = []
     solutions: list[dict[str, Any]] = []
     rejected_after_simulation: list[dict[str, Any]] = []
@@ -768,6 +812,7 @@ def solve_hybrid(
             if bundle.get("id")
         ],
         "synergy_bundle_candidate_preservation": True,
+        "adaptive_candidate_expansion": expansion_trace,
         "rejected_after_simulation": rejected_after_simulation,
         "optimality_claim": (
             "proxy_optimal_within_complete_candidate_library"

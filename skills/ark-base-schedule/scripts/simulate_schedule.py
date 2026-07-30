@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import random
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -25,6 +27,7 @@ from drone_model import (
 )
 from efficiency_calculator import EfficiencyCalculator, production_bonus_for_duration
 from dormitory_planner import plan_dormitories
+from data_loader import operator_index, select_available_skills
 from optimizer_common import (
     context_rooms,
     context_roster,
@@ -185,6 +188,9 @@ def simulate_assignment(
     drone_allocations: list[dict[str, Any]] | None = None,
     drone_inventory: list[dict[str, Any]] | None = None,
     drone_waste: list[dict[str, Any]] | None = None,
+    _dormitory_assignments: list[dict[str, Any]] | None = None,
+    _dormitory_iteration: int = 0,
+    _random_seed: int | None = None,
 ) -> dict[str, Any]:
     segments = context_segments(context)
     rooms = context_rooms(context)
@@ -215,17 +221,33 @@ def simulate_assignment(
     selected_combo_by_segment_room: dict[tuple[str, str], dict[str, Any]] = {}
     power_bonus_by_segment: dict[str, float] = defaultdict(float)
     trade_queue_states: dict[str, dict[str, Any]] = {}
+    trade_queue_products: dict[str, str] = {}
     queue_drone_metrics: dict[tuple[str, str], dict[str, float]] = {}
     queue_drone_details: dict[tuple[str, str], dict[str, Any]] = {}
+    current_morale = {
+        name: float(item.get("morale") if item.get("morale") is not None else 24.0)
+        for name, item in roster.items()
+    }
 
     trading_post_count = sum(1 for value in rooms.values() if value["facility_id"] == "trading_post")
     power_plant_count = sum(1 for value in rooms.values() if value["facility_id"] == "power_plant")
+    base_state = context.get("base_state") or {}
+    dormitory_levels = list(base_state.get("dormitory_levels") or [1, 1, 1, 1])
+    facility_level_sum = (
+        sum(int(value.get("level", 0) or 0) for value in rooms.values())
+        + sum(int(value or 0) for value in dormitory_levels)
+        + sum(int(value or 0) for value in (base_state.get("right_side_levels") or {}).values())
+    )
     settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
     drone_capacity = float(settings.get("drone_capacity", drone_rules()["default_capacity"]))
+    order_rng = random.Random(_random_seed) if _random_seed is not None else None
     right_side_assignments = {
         item["segment_id"]: item
         for item in assignments_for_context(context)
     }
+    dormitory_assignments_by_segment: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for item in _dormitory_assignments or []:
+        dormitory_assignments_by_segment[str(item.get("segment_id") or "")].append(item)
 
     for segment in segments:
         selected = by_segment.get(segment.segment_id, [])
@@ -234,16 +256,38 @@ def simulate_assignment(
             combo = lookup[(item["room_id"], item["combination_id"])]
             facility_id = rooms[item["room_id"]]["facility_id"]
             all_operators.extend(
-                dict(op, assigned_facility=facility_id, assigned_room_id=item["room_id"])
+                dict(
+                    op,
+                    morale=current_morale.get(str(op.get("name") or ""), op.get("morale", 24.0)),
+                    assigned_facility=facility_id,
+                    assigned_room_id=item["room_id"],
+                )
                 for op in (combo.get("operators") or [])
             )
         fixed_right_side = right_side_assignments[segment.segment_id]
         for output_key, facility_id in RIGHT_SIDE_FACILITIES.items():
             for name in fixed_right_side["rooms"][output_key]:
                 base = dict(roster[name])
-                base.update(assigned_facility=facility_id, assigned_room_id=output_key)
+                base.update(
+                    morale=current_morale.get(name, base.get("morale", 24.0)),
+                    assigned_facility=facility_id,
+                    assigned_room_id=output_key,
+                )
                 all_operators.append(base)
         working_names = {item["name"] for item in all_operators}
+        segment_dorm_recovery: dict[str, float] = {}
+        for dormitory in dormitory_assignments_by_segment.get(segment.segment_id, []):
+            for name in dormitory.get("operators") or []:
+                if name in {item["name"] for item in all_operators} or name not in roster:
+                    continue
+                base = dict(roster[name])
+                base.update(
+                    morale=current_morale.get(name, base.get("morale", 24.0)),
+                    assigned_facility="dormitory",
+                    assigned_room_id=str(dormitory.get("dormitory_id") or "dormitory"),
+                )
+                all_operators.append(base)
+                segment_dorm_recovery[name] = float(dormitory.get("base_recovery_per_hour", 0.0) or 0.0)
         dormitory_capacity = len((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1]) * 5
         dormitory_occupant_count = min(dormitory_capacity, max(0, len(roster) - len(working_names)))
         segment_morale_costs = {name: 0.0 for name in roster}
@@ -258,13 +302,20 @@ def simulate_assignment(
             room_id = item["room_id"]
             room = rooms[room_id]
             combo = lookup[(room_id, item["combination_id"])]
+            active_product = str(combo.get("product_id") or room["product_id"])
+            active_room = dict(room, product_id=active_product)
+            if room["facility_id"] == "trading_post":
+                previous_product = trade_queue_products.get(room_id)
+                if previous_product is not None and previous_product != active_product:
+                    trade_queue_states.pop(room_id, None)
+                trade_queue_products[room_id] = active_product
             selected_combo_by_segment_room[(segment.segment_id, room_id)] = combo
             operators = combo.get("operators") or []
             if room["facility_id"] in {"trading_post", "factory", "power_plant", "control_center"}:
                 calculator = EfficiencyCalculator(
                     room["facility_id"],
                     operators,
-                    room["product_id"],
+                    active_product,
                     trading_post_count=trading_post_count,
                     power_plant_count=power_plant_count,
                     drone_capacity=drone_capacity,
@@ -278,9 +329,10 @@ def simulate_assignment(
                     reception_room_level=int(
                         (((context.get("base_state") or {}).get("right_side_levels") or {}).get("reception_room", 3))
                     ),
-                    dormitory_levels=list((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1]),
+                    dormitory_levels=dormitory_levels,
                     dormitory_occupant_count=dormitory_occupant_count,
                     global_operators=all_operators,
+                    facility_level_sum=facility_level_sum,
                 )
                 calculated = calculator.compute()
                 for name, rate in calculator.morale_cost_rates().items():
@@ -304,7 +356,7 @@ def simulate_assignment(
                     float(drone_rules()["occupied_power_plant_base_bonus_pct"]) + skill_bonus
                 )
                 metrics_per_hour = {}
-            elif room["facility_id"] == "trading_post" and room["product_id"] == "lmd_order":
+            elif room["facility_id"] == "trading_post" and active_product == "lmd_order":
                 bonus = _effective_bonus(calculated, fallback_bonus) + float(
                     calculated.get("staffing_base_bonus_pct", 0.0) or 0.0
                 )
@@ -329,6 +381,7 @@ def simulate_assignment(
                     collect_at_start=True,
                     drone_count=node_drones,
                     crew_signature=crew_signature,
+                    rng=order_rng,
                 )
                 trade_queue_states[room_id] = queue_result["state"]
                 trade_queue_result = queue_result
@@ -341,7 +394,7 @@ def simulate_assignment(
             else:
                 metrics_per_hour = _metrics_from_result(
                     room["facility_id"],
-                    room["product_id"],
+                    active_product,
                     calculated,
                     combo.get("metrics_per_hour") or {},
                     fallback_bonus,
@@ -351,12 +404,12 @@ def simulate_assignment(
             raw_metrics = {key: value * segment.hours for key, value in metrics_per_hour.items()}
             effective_metrics = dict(raw_metrics)
             overflow = None
-            units_key = _product_units_key(room["product_id"])
+            units_key = _product_units_key(active_product)
             if units_key and units_key in raw_metrics:
                 capacity = combo.get("warehouse_capacity")
                 if capacity is None:
-                    capacity = warehouse_capacity(room, operators)
-                size = _warehouse_item_size(room["product_id"])
+                    capacity = warehouse_capacity(active_room, operators)
+                size = _warehouse_item_size(active_product)
                 raw_units = float(raw_metrics[units_key])
                 max_units = float(capacity) / size if capacity is not None else raw_units
                 effective_units = min(raw_units, max_units)
@@ -372,12 +425,12 @@ def simulate_assignment(
                     ratio = effective_units / raw_units if raw_units > 0 else 1.0
                     if units_key == "battle_record_units" and raw_units > 0 and "battle_record_exp" in effective_metrics:
                         effective_metrics["battle_record_exp"] *= ratio
-                    if room["product_id"] == "orundum_shard":
+                    if active_product == "orundum_shard":
                         for cost_key in ("lmd_cost", "orirock_cube_consumption"):
                             if cost_key in effective_metrics:
                                 effective_metrics[cost_key] *= ratio
                     warnings.append(
-                        f"{segment.segment_id}/{room_id} 仓库封顶，损失约 {raw_units - effective_units:.2f} 单位 {room['product_id']}"
+                        f"{segment.segment_id}/{room_id} 仓库封顶，损失约 {raw_units - effective_units:.2f} 单位 {active_product}"
                     )
             for key, value in effective_metrics.items():
                 natural_aggregate[key] += float(value)
@@ -390,7 +443,7 @@ def simulate_assignment(
                     "hours": segment.hours,
                     "room_id": room_id,
                     "facility_id": room["facility_id"],
-                    "product_id": room["product_id"],
+                    "product_id": active_product,
                     "combination_id": combo["combination_id"],
                     "operators": operators,
                     "local_proxy_score_per_hour": combo.get("proxy_score_per_hour", 0),
@@ -404,6 +457,16 @@ def simulate_assignment(
             )
         for name in roster:
             operator_morale_costs[name].append(segment_morale_costs[name])
+            if name in working_names:
+                current_morale[name] = max(
+                    0.0,
+                    current_morale[name] - segment_morale_costs[name] * segment.hours,
+                )
+            elif name in segment_dorm_recovery:
+                current_morale[name] = min(
+                    24.0,
+                    current_morale[name] + segment_dorm_recovery[name] * segment.hours,
+                )
 
     # Drone recovery and operation-node allocation.
     allocate_drones = bool(settings.get("allocate_drones", True))
@@ -442,6 +505,8 @@ def simulate_assignment(
                 combo_id = str(allocation.get("combination_id") or "")
                 combo = lookup.get((room_id, combo_id)) or selected_combo_by_segment_room.get((segment.segment_id, room_id))
                 room = rooms[room_id]
+                active_product = str((combo or {}).get("product_id") or room["product_id"])
+                active_room = dict(room, product_id=active_product)
                 count = float(allocation["drones"])
                 queue_key = (segment.segment_id, room_id)
                 if queue_key in queue_drone_metrics:
@@ -460,7 +525,7 @@ def simulate_assignment(
                         for key, value in metrics.items()
                     }
                 else:
-                    metrics_per_drone = drone_metrics_per_drone(room, combo)
+                    metrics_per_drone = drone_metrics_per_drone(active_room, combo)
                     metrics = {key: value * count for key, value in metrics_per_drone.items()}
                 for key, value in metrics.items():
                     drone_aggregate[key] += float(value)
@@ -469,7 +534,7 @@ def simulate_assignment(
                     "operation_time": segment.start,
                     "room_id": room_id,
                     "facility_id": room["facility_id"],
-                    "product_id": room["product_id"],
+                    "product_id": active_product,
                     "combination_id": combo.get("combination_id") if combo else combo_id,
                     "drones": count,
                     "base_minutes_removed": count * float(drone_rules()["acceleration_minutes_per_drone"]),
@@ -562,6 +627,19 @@ def simulate_assignment(
     settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
     require_dormitory_cycle = bool(settings.get("require_dormitory_cycle", False))
     dormitories = (context.get("facility_configuration") or {}).get("dormitories") or []
+    skill_index = operator_index()
+    dormitory_support_weights: dict[str, float] = {}
+    support_tags = {
+        "monster_cooking_per_dorm_level_1",
+        "silent_resonance_per_dorm_occupant_1",
+        "ave_dorm_heat_1",
+    }
+    for name, item in roster.items():
+        skills = select_available_skills(
+            skill_index.get(name, {}), "dormitory", int(item.get("elite", 0)), "", int(item.get("level", 90) or 90)
+        )
+        if any(support_tags.intersection(skill.get("tags", [])) for skill in skills):
+            dormitory_support_weights[name] = 2.0
     dormitory_plan = plan_dormitories(
         segments,
         dormitories,
@@ -569,6 +647,7 @@ def simulate_assignment(
         operator_morale_costs,
         ambience=(context.get("base_state") or {}).get("dormitory_ambience"),
         max_morale=max_morale,
+        support_weights=dormitory_support_weights,
     ) if require_dormitory_cycle else {
         "enabled": False,
         "feasible": True,
@@ -649,7 +728,80 @@ def simulate_assignment(
     if pure_gold_balance < -1e-6:
         warnings.append(f"赤金经济流为负：{pure_gold_balance:.2f}")
 
-    return {
+    inventory_source = dict((context.get("base_state") or {}).get("inventory") or {})
+    inventory_keys = ("pure_gold", "originium_shard", "lmd", "orirock_cube")
+    inventory_state: dict[str, float | None] = {}
+    for key in inventory_keys:
+        value = inventory_source.get(key)
+        inventory_state[key] = None if value is None else float(value)
+    minimum_inventory = dict(inventory_state)
+    cumulative_variance = {"pure_gold": 0.0, "lmd": 0.0}
+    inventory_events: list[dict[str, Any]] = []
+
+    def apply_inventory_event(segment_id: str, timing: str, metrics: dict[str, float]) -> None:
+        deltas = {
+            "pure_gold": float(metrics.get("pure_gold", 0.0)) - float(metrics.get("pure_gold_consumption", 0.0)),
+            "originium_shard": float(metrics.get("orundum_shard", 0.0)) - float(metrics.get("orundum_shard_consumption", 0.0)),
+            "lmd": float(metrics.get("lmd", 0.0)) - float(metrics.get("lmd_cost", 0.0)),
+            "orirock_cube": -float(metrics.get("orirock_cube_consumption", 0.0)),
+        }
+        cumulative_variance["pure_gold"] += float(metrics.get("pure_gold_consumption_variance", 0.0) or 0.0)
+        cumulative_variance["lmd"] += float(metrics.get("lmd_variance", 0.0) or 0.0)
+        for key, delta in deltas.items():
+            if inventory_state[key] is not None:
+                inventory_state[key] = float(inventory_state[key]) + delta
+                prior_minimum = minimum_inventory[key]
+                minimum_inventory[key] = min(float(prior_minimum), float(inventory_state[key])) if prior_minimum is not None else inventory_state[key]
+        stockout_probability: dict[str, float | None] = {}
+        for key in ("pure_gold", "lmd"):
+            variance = cumulative_variance[key]
+            mean = inventory_state[key]
+            if mean is None:
+                stockout_probability[key] = None
+            elif variance <= 1e-12:
+                stockout_probability[key] = 1.0 if mean < 0 else 0.0
+            else:
+                stockout_probability[key] = 0.5 * math.erfc(float(mean) / math.sqrt(2.0 * variance))
+        inventory_events.append({
+            "segment_id": segment_id,
+            "timing": timing,
+            "delta": deltas,
+            "balance": dict(inventory_state),
+            "cumulative_variance": dict(cumulative_variance),
+            "normal_approximation_stockout_probability": stockout_probability,
+        })
+
+    for segment in segments:
+        node_metrics: dict[str, float] = defaultdict(float)
+        interval_metrics: dict[str, float] = defaultdict(float)
+        for item in drone_allocation_results:
+            if item.get("segment_id") == segment.segment_id:
+                for key, value in (item.get("metrics") or {}).items():
+                    node_metrics[key] += float(value)
+        for item in room_results:
+            if item.get("segment_id") == segment.segment_id:
+                for key, value in (item.get("effective_metrics") or {}).items():
+                    interval_metrics[key] += float(value)
+        apply_inventory_event(segment.segment_id, "operation_node_after_drone_acceleration", node_metrics)
+        apply_inventory_event(segment.segment_id, "interval_end_collection", interval_metrics)
+
+    inventory_timeline = {
+        "model": "operation_node_events_with_interval_end_collection",
+        "initial": {key: inventory_source.get(key) for key in inventory_keys},
+        "events": inventory_events,
+        "minimum_balance": minimum_inventory,
+        "known_inventory_stockout": {
+            key: (value is not None and float(value) < -1e-9)
+            for key, value in minimum_inventory.items()
+        },
+        "order_overflow_segments": [
+            {"segment_id": item["segment_id"], "room_id": item["room_id"]}
+            for item in room_results
+            if (item.get("trade_queue") or {}).get("queue_full_at_end")
+        ],
+    }
+
+    output = {
         "schema_version": 2,
         "simulation_type": "segment_global_recalculation_with_trade_queue_and_drone_inventory",
         "simulated_at": utc_now(),
@@ -664,6 +816,7 @@ def simulate_assignment(
         "pure_gold_balance": pure_gold_balance,
         "resource_balance_evaluation": balance_evaluation,
         "resource_sustainability": sustainability,
+        "inventory_timeline": inventory_timeline,
         "continuity_matches": continuity_matches,
         "room_results": room_results,
         "drone_plan": {
@@ -695,10 +848,99 @@ def simulate_assignment(
             "rest_recovery_per_hour": rest_recovery,
             "initial_morale_default": max_morale,
             "dormitory_base_recovery_formula": "1.5 + 0.1 * level + 0.0004 * ambience",
-            "dormitory_manager_bonus_included": False,
+            "dormitory_support_skill_occupants_included": bool(dormitory_support_weights),
             "random_lmd_order_sequence_not_simulated": True,
         },
     }
+    def dormitory_signature(items: list[dict[str, Any]] | None) -> tuple:
+        return tuple(sorted(
+            (
+                str(item.get("segment_id") or ""),
+                str(item.get("dormitory_id") or ""),
+                tuple(sorted(str(name) for name in item.get("operators") or [])),
+            )
+            for item in items or []
+        ))
+
+    dormitory_changed = (
+        dormitory_signature(_dormitory_assignments)
+        != dormitory_signature(dormitory_plan.get("assignments"))
+    )
+    if require_dormitory_cycle and dormitory_plan.get("feasible") and dormitory_changed:
+        if _dormitory_iteration < 3:
+            refined = simulate_assignment(
+                context, library, assignment, drone_allocations, drone_inventory, drone_waste,
+                _dormitory_assignments=dormitory_plan.get("assignments") or [],
+                _dormitory_iteration=_dormitory_iteration + 1,
+                _random_seed=_random_seed,
+            )
+            return refined
+    dormitory_plan["joint_iteration_count"] = _dormitory_iteration + 1
+    dormitory_plan["joint_iteration_converged"] = not dormitory_changed
+    monte_carlo_trials = max(0, int(settings.get("random_order_trials", 0) or 0))
+    if _random_seed is None and monte_carlo_trials:
+        base_seed = int(settings.get("random_order_seed", 20260730) or 20260730)
+        samples: list[dict[str, Any]] = []
+        for trial_index in range(monte_carlo_trials):
+            sampled = simulate_assignment(
+                context, library, assignment, drone_allocations, drone_inventory, drone_waste,
+                _dormitory_assignments=dormitory_plan.get("assignments") or [],
+                _dormitory_iteration=3,
+                _random_seed=base_seed + trial_index,
+            )
+            aggregate_sample = sampled.get("aggregate_metrics") or {}
+            samples.append({
+                "trial": trial_index,
+                "seed": base_seed + trial_index,
+                "lmd": float(aggregate_sample.get("lmd", 0.0) or 0.0),
+                "net_lmd": float(sampled.get("net_lmd_balance", 0.0) or 0.0),
+                "pure_gold_consumption": float(aggregate_sample.get("pure_gold_consumption", 0.0) or 0.0),
+                "pure_gold_balance": float(sampled.get("pure_gold_balance", 0.0) or 0.0),
+                "orundum": float(aggregate_sample.get("orundum", 0.0) or 0.0),
+                "overflow_count": len((sampled.get("inventory_timeline") or {}).get("order_overflow_segments") or []),
+                "known_inventory_stockout": dict((sampled.get("inventory_timeline") or {}).get("known_inventory_stockout") or {}),
+                "order_sequences": [
+                    {
+                        "segment_id": room_result.get("segment_id"),
+                        "room_id": room_result.get("room_id"),
+                        "orders": (room_result.get("trade_queue") or {}).get("completed_order_sequence") or [],
+                    }
+                    for room_result in sampled.get("room_results") or []
+                    if room_result.get("trade_queue")
+                ],
+            })
+
+        def distribution(values: list[float]) -> dict[str, float]:
+            ordered = sorted(values)
+            def percentile(fraction: float) -> float:
+                if not ordered:
+                    return 0.0
+                position = fraction * (len(ordered) - 1)
+                lower = int(math.floor(position))
+                upper = int(math.ceil(position))
+                if lower == upper:
+                    return ordered[lower]
+                return ordered[lower] * (upper - position) + ordered[upper] * (position - lower)
+            mean = sum(ordered) / len(ordered) if ordered else 0.0
+            variance = sum((value - mean) ** 2 for value in ordered) / len(ordered) if ordered else 0.0
+            return {"mean": mean, "stddev": math.sqrt(variance), "p05": percentile(0.05), "p50": percentile(0.5), "p95": percentile(0.95)}
+
+        output["random_order_monte_carlo"] = {
+            "model": "complete_sampled_order_sequences_with_fixed_schedule",
+            "trial_count": monte_carlo_trials,
+            "base_seed": base_seed,
+            "lmd": distribution([item["lmd"] for item in samples]),
+            "net_lmd": distribution([item["net_lmd"] for item in samples]),
+            "pure_gold_consumption": distribution([item["pure_gold_consumption"] for item in samples]),
+            "pure_gold_balance": distribution([item["pure_gold_balance"] for item in samples]),
+            "overflow_trial_rate": sum(item["overflow_count"] > 0 for item in samples) / monte_carlo_trials,
+            "known_inventory_stockout_rate": {
+                key: sum(bool(item["known_inventory_stockout"].get(key)) for item in samples) / monte_carlo_trials
+                for key in inventory_keys
+            },
+            "sample_sequences": samples[: min(10, len(samples))],
+        }
+    return output
 
 
 def main() -> int:

@@ -275,6 +275,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
                         "drone_plan": {"feasible": True},
                         "dormitory_plan": {
                             "repeating_day_verified": True,
+                            "joint_iteration_converged": True,
                             "automation_rules_used": False,
                             "operator_flows": {
                                 name: {"repeating_day_feasible": True}

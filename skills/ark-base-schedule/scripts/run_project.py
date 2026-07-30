@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import uuid
@@ -18,6 +19,7 @@ from export_schedule_template import export_schedule
 from generate_report import generate_report
 from layout_profiles import facility_configuration_power_summary, fixed_right_power_consumption
 from normalize_input import build_decision_packet
+from online_schedule import candidate_online_times, format_minutes
 from optimizer_common import read_json, write_json
 from pareto_frontier import build_pareto_frontier
 from preflight import PreflightError, canonical_config, config_sha256, preflight_project
@@ -78,6 +80,7 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "initial_drone_stock": float(base_state["initial_drone_stock"]),
         "inventory": dict(base_state.get("inventory") or {}),
         "horizon": dict(config.get("horizon") or {}),
+        "economic_values": dict(objective.get("economic_values") or {}),
         "max_orundum_trading_posts": objective.get("max_orundum_trading_posts"),
         "max_shard_factories": objective.get("max_shard_factories"),
         "minimum_battle_record_factories": int(objective.get("minimum_battle_record_factories", 0)),
@@ -90,6 +93,13 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "right_side_schedule": config["right_side_schedule"],
         "shard_balance_policy": dict(balance_policy.get("originium_shard") or {"mode": "hard"}),
         "gold_balance_policy": dict(balance_policy.get("pure_gold") or {"mode": "hard"}),
+        "allow_product_switching": bool(search.get("allow_product_switching", True)),
+        "adaptive_candidate_expansion_rounds": int(search.get("adaptive_candidate_expansion_rounds", 2)),
+        "adaptive_candidate_expansion_factor": float(search.get("adaptive_candidate_expansion_factor", 2.0)),
+        "adaptive_candidate_max_top_k": search.get("adaptive_candidate_max_top_k"),
+        "adaptive_candidate_max_operator_pool_size": search.get("adaptive_candidate_max_operator_pool_size"),
+        "random_order_trials": int(search.get("random_order_trials", 0)),
+        "random_order_seed": int(search.get("random_order_seed", 20260730)),
     })
     return kwargs
 
@@ -183,6 +193,65 @@ def _artifact_manifest(destination: Path, run_id: str, config_hash: str, names: 
     }
 
 
+def _execute_mode(config: dict[str, Any], roster: Path, destination: Path, base: Path) -> dict[str, Any]:
+    mode = str(config["mode"])
+    if mode == "layout_search":
+        kwargs = _layout_kwargs(config, roster)
+        if kwargs.get("profiles_file"):
+            kwargs["profiles_file"] = _resolve(base, kwargs["profiles_file"])
+        return search_layouts(**kwargs)
+    if mode == "upgrade_search":
+        kwargs = _layout_kwargs(config, roster)
+        return run_upgrade_search(
+            roster,
+            online_times=kwargs["online_times"],
+            lmd_floor=kwargs["lmd_floor"],
+            profiles=kwargs["profiles"],
+            max_daily_work_hours=kwargs["max_daily_work_hours"],
+            top_k=kwargs["top_k"],
+            operator_pool_size=kwargs["operator_pool_size"],
+            time_limit=kwargs["time_limit"],
+            max_proxy_attempts=kwargs["max_proxy_attempts"],
+            work_dir=destination / "upgrade-work",
+            profile_mode=kwargs["profile_mode"],
+            profiles_file=_resolve(base, kwargs["profiles_file"]) if kwargs.get("profiles_file") else None,
+            grid_layouts=kwargs["grid_layouts"],
+            max_profiles=kwargs["max_profiles"],
+            dorm_levels=kwargs["dorm_levels"],
+            right_side_levels=kwargs["right_side_levels"],
+            drone_capacity=kwargs["drone_capacity"],
+            initial_drone_stock=kwargs["initial_drone_stock"],
+            minimum_shard_balance=kwargs["minimum_shard_balance"],
+            minimum_gold_balance=kwargs["minimum_gold_balance"],
+            proxy_shard_consumption_factor=kwargs["proxy_shard_consumption_factor"],
+            proxy_gold_consumption_factor=kwargs["proxy_gold_consumption_factor"],
+            proxy_lmd_cost_factor=kwargs["proxy_lmd_cost_factor"],
+            opportunity_postprocess_max_iterations=kwargs["opportunity_postprocess_max_iterations"],
+            right_side_schedule=kwargs["right_side_schedule"],
+            marginal_limit=int((config.get("upgrades") or {}).get("marginal_limit", 0)),
+        )
+    if mode == "fixed_schedule":
+        return _fixed_solve(config, roster)
+    raise ValueError("mode 必须是 layout_search、upgrade_search 或 fixed_schedule")
+
+
+def _result_score(result: dict[str, Any]) -> tuple[float, float, float]:
+    selected = result.get("selected") or {}
+    if selected:
+        return (
+            float(selected.get("economic_utility_lmd_per_day", selected.get("actual_objective_score", 0.0)) or 0.0),
+            float(selected.get("net_lmd_per_day", 0.0) or 0.0),
+            float(selected.get("orundum_per_day", 0.0) or 0.0),
+        )
+    simulation = ((result.get("selected_solution") or {}).get("simulation") or {})
+    aggregate = simulation.get("aggregate_metrics") or {}
+    return (
+        float(simulation.get("actual_objective_score", 0.0) or 0.0),
+        float(aggregate.get("lmd", 0.0) or 0.0) - float(aggregate.get("lmd_cost", 0.0) or 0.0),
+        float(aggregate.get("orundum", 0.0) or 0.0),
+    )
+
+
 def run_project(
     config_path: str | Path,
     *,
@@ -237,46 +306,85 @@ def run_project(
         raise PreflightError(blocked)
 
     mode = str(config["mode"])
-    if mode == "layout_search":
-        kwargs = _layout_kwargs(config, roster)
-        if kwargs.get("profiles_file"):
-            kwargs["profiles_file"] = _resolve(base, kwargs["profiles_file"])
-        result = search_layouts(**kwargs)
-    elif mode == "upgrade_search":
-        kwargs = _layout_kwargs(config, roster)
-        work_dir = destination / "upgrade-work"
-        result = run_upgrade_search(
-            roster,
-            online_times=kwargs["online_times"],
-            lmd_floor=kwargs["lmd_floor"],
-            profiles=kwargs["profiles"],
-            max_daily_work_hours=kwargs["max_daily_work_hours"],
-            top_k=kwargs["top_k"],
-            operator_pool_size=kwargs["operator_pool_size"],
-            time_limit=kwargs["time_limit"],
-            max_proxy_attempts=kwargs["max_proxy_attempts"],
-            work_dir=work_dir,
-            profile_mode=kwargs["profile_mode"],
-            profiles_file=_resolve(base, kwargs["profiles_file"]) if kwargs.get("profiles_file") else None,
-            grid_layouts=kwargs["grid_layouts"],
-            max_profiles=kwargs["max_profiles"],
-            dorm_levels=kwargs["dorm_levels"],
-            right_side_levels=kwargs["right_side_levels"],
-            drone_capacity=kwargs["drone_capacity"],
-            initial_drone_stock=kwargs["initial_drone_stock"],
-            minimum_shard_balance=kwargs["minimum_shard_balance"],
-            minimum_gold_balance=kwargs["minimum_gold_balance"],
-            proxy_shard_consumption_factor=kwargs["proxy_shard_consumption_factor"],
-            proxy_gold_consumption_factor=kwargs["proxy_gold_consumption_factor"],
-            proxy_lmd_cost_factor=kwargs["proxy_lmd_cost_factor"],
-            opportunity_postprocess_max_iterations=kwargs["opportunity_postprocess_max_iterations"],
-            right_side_schedule=kwargs["right_side_schedule"],
-            marginal_limit=int((config.get("upgrades") or {}).get("marginal_limit", 0)),
+    schedule_policy = dict((config.get("objective") or {}).get("online_schedule") or {})
+    if str(schedule_policy.get("mode", "fixed")) == "optimize":
+        candidates = candidate_online_times(
+            int(schedule_policy.get("count", len(config["objective"]["online_times"]))),
+            mode="optimize",
+            step_minutes=int(schedule_policy.get("candidate_step_minutes", 60)),
+            max_candidates=int(schedule_policy.get("max_candidates", 48)),
         )
-    elif mode == "fixed_schedule":
-        result = _fixed_solve(config, roster)
-    else:  # preflight already rejects this; retain defensive branch.
-        raise ValueError("mode 必须是 layout_search、upgrade_search 或 fixed_schedule")
+        evaluated: list[dict[str, Any]] = []
+        failures: list[dict[str, Any]] = []
+        best: tuple[tuple[float, float, float], dict[str, Any], list[str]] | None = None
+        evaluated_times: set[tuple[str, ...]] = set()
+
+        def evaluate_times(times: list[str], source: str) -> None:
+            nonlocal best
+            key = tuple(times)
+            if key in evaluated_times:
+                return
+            evaluated_times.add(key)
+            candidate_config = copy.deepcopy(config)
+            candidate_config["objective"]["online_times"] = list(times)
+            try:
+                candidate_result = _execute_mode(candidate_config, roster, destination, base)
+                score = _result_score(candidate_result)
+                evaluated.append({"online_times": list(times), "score": score[0], "tie_break": list(score[1:]), "source": source})
+                if best is None or score > best[0]:
+                    best = (score, candidate_result, list(times))
+            except Exception as exc:
+                failures.append({"online_times": list(times), "reason": str(exc), "source": source})
+
+        for times in candidates:
+            evaluate_times(list(times), "global_grid")
+        if best is None:
+            raise RuntimeError(f"所有上线时间候选均求解失败: {failures[:5]}")
+        refinement_budget = max(0, int(schedule_policy.get("refinement_max_candidates", 36)))
+        refinement_count = 0
+        refinement_step = max(1, int(schedule_policy.get("candidate_step_minutes", 60)) // 2)
+        while bool(schedule_policy.get("continuous_refinement", True)) and refinement_budget > 0:
+            center = [int(value[:2]) * 60 + int(value[3:]) for value in best[2]]
+            neighbors: list[list[str]] = []
+            for index in range(len(center)):
+                for direction in (-1, 1):
+                    shifted = list(center)
+                    shifted[index] = (shifted[index] + direction * refinement_step) % (24 * 60)
+                    formatted = [format_minutes(value) for value in shifted]
+                    cyclic_span = sum(
+                        (shifted[(item + 1) % len(shifted)] - shifted[item]) % (24 * 60)
+                        for item in range(len(shifted))
+                    )
+                    if len(set(formatted)) == len(formatted) and cyclic_span == 24 * 60:
+                        neighbors.append(formatted)
+            for times in neighbors:
+                if refinement_budget <= 0:
+                    break
+                before = len(evaluated_times)
+                evaluate_times(times, f"local_refinement_{refinement_step}m")
+                if len(evaluated_times) > before:
+                    refinement_budget -= 1
+                    refinement_count += 1
+            if refinement_step == 1:
+                break
+            refinement_step = max(1, refinement_step // 2)
+        result = best[1]
+        config["objective"]["online_times"] = best[2]
+        result["online_time_search"] = {
+            "mode": "discrete_outer_search",
+            "selected_online_times": best[2],
+            "candidate_step_minutes": int(schedule_policy.get("candidate_step_minutes", 60)),
+            "evaluated_count": len(evaluated),
+            "failed_count": len(failures),
+            "candidate_limit": int(schedule_policy.get("max_candidates", 48)),
+            "minute_level_refinement_enabled": bool(schedule_policy.get("continuous_refinement", True)),
+            "refinement_evaluated_count": refinement_count,
+            "time_resolution_minutes": refinement_step,
+            "evaluated": sorted(evaluated, key=lambda item: (item["score"], item["tie_break"]), reverse=True),
+            "failures": failures,
+        }
+    else:
+        result = _execute_mode(config, roster, destination, base)
 
     selected_power = (
         ((result.get("selected") or {}).get("power") or {})

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "data_version": "2026-07-30-full-skills-parsed-421-v11",
+  "data_version": "2026-07-30-full-skills-parsed-421-v12",
   "source": "Full operator base-skill table with structured-rule overlay",
   "operators": [
     {
@@ -430,7 +430,9 @@
           "description": "进驻贸易站时，订单获取效率+10%，当前贸易站赤金订单的赤金交付数必定为2（不视作违约订单）",
           "base_bonus_pct": 10.0,
           "model_status": "structured",
-          "tags": [],
+          "tags": [
+            "u_official_two_gold_order"
+          ],
           "products": [
             "lmd_order"
           ],
@@ -622,7 +624,9 @@
     {
       "id": "op_beac52b835b8",
       "name": "临光",
-      "groups": [],
+      "groups": [
+        "knight"
+      ],
       "skills": [
         {
           "facility": "dormitory",
@@ -920,8 +924,10 @@
           "variant_group": "control_center:skill:“山河远阔”",
           "description": "进驻控制中枢时，当自身心情大于12时，人间烟火+15；当自身心情处于12以下时，感知信息+10",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "morale_threshold_fireworks_15_else_perception_10"
+          ],
           "products": [
             "base_management"
           ],
@@ -935,8 +941,10 @@
           "variant_group": "control_center:skill:杯莫停",
           "description": "进驻控制中枢时，消除当前控制中枢内所有岁干员自身心情消耗的影响",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "control_sui_self_morale_modifier_immunity"
+          ],
           "products": [
             "base_management"
           ],
@@ -1273,8 +1281,10 @@
           "variant_group": "trading_post:skill:慧眼独到",
           "description": "进驻贸易站时，固定获取特别独占订单（不视作违约订单），且该类订单不受任何订单获取效率的影响",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "pepe_exclusive_order"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -1289,8 +1299,10 @@
           "variant_group": "trading_post:skill:多面逢源",
           "description": "进驻贸易站时，当前贸易站每级+1个订单上限",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "order_capacity_per_room_level_1"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -2360,8 +2372,10 @@
           "variant_group": "factory:skill:重聚时光",
           "description": "进驻制造站时，当前制造站内每个A1小队干员为自身+10%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_a1_skill_10"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -3355,8 +3369,10 @@
           "variant_group": "dormitory:skill:无声共鸣",
           "description": "进驻宿舍时，该宿舍内每有1名干员，无声共鸣+1",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "silent_resonance_per_dorm_occupant_1"
+          ],
           "products": [
             "morale_recovery"
           ],
@@ -3492,6 +3508,7 @@
           "base_bonus_pct": 0.0,
           "model_status": "structured",
           "tags": [
+            "morale_above_12_perception_10",
             "morale_cost_plus_0.5"
           ],
           "products": [
@@ -3507,8 +3524,11 @@
           "variant_group": "control_center:skill:\\\"不以物喜\\\"",
           "description": "进驻控制中枢时，控制中枢内所有干员的心情每小时恢复+0.05；当自身心情处于12以下时，人间烟火+15",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "morale_at_most_12_fireworks_15",
+            "room_morale_recovery_0.05"
+          ],
           "products": [
             "base_management"
           ],
@@ -3548,9 +3568,10 @@
           "variant_group": "factory:skill:源石技艺理论应用",
           "description": "进驻制造站时，当前制造站内每个莱茵科技类技能为自身+5%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
+          "model_status": "structured",
           "tags": [
-            "dorothy_rhine_room"
+            "dorothy_rhine_room",
+            "factory_per_rhine_skill_5"
           ],
           "products": [
             "pure_gold",
@@ -4811,6 +4832,7 @@
           "model_status": "structured",
           "tags": [
             "morale_cost_minus_0.25",
+            "tailoring_alpha_empirical",
             "time_dependent_probability"
           ],
           "products": [
@@ -5037,8 +5059,10 @@
           "variant_group": "factory:name:自动化",
           "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+5%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "automation_reset_others_per_power_plant_5"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -5128,8 +5152,10 @@
           "variant_group": "factory:skill:原质塑金副产物",
           "description": "进驻制造站时，每个贸易站为当前制造站贵金属类配方的生产力+3%",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_gold_per_trading_post_3"
+          ],
           "products": [
             "pure_gold"
           ],
@@ -5585,8 +5611,10 @@
           "variant_group": "factory:skill:问枯荣",
           "description": "进驻制造站时，每1点巫术结晶+2%生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_witchcraft_2"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -5602,8 +5630,10 @@
           "variant_group": "factory:skill:逐水草",
           "description": "进驻制造站时，每1点巫术结晶+1%生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_witchcraft_1"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -5619,8 +5649,10 @@
           "variant_group": "factory:skill:古老巫术",
           "description": "进驻制造站时，每5点人间烟火转化为1点巫术结晶",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "fireworks_to_witchcraft_5_1"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -6492,6 +6524,7 @@
           "model_status": "structured",
           "tags": [
             "morale_cost_minus_0.25",
+            "tailoring_beta_empirical",
             "time_dependent_probability"
           ],
           "products": [
@@ -6511,6 +6544,7 @@
           "model_status": "structured",
           "tags": [
             "morale_cost_minus_0.25",
+            "tailoring_alpha_empirical",
             "time_dependent_probability"
           ],
           "products": [
@@ -7487,6 +7521,7 @@
           "model_status": "structured",
           "tags": [
             "morale_cost_minus_0.25",
+            "tailoring_beta_empirical",
             "time_dependent_probability"
           ],
           "products": [
@@ -7506,6 +7541,7 @@
           "model_status": "structured",
           "tags": [
             "morale_cost_minus_0.25",
+            "tailoring_alpha_empirical",
             "time_dependent_probability"
           ],
           "products": [
@@ -7679,8 +7715,10 @@
           "variant_group": "office:skill:救援队·灾后普查",
           "description": "进驻人力办公室时，每个招募位（不包含初始招募位）+10点人间烟火",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "human_fireworks_per_extra_recruitment_slot_10"
+          ],
           "products": [
             "hr_network"
           ],
@@ -7880,8 +7918,10 @@
           "variant_group": "control_center:skill:我寻思能行",
           "description": "进驻控制中枢时，如果Lancet-2进驻在发电站，发电站额外+2（仅影响设施数量）",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "automation_virtual_power_plant_2_if_lancet"
+          ],
           "products": [
             "base_management"
           ],
@@ -7895,8 +7935,10 @@
           "variant_group": "factory:name:自动化",
           "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+10%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "automation_reset_others_per_power_plant_10"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -7912,9 +7954,9 @@
           "variant_group": "factory:name:自动化",
           "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+5%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
+          "model_status": "structured",
           "tags": [
-            "eunectes_per_power_plant"
+            "automation_reset_others_per_power_plant_5"
           ],
           "products": [
             "pure_gold",
@@ -7938,8 +7980,10 @@
           "variant_group": "dormitory:skill:森西大食堂",
           "description": "进驻宿舍时，当前宿舍每级提供1层魔物料理",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "monster_cooking_per_dorm_level_1"
+          ],
           "products": [
             "morale_recovery"
           ],
@@ -8166,6 +8210,7 @@
       "id": "op_4057ad193218",
       "name": "正义骑士号",
       "groups": [
+        "knight",
         "red_pine",
         "work_platform"
       ],
@@ -8282,8 +8327,10 @@
           "variant_group": "factory:skill:意识协议",
           "description": "进驻制造站时，当前制造站内每个标准化类技能为自身+5%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_standardization_skill_5"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -8844,8 +8891,10 @@
           "variant_group": "factory:skill:意识兼容",
           "description": "进驻制造站时，当前制造站内所有莱茵科技类、红松骑士团类技能也全都视作标准化类技能",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "standardization_alias_rhine_red_pine"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -9233,7 +9282,7 @@
           "variant_group": "factory:skill:再生能源",
           "description": "进驻制造站时，每个贸易站为当前制造站贵金属类配方的生产力+20%",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
+          "model_status": "structured",
           "tags": [
             "qingliu_per_trading_post"
           ],
@@ -9415,11 +9464,13 @@
           "elite": 2,
           "required_level": 1,
           "skill_name": "仿生海龙",
-          "variant_group": "factory:skill:仿生海龙",
+          "variant_group": "factory:known:1",
           "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+15%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "automation_reset_others_per_power_plant_15"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -9432,12 +9483,12 @@
           "elite": 0,
           "required_level": 1,
           "skill_name": "自动化·β",
-          "variant_group": "factory:name:自动化",
+          "variant_group": "factory:known:1",
           "description": "进驻制造站时，当前制造站内其他干员提供的生产力全部归零（不包含根据设施数量提供加成的生产力），每个发电站为当前制造站+10%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
+          "model_status": "structured",
           "tags": [
-            "wendy_per_power_plant"
+            "automation_reset_others_per_power_plant_10"
           ],
           "products": [
             "pure_gold",
@@ -9756,6 +9807,7 @@
       "id": "op_617ae5b34265",
       "name": "灰毫",
       "groups": [
+        "knight",
         "red_pine"
       ],
       "skills": [
@@ -10064,7 +10116,9 @@
     {
       "id": "op_9821a3e731cd",
       "name": "焰尾",
-      "groups": [],
+      "groups": [
+        "knight"
+      ],
       "skills": [
         {
           "facility": "control_center",
@@ -10074,8 +10128,10 @@
           "variant_group": "control_center:skill:红松的骑士",
           "description": "进驻控制中枢时，每个进驻在制造站的红松骑士团干员，作战记录类配方的生产力+10%，贵金属类配方的生产力-10%",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "red_pine_factory_record_10_gold_minus_10"
+          ],
           "products": [
             "base_management"
           ],
@@ -10524,8 +10580,10 @@
           "variant_group": "factory:skill:意想不到的美味",
           "description": "进驻制造站时，每1点魔物料理+1%生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_monster_cooking_1"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -10655,8 +10713,10 @@
           "variant_group": "trading_post:skill:招商引资",
           "description": "进驻贸易站时，当前贸易站内干员提升的每个订单上限，提供4%订单获取效率",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "trade_per_positive_order_capacity_1_4"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -10723,7 +10783,9 @@
     {
       "id": "op_ac4279661f0c",
       "name": "瑕光",
-      "groups": [],
+      "groups": [
+        "knight"
+      ],
       "skills": [
         {
           "facility": "workshop",
@@ -10838,7 +10900,9 @@
     {
       "id": "op_a883d3ec17ef",
       "name": "白金",
-      "groups": [],
+      "groups": [
+        "knight"
+      ],
       "skills": [
         {
           "facility": "training_room",
@@ -11224,6 +11288,7 @@
       "id": "op_121d130c309d",
       "name": "砾",
       "groups": [
+        "knight",
         "metalcraft"
       ],
       "skills": [
@@ -11400,8 +11465,10 @@
           "variant_group": "trading_post:name:虔诚筹款",
           "description": "进驻贸易站时，每间宿舍每级+2%获取效率",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "trade_per_dorm_level_sum_2"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -11416,8 +11483,10 @@
           "variant_group": "trading_post:name:虔诚筹款",
           "description": "进驻贸易站时，每间宿舍每级+1%获取效率",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "trade_per_dorm_level_sum_1"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -12417,7 +12486,8 @@
       "id": "op_2c065c214d3d",
       "name": "耀骑士临光",
       "groups": [
-        "alternate"
+        "alternate",
+        "knight"
       ],
       "skills": [
         {
@@ -12633,8 +12703,10 @@
           "variant_group": "factory:name:机械辅助",
           "description": "进驻制造站时，每8个工程机器人+5%生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_engineering_robot_8_5"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -12650,8 +12722,10 @@
           "variant_group": "factory:name:机械辅助",
           "description": "进驻制造站时，每16个工程机器人+5%生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_engineering_robot_16_5"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -12667,8 +12741,10 @@
           "variant_group": "factory:skill:绘图设计",
           "description": "进驻制造站时，基建内除活动室外每间设施每级+1个工程机器人，上限64个",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "engineering_robot_per_facility_level_1_cap_64"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -13063,8 +13139,10 @@
           "variant_group": "factory:skill:打工心得",
           "description": "进驻制造站时，当前制造站内每个金属工艺类技能为自身+5%的生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_metalcraft_skill_5"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -13488,8 +13566,10 @@
           "variant_group": "power_plant:skill:灵河共鸣",
           "description": "进驻发电站时，每间宿舍每级为充能速度额外+0.5%",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "power_per_dorm_level_sum_0.5"
+          ],
           "products": [
             "drone_recovery"
           ],
@@ -13672,7 +13752,9 @@
     {
       "id": "op_aafd2cad0263",
       "name": "薇薇安娜",
-      "groups": [],
+      "groups": [
+        "knight"
+      ],
       "skills": [
         {
           "facility": "control_center",
@@ -13682,8 +13764,10 @@
           "variant_group": "control_center:skill:烛骑士微光",
           "description": "进驻控制中枢时，每个进驻在制造站的骑士干员生产力+7%",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "knight_factory_productivity_7"
+          ],
           "products": [
             "base_management"
           ],
@@ -14462,6 +14546,7 @@
           "model_status": "structured",
           "tags": [
             "morale_cost_minus_0.25",
+            "tailoring_alpha_empirical",
             "time_dependent_probability"
           ],
           "products": [
@@ -14953,7 +15038,9 @@
     {
       "id": "op_f471e8da9454",
       "name": "远牙",
-      "groups": [],
+      "groups": [
+        "knight"
+      ],
       "skills": [
         {
           "facility": "factory",
@@ -15021,8 +15108,10 @@
           "variant_group": "factory:skill:意识实体",
           "description": "进驻制造站时，每1点思维链环+1%生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_thought_chain_1_1"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -15038,8 +15127,10 @@
           "variant_group": "factory:skill:念力",
           "description": "进驻制造站时，每2点思维链环+1%生产力",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "factory_per_thought_chain_2_1"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -15055,8 +15146,11 @@
           "variant_group": "factory:skill:超感",
           "description": "进驻制造站时，宿舍内每有1名干员则感知信息+1，同时每1点感知信息转化为1点思维链环",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "perception_per_dorm_occupant_1",
+            "perception_to_thought_chain_1"
+          ],
           "products": [
             "pure_gold",
             "battle_record",
@@ -15305,6 +15399,7 @@
       "id": "op_2527797abbf7",
       "name": "野鬃",
       "groups": [
+        "knight",
         "red_pine"
       ],
       "skills": [
@@ -15587,7 +15682,8 @@
       "id": "op_321b104ca0c5",
       "name": "锏",
       "groups": [
-        "karlan_trade"
+        "karlan_trade",
+        "knight"
       ],
       "skills": [
         {
@@ -15598,8 +15694,10 @@
           "variant_group": "trading_post:skill:冠军风采",
           "description": "进驻贸易站时，当前贸易站内干员提升的每5个订单上限，提供25%订单获取效率，最多提供100%效率",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "trade_per_positive_order_capacity_5_25_cap_100"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -15611,11 +15709,13 @@
           "elite": 2,
           "required_level": 1,
           "skill_name": "不怒自威",
-          "variant_group": "trading_post:skill:不怒自威",
+          "variant_group": "trading_post:known:1",
           "description": "进驻贸易站时，订单获取效率+25%，且订单上限-6（订单最少为1）",
           "base_bonus_pct": 25.0,
           "model_status": "structured",
-          "tags": [],
+          "tags": [
+            "order_capacity_minus_6"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -15627,11 +15727,13 @@
           "elite": 0,
           "required_level": 1,
           "skill_name": "威压",
-          "variant_group": "trading_post:skill:威压",
+          "variant_group": "trading_post:known:1",
           "description": "进驻贸易站时，订单获取效率+20%，且订单上限-2（订单最少为1）",
           "base_bonus_pct": 20.0,
           "model_status": "structured",
-          "tags": [],
+          "tags": [
+            "order_capacity_minus_2"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -16627,7 +16729,9 @@
     {
       "id": "op_f935940a9ab4",
       "name": "鞭刃",
-      "groups": [],
+      "groups": [
+        "knight"
+      ],
       "skills": [
         {
           "facility": "training_room",
@@ -16948,11 +17052,10 @@
           "skill_name": "际崖居民",
           "variant_group": "trading_post:skill:际崖居民",
           "description": "进驻贸易站时，基建内（不包含副手及活动室使用者）每1名杜林族干员（最多4名）为当前贸易站提供1条赤金生产线",
-          "base_bonus_pct": 5.0,
-          "model_status": "description_only",
+          "base_bonus_pct": 0.0,
+          "model_status": "structured",
           "tags": [
-            "hongxue_line_source",
-            "hongxue_per_line"
+            "hongxue_line_source"
           ],
           "products": [
             "lmd_order"
@@ -16967,8 +17070,10 @@
           "variant_group": "trading_post:skill:销路宣发",
           "description": "进驻贸易站时，每有1条赤金生产线，则当前贸易站订单获取效率+5%",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "hongxue_per_line_5"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -17267,8 +17372,10 @@
           "variant_group": "trading_post:skill:熟悉的味道",
           "description": "进驻贸易站时，每1点魔物料理+1%订单效率",
           "base_bonus_pct": 0.0,
-          "model_status": "description_only",
-          "tags": [],
+          "model_status": "structured",
+          "tags": [
+            "trade_per_monster_cooking_1"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"

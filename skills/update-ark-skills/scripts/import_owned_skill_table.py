@@ -71,6 +71,10 @@ EXTRA_GROUPS = {
     },
     "glasgow": {"推进之王", "摩根", "戴菲恩", "达格达", "因陀罗"},
     "lee_detective_agency": {"老鲤", "阿", "吽", "槐琥"},
+    "knight": {
+        "临光", "耀骑士临光", "瑕光", "焰尾", "野鬃", "灰毫", "远牙",
+        "鞭刃", "正义骑士号", "白金", "砾", "薇薇安娜", "锏",
+    },
 }
 
 KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
@@ -145,6 +149,49 @@ KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
     ("黑键", "怅惘和声"): ["trade_per_silent_resonance_2_1"],
     ("深律", "心声图绘"): ["silent_resonance_per_extra_recruitment_slot_15"],
     ("伺夜", "新城贸易"): ["trade_reception_room_level_5_cap_40"],
+    ("清流", "再生能源"): ["qingliu_per_trading_post"],
+    ("异客", "自动化·α"): ["automation_reset_others_per_power_plant_5"],
+    ("森蚺", "自动化·α"): ["automation_reset_others_per_power_plant_5"],
+    ("森蚺", "自动化·β"): ["automation_reset_others_per_power_plant_10"],
+    ("森蚺", "我寻思能行"): ["automation_virtual_power_plant_2_if_lancet"],
+    ("温蒂", "自动化·β"): ["automation_reset_others_per_power_plant_10"],
+    ("温蒂", "仿生海龙"): ["automation_reset_others_per_power_plant_15"],
+    ("令", "“山河远阔”"): ["morale_threshold_fireworks_15_else_perception_10"],
+    ("令", "杯莫停"): ["control_sui_self_morale_modifier_immunity"],
+    ("夕", "\\\"不以己悲\\\""): ["morale_above_12_perception_10"],
+    ("夕", "\\\"不以物喜\\\""): ["morale_at_most_12_fireworks_15", "room_morale_recovery_0.05"],
+    ("截云", "古老巫术"): ["fireworks_to_witchcraft_5_1"],
+    ("截云", "逐水草"): ["factory_per_witchcraft_1"],
+    ("截云", "问枯荣"): ["factory_per_witchcraft_2"],
+    ("迷迭香", "超感"): ["perception_per_dorm_occupant_1", "perception_to_thought_chain_1"],
+    ("迷迭香", "念力"): ["factory_per_thought_chain_2_1"],
+    ("迷迭香", "意识实体"): ["factory_per_thought_chain_1_1"],
+    ("塑心", "无声共鸣"): ["silent_resonance_per_dorm_occupant_1"],
+    ("桑葚", "救援队·灾后普查"): ["human_fireworks_per_extra_recruitment_slot_10"],
+    ("森西", "森西大食堂"): ["monster_cooking_per_dorm_level_1"],
+    ("玛露西尔", "意想不到的美味"): ["factory_per_monster_cooking_1"],
+    ("齐尔查克", "熟悉的味道"): ["trade_per_monster_cooking_1"],
+    ("至简", "绘图设计"): ["engineering_robot_per_facility_level_1_cap_64"],
+    ("至简", "机械辅助·α"): ["factory_per_engineering_robot_16_5"],
+    ("至简", "机械辅助·β"): ["factory_per_engineering_robot_8_5"],
+    ("历阵锐枪芬", "重聚时光"): ["factory_per_a1_skill_10"],
+    ("多萝西", "源石技艺理论应用"): ["factory_per_rhine_skill_5"],
+    ("苍苔", "打工心得"): ["factory_per_metalcraft_skill_5"],
+    ("水月", "意识协议"): ["factory_per_standardization_skill_5"],
+    ("海沫", "意识兼容"): ["standardization_alias_rhine_red_pine"],
+    ("琳琅诗怀雅", "招商引资"): ["trade_per_positive_order_capacity_1_4"],
+    ("锏", "冠军风采"): ["trade_per_positive_order_capacity_5_25_cap_100"],
+    ("鸿雪", "际崖居民"): ["hongxue_line_source"],
+    ("鸿雪", "销路宣发"): ["hongxue_per_line_5"],
+    ("空弦", "虔诚筹款·α"): ["trade_per_dorm_level_sum_1"],
+    ("空弦", "虔诚筹款·β"): ["trade_per_dorm_level_sum_2"],
+    ("菲莱", "灵河共鸣"): ["power_per_dorm_level_sum_0.5"],
+    ("引星棘刺", "原质塑金副产物"): ["factory_gold_per_trading_post_3"],
+    ("焰尾", "红松的骑士"): ["red_pine_factory_record_10_gold_minus_10"],
+    ("薇薇安娜", "烛骑士微光"): ["knight_factory_productivity_7"],
+    ("佩佩", "慧眼独到"): ["pepe_exclusive_order"],
+    ("佩佩", "多面逢源"): ["order_capacity_per_room_level_1"],
+    ("U-Official", "天真的谈判者"): ["u_official_two_gold_order"],
 }
 
 KNOWN_BASE_BONUS_OVERRIDES: dict[tuple[str, str], float] = {
@@ -152,6 +199,7 @@ KNOWN_BASE_BONUS_OVERRIDES: dict[tuple[str, str], float] = {
     ("龙舌兰", "投资·α"): 0.0,
     ("龙舌兰", "投资·β"): 0.0,
     ("深律", "心声图绘"): 0.0,
+    ("鸿雪", "际崖居民"): 0.0,
 }
 
 KNOWN_EFFECTS: dict[tuple[str, str], list[dict[str, Any]]] = {
@@ -191,6 +239,10 @@ OBSOLETE_TAGS_BY_SKILL: dict[tuple[str, str], set[str]] = {
     ("巫恋", "低语"): {"override_room_direct_bonus", "morale_cost_plus_0.25"},
     ("龙舌兰", "投资·β"): {"independent_order_lmd_500"},
     ("贝洛内", "未偿还的债务"): {"order_capacity_2", "morale_cost_minus_0.1"},
+    ("森蚺", "自动化·α"): {"eunectes_per_power_plant"},
+    ("温蒂", "自动化·β"): {"wendy_per_power_plant"},
+    ("鸿雪", "际崖居民"): {"hongxue_per_line"},
+    ("孑", "市井之道"): {"order_capacity_minus_1"},
 }
 
 
@@ -214,6 +266,8 @@ KNOWN_VARIANT_GROUPS: dict[str, list[set[str]]] = {
     "雪猎": [{"独当一面", "虔信"}],
     "折光": [{"鉴定师的眼光", "鉴定师的手段"}],
     "黑键": [{"徘徊旋律", "怅惘和声"}],
+    "温蒂": [{"自动化·β", "仿生海龙"}],
+    "锏": [{"威压", "不怒自威"}],
 }
 
 def normalized_variant_name(skill_name: str) -> str:
@@ -330,10 +384,20 @@ def infer_tags(name: str, skill_name: str, description: str) -> list[str]:
             clause = description[:match.start()].rsplit("；", 1)[-1]
             if not any(word in clause for word in ("如果", "当与", "当自身", "每有", "每个", "每名", "根据")):
                 tags.append(f"order_capacity_{match.group(1)}")
+    if "订单上限-" in description:
+        match = re.search(r"订单上限-([0-9]+)", description)
+        if match:
+            clause = description[:match.start()].rsplit("；", 1)[-1]
+            if not any(word in clause for word in ("如果", "当与", "当自身", "每", "根据")):
+                tags.append(f"order_capacity_minus_{match.group(1)}")
     if "最终达到" in description and "%" in description:
         tags.append("time_dependent")
     if "工作时长影响概率" in description:
         tags.append("time_dependent_probability")
+    if re.search(r"裁缝[·・._-]?β$", skill_name, flags=re.IGNORECASE):
+        tags.append("tailoring_beta_empirical")
+    elif re.search(r"裁缝[·・._-]?α$", skill_name, flags=re.IGNORECASE):
+        tags.append("tailoring_alpha_empirical")
     if "同种效果取最高" in description:
         tags.append("non_stacking_max")
     return sorted(set(tags))
@@ -509,7 +573,10 @@ def merge_existing(
                     exact["effects"] = effects
                 if special_rules:
                     exact["special_rules"] = special_rules
-                if model_status:
+                if model_status and not (
+                    exact.get("model_status") == "structured"
+                    and model_status == "description_only"
+                ):
                     exact["model_status"] = model_status
                 continue
             if mechanism or effects or special_rules or model_status in {"structured", "verified_zero", "unsupported"}:

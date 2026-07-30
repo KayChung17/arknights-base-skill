@@ -97,6 +97,9 @@ def context_rooms(context: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "level": level,
             "capacity": capacity,
         }
+        product_options = [str(value) for value in (room.get("product_options") or []) if value]
+        if product_options:
+            normalized[room_id]["product_options"] = list(dict.fromkeys(product_options))
     return normalized
 
 
@@ -263,6 +266,22 @@ def objective_profile(context: dict[str, Any]) -> dict[str, float]:
             "base_management": 0.25,
             "fixed_lmd": 0.001,
             "continuity": 0.2,
+            "orirock_cube_consumption": 0.0,
+        },
+        "lmd_equivalent": {
+            "orundum": 160.0,
+            "lmd": 1.0,
+            "lmd_cost": -1.0,
+            "fixed_lmd": 1.0,
+            "orundum_shard": 0.0,
+            "orundum_shard_consumption": 0.0,
+            "pure_gold": 0.0,
+            "pure_gold_consumption": 0.0,
+            "battle_record_exp": 0.0,
+            "drone_recovery": 0.0,
+            "hr_network": 0.0,
+            "base_management": 0.0,
+            "continuity": 0.0,
             "orirock_cube_consumption": 0.0,
         },
     }

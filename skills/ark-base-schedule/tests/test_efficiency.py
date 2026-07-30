@@ -112,9 +112,9 @@ class EfficiencyTests(unittest.TestCase):
             trading_post_count=2,
             power_plant_count=3,
         ).compute()
-        self.assertEqual(result["layers"]["direct_bonus_pct"], 30)
-        self.assertEqual(result["layers"]["facility_bonus_pct"], 85)
-        self.assertEqual(result["estimated_efficiency_bonus_pct"], 115)
+        self.assertEqual(result["layers"]["direct_bonus_pct"], 0)
+        self.assertEqual(result["layers"]["facility_bonus_pct"], 70)
+        self.assertEqual(result["estimated_efficiency_bonus_pct"], 70)
 
     def test_hourly_growth_is_integrated_over_the_shift(self):
         operators = [

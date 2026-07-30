@@ -31,6 +31,7 @@ def plan_dormitories(
     *,
     ambience: list[float] | None = None,
     max_morale: float = 24.0,
+    support_weights: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Assign active off-duty operators to beds and verify the fixed daily cycle."""
     dorms = list(dormitories or [])
@@ -41,10 +42,12 @@ def plan_dormitories(
         dormitory_base_recovery(level, None if ambience is None else ambience[index])
         for index, level in enumerate(levels)
     ]
-    active = sorted(
+    support_weights = {str(name): float(value) for name, value in (support_weights or {}).items() if float(value) > 0}
+    active_workers = {
         name for name, states in work_states.items()
         if any(states)
-    )
+    }
+    active = sorted(active_workers | set(support_weights))
     consumption = {
         name: sum(
             float(rate) * float(segment.hours)
@@ -118,8 +121,10 @@ def plan_dormitories(
             upper.append(1.0)
 
     objective = np.array([
-        float(segments[segment_index].hours) + dorm_index * 1e-5
-        for _name, segment_index, dorm_index in variables
+        float(segments[segment_index].hours)
+        * (1.0 - support_weights.get(name, 0.0))
+        + dorm_index * 1e-5
+        for name, segment_index, dorm_index in variables
     ])
     constraint = LinearConstraint(np.vstack(rows), np.array(lower), np.array(upper))
     result = milp(
@@ -204,6 +209,7 @@ def plan_dormitories(
         "automation_rules_used": False,
         "dorm_manager_bonus_included": False,
         "capacity_per_dormitory": 5,
+        "support_weights": support_weights,
         "feasible": repeating,
         "repeating_day_verified": repeating,
         "assignments": assignments,

@@ -182,6 +182,7 @@ class EfficiencyCalculator:
         dormitory_levels: list[int] | None = None,
         dormitory_occupant_count: int | None = None,
         global_operators: list[OwnedOperator | dict | str] | None = None,
+        facility_level_sum: int | None = None,
     ):
         self.facility = normalize_facility(facility)
         self.product = normalize_product(product)
@@ -202,6 +203,7 @@ class EfficiencyCalculator:
             if dormitory_occupant_count is not None
             else sum(1 for op in self.global_operators if op.get("assigned_facility") == "dormitory")
         )
+        self.facility_level_sum = int(facility_level_sum or 0)
         self.index = operator_index()
         self.mechanics = load_mechanics()
 
@@ -390,7 +392,19 @@ class EfficiencyCalculator:
                 )
                 value += min(25.0, active_sui * 5.0)
         for op in self.global_operators:
+            morale = float(op.get("morale", 24.0) if op.get("morale") is not None else 24.0)
+            if op.get("assigned_facility") == "control_center":
+                for skill in self._skills(op, "control_center", ""):
+                    tags = set(skill.get("tags", []))
+                    if "morale_threshold_fireworks_15_else_perception_10" in tags and morale > 12:
+                        value += 15.0
+                    if "morale_at_most_12_fireworks_15" in tags and morale <= 12:
+                        value += 15.0
             if op.get("assigned_facility") and op.get("assigned_facility") != "trading_post":
+                if op.get("assigned_facility") == "office":
+                    for skill in self._skills(op, "office", ""):
+                        if "human_fireworks_per_extra_recruitment_slot_10" in skill.get("tags", []):
+                            value += float(self.office_level * 10)
                 continue
             for skill in self._skills(op, "trading_post", ""):
                 if "human_fireworks_per_dorm_occupant_1" in skill.get("tags", []):
@@ -422,10 +436,52 @@ class EfficiencyCalculator:
                         value += float(self.dormitory_occupant_count)
             if facility == "control_center":
                 for skill in self._skills(op, "control_center", ""):
+                    tags = set(skill.get("tags", []))
+                    morale = float(op.get("morale", 24.0) if op.get("morale") is not None else 24.0)
+                    if "morale_threshold_fireworks_15_else_perception_10" in tags and morale <= 12:
+                        value += 10.0
+                    if "morale_above_12_perception_10" in tags and morale > 12:
+                        value += 10.0
                     for tag in skill.get("tags", []):
                         if isinstance(tag, str) and tag.startswith("perception_fixed_"):
                             value += float(tag.rsplit("_", 1)[1])
         return value
+
+    def _global_thought_chain(self) -> float:
+        converts = any(
+            "perception_to_thought_chain_1" in skill.get("tags", [])
+            for op in self.global_operators
+            if op.get("assigned_facility") == "factory"
+            for skill in self._skills(op, "factory", self.product)
+        )
+        return self._global_perception_information() if converts else 0.0
+
+    def _global_witchcraft_crystal(self) -> float:
+        converts = any(
+            "fireworks_to_witchcraft_5_1" in skill.get("tags", [])
+            for op in self.global_operators
+            if op.get("assigned_facility") == "factory"
+            for skill in self._skills(op, "factory", self.product)
+        )
+        return math.floor(self._global_human_fireworks() / 5.0) if converts else 0.0
+
+    def _global_monster_cooking(self) -> float:
+        return sum(
+            sum(self.dormitory_levels)
+            for op in self.global_operators
+            if op.get("assigned_facility") == "dormitory"
+            for skill in self._skills(op, "dormitory", "")
+            if "monster_cooking_per_dorm_level_1" in skill.get("tags", [])
+        )
+
+    def _global_engineering_robots(self) -> float:
+        active = any(
+            "engineering_robot_per_facility_level_1_cap_64" in skill.get("tags", [])
+            for op in self.global_operators
+            if op.get("assigned_facility") == "factory"
+            for skill in self._skills(op, "factory", self.product)
+        )
+        return min(64.0, float(self.facility_level_sum)) if active else 0.0
 
     def _global_silent_resonance(self) -> float:
         direct = 0.0
@@ -440,6 +496,10 @@ class EfficiencyCalculator:
                 for skill in self._skills(op, "office", ""):
                     if "silent_resonance_per_extra_recruitment_slot_15" in skill.get("tags", []):
                         direct += float(self.office_level * 15)
+            elif facility == "dormitory":
+                for skill in self._skills(op, "dormitory", ""):
+                    if "silent_resonance_per_dorm_occupant_1" in skill.get("tags", []):
+                        direct += float(self.dormitory_occupant_count)
         if converts_perception:
             direct += self._global_perception_information()
         return direct
@@ -457,7 +517,30 @@ class EfficiencyCalculator:
                 ):
                     virtual = 1
                     break
+        lancet_active = any(
+            op.get("assigned_facility") == "power_plant" and op.get("name") == "Lancet-2"
+            for op in self.global_operators
+        )
+        if lancet_active and any(
+            "automation_virtual_power_plant_2_if_lancet" in skill.get("tags", [])
+            for _, skill in self._global_control_skills()
+        ):
+            virtual += 2
         return self.power_plant_count + virtual
+
+    def _room_skill_category_count(self, category: str) -> int:
+        categories: list[str] = []
+        alias_standardization = False
+        for op in self.operators:
+            for skill in self._skills(op, "factory", self.product):
+                variant = str(skill.get("variant_group") or "")
+                if ":name:" in variant:
+                    categories.append(variant.rsplit(":name:", 1)[1])
+                if "standardization_alias_rhine_red_pine" in skill.get("tags", []):
+                    alias_standardization = True
+        if category == "标准化" and alias_standardization:
+            return sum(value in {"标准化", "莱茵科技", "红松骑士团"} for value in categories)
+        return categories.count(category)
 
     def compute(self) -> dict[str, Any]:
         if self.facility == "trading_post":
@@ -552,6 +635,10 @@ class EfficiencyCalculator:
                         targeted_control_recovery["魔王"] += 0.10
                         targeted_control_recovery["阿米娅"] += 0.10
         room_names = {op["name"] for op in self.operators}
+        sui_modifier_immunity = self.facility == "control_center" and any(
+            "control_sui_self_morale_modifier_immunity" in skill.get("tags", [])
+            for _, skill in self._global_control_skills()
+        )
         for op in self.operators:
             for skill in self._skills(op):
                 tags = set(skill.get("tags", []))
@@ -561,8 +648,12 @@ class EfficiencyCalculator:
                     elif tag.startswith("room_morale_cost_plus_"):
                         room_morale_cost += float(tag.rsplit("_", 1)[1])
                     elif tag.startswith("morale_cost_minus_"):
+                        if sui_modifier_immunity and "sui" in self._groups(op):
+                            continue
                         rates[op["name"]] -= float(tag.rsplit("_", 1)[1])
                     elif tag.startswith("morale_cost_plus_") and "ave_trade_per_8_heat_1" not in tags:
+                        if sui_modifier_immunity and "sui" in self._groups(op):
+                            continue
                         rates[op["name"]] += float(tag.rsplit("_", 1)[1])
                 if "vigil_same_room_morale_reduction_0.1" in tags and "伺夜" in room_names:
                     rates[op["name"]] -= 0.1
@@ -632,7 +723,12 @@ class EfficiencyCalculator:
         whisper_active = bool(whisper_operators)
 
         durin_count = min(self.count_global_group("durin"), 4)
-        production_lines = durin_count
+        hongxue_active = any(
+            "hongxue_line_source" in skill.get("tags", [])
+            for op in self.operators
+            for skill in self._skills(op)
+        )
+        production_lines = durin_count if hongxue_active else 0
         if any(
             "qiliang_virtual_lines" in skill.get("tags", [])
             for op in self.operators
@@ -646,22 +742,30 @@ class EfficiencyCalculator:
         room_siracusa = self.count_room_group("siracusa")
         room_laterano = self.count_room_group("laterano")
         room_names = {op["name"] for op in self.operators}
-        room_order_capacity = 0
+        room_order_capacity_increase = 0
+        room_order_capacity_decrease = 0
         for room_op in self.operators:
             for room_skill in self._skills(room_op):
                 for room_tag in room_skill.get("tags", []):
                     if room_tag == "order_capacity_per_room_level_1":
-                        room_order_capacity += self.facility_level
+                        room_order_capacity_increase += self.facility_level
                         continue
                     if room_tag == "vigil_same_room_order_capacity_2":
                         if "伺夜" in room_names:
-                            room_order_capacity += 2
+                            room_order_capacity_increase += 2
+                        continue
+                    if isinstance(room_tag, str) and room_tag.startswith("order_capacity_minus_"):
+                        try:
+                            room_order_capacity_decrease += int(float(room_tag.rsplit("_", 1)[1]))
+                        except ValueError:
+                            pass
                         continue
                     if isinstance(room_tag, str) and room_tag.startswith("order_capacity_"):
                         try:
-                            room_order_capacity += int(float(room_tag.rsplit("_", 1)[1]))
+                            room_order_capacity_increase += int(float(room_tag.rsplit("_", 1)[1]))
                         except ValueError:
                             pass
+        room_order_capacity = max(-9, room_order_capacity_increase - room_order_capacity_decrease)
         snowant_caps: list[float] = []
         jaye_e1_operators: set[str] = set()
         for room_op in self.operators:
@@ -714,10 +818,11 @@ class EfficiencyCalculator:
                 if "hongxue_line_source" in tags:
                     detail["notes"].append(f"赤金生产线来源：{durin_count} 条")
                     continue
-                if "hongxue_per_line" in tags:
-                    value = production_lines * bonus
+                if "hongxue_per_line_5" in tags or "hongxue_per_line" in tags:
+                    per_line = 5.0 if "hongxue_per_line_5" in tags else bonus
+                    value = production_lines * per_line
                     op_global += value
-                    detail["notes"].append(f"{production_lines} 条生产线 × {bonus:.0f}% = +{value:.0f}%")
+                    detail["notes"].append(f"{production_lines} 条生产线 × {per_line:.0f}% = +{value:.0f}%")
                     continue
                 if "tuye_per_two_lines" in tags:
                     value = (production_lines // 2) * 15
@@ -780,6 +885,27 @@ class EfficiencyCalculator:
                     value = self._global_human_fireworks()
                     op_global += value
                     detail["notes"].append(f"人间烟火 {value:g}：订单效率 +{value:g}%")
+                    continue
+                if "trade_per_monster_cooking_1" in tags:
+                    value = self._global_monster_cooking()
+                    op_global += value
+                    detail["notes"].append(f"魔物料理 {value:g}：订单效率 +{value:g}%")
+                    continue
+                if "trade_per_dorm_level_sum_1" in tags or "trade_per_dorm_level_sum_2" in tags:
+                    per_level = 2.0 if "trade_per_dorm_level_sum_2" in tags else 1.0
+                    value = sum(self.dormitory_levels) * per_level
+                    op_facility += value
+                    detail["notes"].append(f"宿舍等级总和 {sum(self.dormitory_levels)} ×{per_level:g}% = +{value:g}%")
+                    continue
+                if "trade_per_positive_order_capacity_1_4" in tags:
+                    value = room_order_capacity_increase * 4.0
+                    op_global += value
+                    detail["notes"].append(f"正订单上限加成 {room_order_capacity_increase} ×4% = +{value:g}%")
+                    continue
+                if "trade_per_positive_order_capacity_5_25_cap_100" in tags:
+                    value = min(100.0, math.floor(room_order_capacity_increase / 5.0) * 25.0)
+                    op_global += value
+                    detail["notes"].append(f"正订单上限加成 {room_order_capacity_increase}，每5点+25%：+{value:g}%")
                     continue
                 if "trade_per_catnip_3" in tags:
                     catnip = self._global_catnip()
@@ -961,6 +1087,8 @@ class EfficiencyCalculator:
             "fixed_order_value_lmd_per_trigger": fixed_order_lmd,
             "special_flags": sorted(set(special_flags)),
             "order_capacity": 10 + room_order_capacity,
+            "positive_order_capacity_increase": room_order_capacity_increase,
+            "order_capacity_decrease": room_order_capacity_decrease,
             "jaye_e0_proxy_bonus_pct": (
                 jaye_special_bonus
                 if "孑" in room_names and not jaye_e1_operators and not whisper_active
@@ -997,7 +1125,7 @@ class EfficiencyCalculator:
             op["name"]
             for op in self.operators
             if any(
-                "automation_reset_others_per_power_plant_5" in skill.get("tags", [])
+                any(str(tag).startswith("automation_reset_others_per_power_plant_") for tag in skill.get("tags", []))
                 for skill in self._skills(op)
             )
         }
@@ -1112,17 +1240,18 @@ class EfficiencyCalculator:
                     op_facility_count += value
                     detail["notes"].append(f"{self.trading_post_count} 个贸易站 ×20% = +{value}%")
                     continue
-                if "wendy_per_power_plant" in tags:
-                    value = automation_power_plant_count * 15
+                automation_tags = [
+                    tag for tag in tags
+                    if str(tag).startswith("automation_reset_others_per_power_plant_")
+                ]
+                if automation_tags:
+                    per_plant = max(float(str(tag).rsplit("_", 1)[1]) for tag in automation_tags)
+                    value = automation_power_plant_count * per_plant
                     op_facility += value
                     op_facility_count += value
-                    detail["notes"].append(f"自动化读取 {automation_power_plant_count} 个发电站 ×15% = +{value}%")
-                    continue
-                if "eunectes_per_power_plant" in tags:
-                    value = automation_power_plant_count * 20
-                    op_facility += value
-                    op_facility_count += value
-                    detail["notes"].append(f"自动化读取 {automation_power_plant_count} 个发电站 ×20% = +{value}%")
+                    detail["notes"].append(
+                        f"自动化读取 {automation_power_plant_count} 个发电站 ×{per_plant:g}% = +{value:g}%"
+                    )
                     continue
                 if "nasti_per_rhine" in tags:
                     value = min(self.count_global_group("rhine_lab"), 5) * 3
@@ -1130,28 +1259,35 @@ class EfficiencyCalculator:
                     detail["notes"].append(f"莱茵生命全局计数：+{value}%")
                     continue
                 if "dorothy_rhine_room" in tags:
-                    value = self.count_room_group("rhine_lab") * 10
+                    value = self._room_skill_category_count("莱茵科技") * 5
                     op_global += value
-                    detail["notes"].append(f"同站莱茵生命 {self.count_room_group('rhine_lab')} 人：+{value}%")
+                    detail["notes"].append(f"同站莱茵科技类技能：+{value}%")
                     continue
                 if "cangtai_per_other_metalcraft" in tags:
-                    value = max(0, self.count_room_group("metalcraft") - 1) * 5
+                    value = self._room_skill_category_count("金属工艺") * 5
                     op_global += value
-                    detail["notes"].append(f"其他金属工艺成员：+{value}%")
+                    detail["notes"].append(f"同站金属工艺类技能：+{value}%")
+                    continue
+                if "factory_per_rhine_skill_5" in tags:
+                    value = self._room_skill_category_count("莱茵科技") * 5
+                    op_global += value
+                    detail["notes"].append(f"同站莱茵科技类技能：+{value}%")
+                    continue
+                if "factory_per_metalcraft_skill_5" in tags:
+                    value = self._room_skill_category_count("金属工艺") * 5
+                    op_global += value
+                    detail["notes"].append(f"同站金属工艺类技能：+{value}%")
+                    continue
+                if "factory_per_standardization_skill_5" in tags:
+                    value = self._room_skill_category_count("标准化") * 5
+                    op_global += value
+                    detail["notes"].append(f"同站标准化类技能：+{value}%")
                     continue
                 if "yinji_per_trading_post" in tags:
                     value = self.trading_post_count * 3
                     op_facility += value
                     op_facility_count += value
                     detail["notes"].append(f"{self.trading_post_count} 个贸易站 ×3% = +{value}%")
-                    continue
-                if "automation_reset_others_per_power_plant_5" in tags:
-                    value = automation_power_plant_count * 5
-                    op_facility += value
-                    op_facility_count += value
-                    detail["notes"].append(
-                        f"自动化读取 {automation_power_plant_count} 个发电站 ×5% = +{value}%"
-                    )
                     continue
                 if "with_jiushen_battle_record_30" in tags:
                     value = 30 if self.product == "battle_record" and "酒神" in room_names else 0
@@ -1162,6 +1298,11 @@ class EfficiencyCalculator:
                     value = self.count_room_group("a1") * 10
                     op_global += value
                     detail["notes"].append(f"同站 A1 成员 {self.count_room_group('a1')} 人：+{value}%")
+                    continue
+                if "factory_per_a1_skill_10" in tags:
+                    value = self.count_room_group("a1") * 10
+                    op_global += value
+                    detail["notes"].append(f"同站 A1 小队干员：+{value}%")
                     continue
                 if "work_platform_per_member_5" in tags:
                     value = work_platform_count * 5
@@ -1217,6 +1358,38 @@ class EfficiencyCalculator:
                     op_global += value
                     detail["notes"].append(f"人间烟火 {fireworks:g}：生产力 +{value:g}%")
                     continue
+                if "factory_per_witchcraft_1" in tags or "factory_per_witchcraft_2" in tags:
+                    per_crystal = 2.0 if "factory_per_witchcraft_2" in tags else 1.0
+                    crystals = self._global_witchcraft_crystal()
+                    value = crystals * per_crystal
+                    op_global += value
+                    detail["notes"].append(f"巫术结晶 {crystals:g} ×{per_crystal:g}% = +{value:g}%")
+                    continue
+                if "factory_per_thought_chain_2_1" in tags or "factory_per_thought_chain_1_1" in tags:
+                    step = 1.0 if "factory_per_thought_chain_1_1" in tags else 2.0
+                    chain = self._global_thought_chain()
+                    value = math.floor(chain / step)
+                    op_global += value
+                    detail["notes"].append(f"思维链环 {chain:g}，每{step:g}点+1%：+{value:g}%")
+                    continue
+                if "factory_per_monster_cooking_1" in tags:
+                    value = self._global_monster_cooking()
+                    op_global += value
+                    detail["notes"].append(f"魔物料理 {value:g}：生产力 +{value:g}%")
+                    continue
+                if "factory_per_engineering_robot_8_5" in tags or "factory_per_engineering_robot_16_5" in tags:
+                    step = 8.0 if "factory_per_engineering_robot_8_5" in tags else 16.0
+                    robots = self._global_engineering_robots()
+                    value = math.floor(robots / step) * 5.0
+                    op_global += value
+                    detail["notes"].append(f"工程机器人 {robots:g}，每{step:g}个+5%：+{value:g}%")
+                    continue
+                if "factory_gold_per_trading_post_3" in tags:
+                    value = self.trading_post_count * 3.0 if self.product == "pure_gold" else 0.0
+                    op_facility += value
+                    op_facility_count += value
+                    detail["notes"].append(f"贸易站数量联动：+{value:g}%")
+                    continue
                 op_direct += bonus
                 if bonus:
                     detail["notes"].append(f"直接生产力 +{bonus:.0f}%")
@@ -1262,6 +1435,16 @@ class EfficiencyCalculator:
             value = 1 + int(heat // 20)
             global_bonus += value
             result["warnings"].append(f"Ave Mujica热情值按满员宿舍代理为 {heat:.0f}，赤金 +{value}%")
+        red_pine_count = self.count_room_group("red_pine")
+        if "red_pine_factory_record_10_gold_minus_10" in control_tags and red_pine_count:
+            value = red_pine_count * (10.0 if self.product == "battle_record" else -10.0 if self.product == "pure_gold" else 0.0)
+            global_bonus += value
+            result["warnings"].append(f"红松的骑士：当前站红松骑士团 {red_pine_count} 人，生产力 {value:+g}%")
+        knight_count = self.count_room_group("knight")
+        if "knight_factory_productivity_7" in control_tags and knight_count:
+            value = knight_count * 7.0
+            global_bonus += value
+            result["warnings"].append(f"烛骑士微光：当前站骑士 {knight_count} 人，生产力 +{value:g}%")
 
         static_bonus = direct_bonus + facility_bonus + global_bonus
         final_time_bonus = sum(float(item["final_bonus_pct"]) for item in time_profiles)
@@ -1283,6 +1466,15 @@ class EfficiencyCalculator:
                 ({"dongshi_reset"} if dongshi_values else set())
                 | ({"automation_reset_others"} if automation_reset_names else set())
             ),
+            "intermediate_products": {
+                "human_fireworks": self._global_human_fireworks(),
+                "witchcraft_crystal": self._global_witchcraft_crystal(),
+                "perception_information": self._global_perception_information(),
+                "thought_chain": self._global_thought_chain(),
+                "silent_resonance": self._global_silent_resonance(),
+                "monster_cooking": self._global_monster_cooking(),
+                "engineering_robot": self._global_engineering_robots(),
+            },
         })
         return result
 
@@ -1306,6 +1498,10 @@ class EfficiencyCalculator:
                     value = self.count_global_group("rhine_lab") * 3
                     drone_bonus += value
                     detail["notes"].append(f"莱茵生命全局计数：无人机恢复 +{value}%")
+                if "power_per_dorm_level_sum_0.5" in tags:
+                    value = sum(self.dormitory_levels) * 0.5
+                    drone_bonus += value
+                    detail["notes"].append(f"宿舍等级总和 {sum(self.dormitory_levels)} ×0.5%：无人机恢复 +{value:g}%")
                 if "red_pine_power" in tags:
                     flags.append("red_pine_power")
                     detail["notes"].append("红松骑士团能源联动已记录")
@@ -1366,6 +1562,7 @@ class EfficiencyCalculator:
             "fixed_order_value_lmd_per_trigger":0,
             "special_flags":sorted(flag_set),
             "resolved_effect_sources": control_effect_sources,
+            "resolved_effect_values": control_effects,
         })
         return result
 

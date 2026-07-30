@@ -18,10 +18,11 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import random
 from pathlib import Path
 from typing import Any, Iterable
 
-from data_loader import load_mechanics
+from data_loader import load_mechanics, operator_index, select_available_skills
 from optimizer_common import factory_base_metrics, trading_base_metrics, read_json, write_json
 
 
@@ -117,20 +118,36 @@ def _operator_elite(combo: dict[str, Any] | None, name: str) -> int:
     return 0
 
 
+def _operator_tags(combo: dict[str, Any] | None, name: str) -> set[str]:
+    record = operator_index().get(name, {})
+    operator = next(
+        (item for item in ((combo or {}).get("operators") or []) if str(item.get("name") or "") == name),
+        {},
+    )
+    skills = select_available_skills(
+        record,
+        "trading_post",
+        int(operator.get("elite", 0) or 0),
+        "lmd_order",
+        int(operator.get("level", 90) or 90),
+    )
+    return {str(tag) for skill in skills for tag in skill.get("tags", [])}
+
+
 def special_order_resolution(combo: dict[str, Any] | None) -> dict[str, Any]:
     """Explain active and suppressed order effects for one trading-post crew."""
 
     names = _operator_names(combo)
     present: list[dict[str, str]] = []
     definitions = (
-        ("佩佩", "pepe_exclusive_order"),
-        ("可露希尔", "closure_special_order"),
-        ("U-Official", "u_official_two_gold_order"),
-        ("但书", "proviso_breach_order"),
-        ("龙舌兰", "tequila_investment_order"),
+        ("佩佩", "pepe_exclusive_order", "pepe_exclusive_order"),
+        ("可露希尔", "special_order", "closure_special_order"),
+        ("U-Official", "u_official_two_gold_order", "u_official_two_gold_order"),
+        ("但书", "proviso_breach_order", "proviso_breach_order"),
+        ("龙舌兰", "tequila_investment_order", "tequila_investment_order"),
     )
-    for operator, effect in definitions:
-        if operator in names:
+    for operator, required_tag, effect in definitions:
+        if operator in names and required_tag in _operator_tags(combo, operator):
             present.append({"operator": operator, "effect": effect})
 
     active: list[dict[str, str]] = []
@@ -156,31 +173,57 @@ def special_order_resolution(combo: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def _weighted_order(distribution: Iterable[dict[str, Any]]) -> dict[str, float]:
+    items = list(distribution)
     total_probability = 0.0
     totals = {"minutes": 0.0, "pure_gold": 0.0, "lmd": 0.0}
-    for item in distribution:
+    for item in items:
         probability = float(item.get("probability", 0.0))
         total_probability += probability
         for key in totals:
             totals[key] += probability * float(item.get(key, 0.0))
     if total_probability <= 0:
         raise ValueError("订单概率分布为空")
-    return {key: value / total_probability for key, value in totals.items()}
+    means = {key: value / total_probability for key, value in totals.items()}
+    for key in tuple(totals):
+        means[f"variance_{key}"] = sum(
+            float(item.get("probability", 0.0))
+            * (float(item.get(key, 0.0)) - means[key]) ** 2
+            for item in items
+        ) / total_probability
+    means["covariance_lmd_pure_gold"] = sum(
+        float(item.get("probability", 0.0))
+        * (float(item.get("lmd", 0.0)) - means["lmd"])
+        * (float(item.get("pure_gold", 0.0)) - means["pure_gold"])
+        for item in items
+    ) / total_probability
+    means["distribution"] = [
+        {
+            **item,
+            "probability": float(item.get("probability", 0.0)) / total_probability,
+        }
+        for item in items
+    ]
+    return means
+
+
+def _with_zero_variance(order: dict[str, Any]) -> dict[str, Any]:
+    for key in ("minutes", "pure_gold", "lmd"):
+        order.setdefault(f"variance_{key}", 0.0)
+    order.setdefault("covariance_lmd_pure_gold", 0.0)
+    order.setdefault("distribution", [{
+        "probability": 1.0,
+        "minutes": float(order.get("minutes", 0.0)),
+        "pure_gold": float(order.get("pure_gold", 0.0)),
+        "lmd": float(order.get("lmd", 0.0)),
+    }])
+    return order
 
 
 def _tailoring_grade(combo: dict[str, Any] | None, name: str, elite: int) -> str | None:
-    known = {
-        "巫恋": (0, None),
-        "柏喙": (0, 2),
-        "卡夫卡": (0, 2),
-        "贝娜": (2, None),
-        "明椒": (0, 2),
-        "折光": (0, 2),
-    }
-    alpha_elite, beta_elite = known.get(name, (None, None))
-    if beta_elite is not None and elite >= beta_elite:
+    tags = _operator_tags(combo, name)
+    if "tailoring_beta_empirical" in tags:
         return "beta"
-    if alpha_elite is not None and elite >= alpha_elite:
+    if "tailoring_alpha_empirical" in tags or "time_dependent_probability" in tags:
         return "alpha"
     return None
 
@@ -246,22 +289,22 @@ def expected_lmd_order(
     # Special-order priority follows the game rule table: Pepe > Closure >
     # Eureka/U-Official > Proviso > Tequila. Only mechanics with verified
     # numeric attributes are transformed here.
-    if "佩佩" in names:
+    if "佩佩" in names and "pepe_exclusive_order" in _operator_tags(combo, "佩佩"):
         order = dict(rules["pepe_exclusive_order"])
         order.update({
             "model": "pepe_exclusive_order",
             "probabilistic": False,
             "efficiency_affected": False,
         })
-        return order
-    if "可露希尔" in names:
+        return _with_zero_variance(order)
+    if "可露希尔" in names and "special_order" in _operator_tags(combo, "可露希尔"):
         order = dict(rules["closure_special_order"])
         order.update({
             "model": "closure_special_order",
             "probabilistic": False,
             "efficiency_affected": True,
         })
-        return order
+        return _with_zero_variance(order)
 
     distribution = [dict(item) for item in rules["lmd_order_distributions"].get(str(room_level), [])]
     if not distribution:
@@ -274,7 +317,7 @@ def expected_lmd_order(
             distribution = tailoring
 
     # U-Official forces two-gold orders and explicitly prevents breach status.
-    if "U-Official" in names:
+    if "U-Official" in names and "u_official_two_gold_order" in _operator_tags(combo, "U-Official"):
         distribution = [{"probability": 1.0, "minutes": 144.0, "pure_gold": 2.0, "lmd": 1000.0}]
         order = _weighted_order(distribution)
         order.update({
@@ -282,15 +325,15 @@ def expected_lmd_order(
             "probabilistic": False,
             "efficiency_affected": True,
         })
-        return order
+        return _with_zero_variance(order)
 
     # Proviso changes delivery quantity/reward without changing original order
     # duration. E2 adds two gold/1000 LMD to orders below four gold; the lower
     # version adds one gold/500 LMD. Tequila then adds LMD only to original
     # non-breach four-gold orders.
     transformed = []
-    proviso_active = "但书" in names
-    tequila_active = "龙舌兰" in names
+    proviso_active = "但书" in names and "proviso_breach_order" in _operator_tags(combo, "但书")
+    tequila_active = "龙舌兰" in names and "tequila_investment_order" in _operator_tags(combo, "龙舌兰")
     proviso_extra = 2.0 if _operator_elite(combo, "但书") >= 2 else 1.0
     tequila_extra_lmd = 500.0 if _operator_elite(combo, "龙舌兰") >= 2 else 250.0
     for item in distribution:
@@ -335,6 +378,7 @@ def simulate_lmd_order_queue(
     collect_at_start: bool = True,
     drone_count: float = 0.0,
     crew_signature: str | None = None,
+    rng: random.Random | None = None,
 ) -> dict[str, Any]:
     """Advance one LMD trade-post queue through an operation interval.
 
@@ -358,19 +402,46 @@ def simulate_lmd_order_queue(
 
     def begin_order() -> dict[str, Any]:
         expected = expected_lmd_order(room_level, combo, warmup_hours=warmup)
+        realised = expected
+        distribution = list(expected.get("distribution") or [])
+        if rng is not None and distribution:
+            threshold = rng.random()
+            cumulative = 0.0
+            selected_distribution = distribution[-1]
+            for candidate in distribution:
+                cumulative += float(candidate.get("probability", 0.0) or 0.0)
+                if threshold <= cumulative:
+                    selected_distribution = candidate
+                    break
+            realised = {
+                **expected,
+                **selected_distribution,
+                "variance_lmd": 0.0,
+                "variance_pure_gold": 0.0,
+                "covariance_lmd_pure_gold": 0.0,
+            }
         return {
-            "remaining_base_minutes": float(expected["minutes"]),
-            "minutes": float(expected["minutes"]),
-            "pure_gold": float(expected["pure_gold"]),
-            "lmd": float(expected["lmd"]),
+            "remaining_base_minutes": float(realised["minutes"]),
+            "minutes": float(realised["minutes"]),
+            "pure_gold": float(realised["pure_gold"]),
+            "lmd": float(realised["lmd"]),
             "model": str(expected.get("model") or "expected_order"),
+            "efficiency_affected": bool(expected.get("efficiency_affected", True)),
+            "variance_lmd": float(realised.get("variance_lmd", 0.0) or 0.0),
+            "variance_pure_gold": float(realised.get("variance_pure_gold", 0.0) or 0.0),
+            "covariance_lmd_pure_gold": float(realised.get("covariance_lmd_pure_gold", 0.0) or 0.0),
         }
 
     if not order and completed < capacity:
         order = begin_order()
 
-    natural = {"lmd_trade_work": 0.0, "lmd": 0.0, "pure_gold_consumption": 0.0}
-    accelerated = {"lmd_trade_work": 0.0, "lmd": 0.0, "pure_gold_consumption": 0.0}
+    natural = {"lmd_trade_work": 0.0, "lmd": 0.0, "pure_gold_consumption": 0.0,
+               "lmd_variance": 0.0, "pure_gold_consumption_variance": 0.0,
+               "lmd_gold_covariance": 0.0}
+    accelerated = {"lmd_trade_work": 0.0, "lmd": 0.0, "pure_gold_consumption": 0.0,
+                   "lmd_variance": 0.0, "pure_gold_consumption_variance": 0.0,
+                   "lmd_gold_covariance": 0.0}
+    completed_order_sequence: list[dict[str, Any]] = []
 
     drone_minutes = max(0.0, float(drone_count or 0.0)) * float(
         drone_rules()["acceleration_minutes_per_drone"]
@@ -386,6 +457,13 @@ def simulate_lmd_order_queue(
         accelerated["lmd_trade_work"] += 1.0
         accelerated["lmd"] += float(order["lmd"])
         accelerated["pure_gold_consumption"] += float(order["pure_gold"])
+        accelerated["lmd_variance"] += float(order.get("variance_lmd", 0.0))
+        accelerated["pure_gold_consumption_variance"] += float(order.get("variance_pure_gold", 0.0))
+        accelerated["lmd_gold_covariance"] += float(order.get("covariance_lmd_pure_gold", 0.0))
+        completed_order_sequence.append({
+            "source": "drone", "minutes": order["minutes"], "pure_gold": order["pure_gold"],
+            "lmd": order["lmd"], "model": order["model"],
+        })
         # Operation-node acceleration is followed by immediate collection, so
         # every finished order starts the next one with an empty completed queue.
         completed = 0
@@ -396,7 +474,11 @@ def simulate_lmd_order_queue(
     jaye = _is_jaye_e0(combo)
     while wall_minutes > 1e-9 and order and completed < capacity:
         dynamic_jaye = 4.0 * max(0, capacity - completed) if jaye else 0.0
-        multiplier = max(0.0, 1.0 + (float(base_efficiency_bonus_pct) + dynamic_jaye) / 100.0)
+        multiplier = (
+            max(0.0, 1.0 + (float(base_efficiency_bonus_pct) + dynamic_jaye) / 100.0)
+            if bool(order.get("efficiency_affected", True))
+            else 1.0
+        )
         if multiplier <= 0.0:
             break
         needed_wall = float(order["remaining_base_minutes"]) / multiplier
@@ -413,6 +495,13 @@ def simulate_lmd_order_queue(
         natural["lmd_trade_work"] += 1.0
         natural["lmd"] += float(order["lmd"])
         natural["pure_gold_consumption"] += float(order["pure_gold"])
+        natural["lmd_variance"] += float(order.get("variance_lmd", 0.0))
+        natural["pure_gold_consumption_variance"] += float(order.get("variance_pure_gold", 0.0))
+        natural["lmd_gold_covariance"] += float(order.get("covariance_lmd_pure_gold", 0.0))
+        completed_order_sequence.append({
+            "source": "natural", "minutes": order["minutes"], "pure_gold": order["pure_gold"],
+            "lmd": order["lmd"], "model": order["model"],
+        })
         completed += 1
         order = begin_order() if completed < capacity else {}
 
@@ -429,9 +518,17 @@ def simulate_lmd_order_queue(
         "unused_drone_base_minutes": drone_minutes,
         "elapsed_production_minutes": elapsed_wall,
         "queue_state_exact": True,
-        "order_quality_model": "expected_value",
+        "order_quality_model": "sampled_random_sequence" if rng is not None else "expected_value",
+        "completed_order_sequence": completed_order_sequence,
         "jaye_e0_dynamic": jaye,
         "order_capacity": capacity,
+        "queue_full_at_end": completed >= capacity,
+        "random_moments": {
+            "natural_lmd_variance": natural["lmd_variance"],
+            "natural_pure_gold_variance": natural["pure_gold_consumption_variance"],
+            "drone_lmd_variance": accelerated["lmd_variance"],
+            "drone_pure_gold_variance": accelerated["pure_gold_consumption_variance"],
+        },
     }
 
 

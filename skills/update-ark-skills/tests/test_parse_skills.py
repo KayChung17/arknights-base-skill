@@ -201,6 +201,38 @@ class OwnedSkillTableImportTests(unittest.TestCase):
         self.assertEqual(merged[0]["skills"][0]["skill_name"], "生态科主任")
         self.assertIn("muelsyse_drone_per_rhine", merged[0]["skills"][0]["tags"])
 
+    def test_new_known_tag_is_not_downgraded_by_old_description_only_status(self):
+        from import_owned_skill_table import merge_existing, parse_table
+
+        source = "清流|精1|制造站|再生能源|进驻制造站时，每个贸易站为当前制造站贵金属类配方的生产力+20%\n"
+        existing = {"operators": [{
+            "name": "清流",
+            "groups": [],
+            "skills": [{
+                "facility": "factory",
+                "elite": 1,
+                "skill_name": "再生能源",
+                "description": "旧描述",
+                "base_bonus_pct": 0,
+                "model_status": "description_only",
+                "tags": [],
+                "products": ["pure_gold"],
+            }],
+        }]}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_path = root / "skills_parsed.txt"
+            existing_path = root / "existing.json"
+            source_path.write_text(source, encoding="utf-8")
+            existing_path.write_text(json.dumps(existing, ensure_ascii=False), encoding="utf-8")
+            parsed, warnings = parse_table(source_path)
+            merged = merge_existing(parsed, existing_path)
+
+        self.assertEqual(warnings, [])
+        skill = merged[0]["skills"][0]
+        self.assertEqual(skill["model_status"], "structured")
+        self.assertIn("qingliu_per_trading_post", skill["tags"])
+
     def test_roster_scoped_block_format(self):
         from import_owned_skill_table import parse_table
 

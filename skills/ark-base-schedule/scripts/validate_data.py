@@ -10,6 +10,7 @@ from pathlib import Path
 
 from data_loader import ASSETS_DIR, load_mechanics, load_operator_data
 from coverage_report import skill_structure_issues
+from tag_registry import registration_for, unregistered_tags
 
 
 def granted_effect_conflicts(operator_data: dict) -> list[str]:
@@ -118,6 +119,15 @@ def validate() -> list[str]:
     valid_model_statuses = {"structured", "verified_zero", "conservative_zero", "description_only", "unsupported"}
     supported_mechanisms = {"step_bonus"}
     supported_stacking = {"add", "max", "replace", "multiply", "exclusive"}
+    all_asset_tags = {
+        str(tag)
+        for operator in operator_data.get("operators", [])
+        for skill in operator.get("skills", [])
+        for tag in skill.get("tags", [])
+    }
+    for tag in unregistered_tags(all_asset_tags):
+        errors.append(f"未注册的技能 tag: {tag}")
+
     for operator in operator_data.get("operators", []):
         name = operator.get("name")
         operator_id = operator.get("id")
@@ -149,6 +159,12 @@ def validate() -> list[str]:
             mechanism = skill.get("mechanism")
             bonus = float(skill.get("base_bonus_pct", 0.0) or 0.0)
             tags = list(skill.get("tags") or [])
+            for tag in tags:
+                registration = registration_for(str(tag))
+                if registration is None:
+                    continue
+                if not registration.consumer.endswith(".py"):
+                    errors.append(f"{name}/{skill.get('skill_name')}: tag {tag} 缺少运行消费者")
             effects = list(skill.get("effects") or [])
             special_rules = list(skill.get("special_rules") or [])
             if status is not None and status not in valid_model_statuses:

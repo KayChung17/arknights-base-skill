@@ -88,6 +88,7 @@ def _compute_efficiency(
     dormitory_levels: list[int] | None = None,
     training_room_level: int = 3,
     reception_room_level: int = 3,
+    facility_level_sum: int = 0,
 ) -> dict[str, Any]:
     if facility not in {"trading_post", "factory", "power_plant", "control_center"}:
         return {"error": f"calculator_unsupported:{facility}", "warnings": []}
@@ -104,6 +105,7 @@ def _compute_efficiency(
         reception_room_level=reception_room_level,
         dormitory_levels=dormitory_levels,
         global_operators=assigned,
+        facility_level_sum=facility_level_sum,
     ).compute()
 
 def _effective_bonus(result: dict[str, Any]) -> float:
@@ -224,6 +226,27 @@ def _effect_resolution(
     }
 
 
+def _cross_facility_proxy_score(context: dict[str, Any], result: dict[str, Any]) -> float:
+    """Value structured control-center effects against downstream base rates."""
+    effects = result.get("resolved_effect_values") or {}
+    trade_pct = float(effects.get("global_trading_order_efficiency_pct", 0.0) or 0.0)
+    factory_pct = float(effects.get("global_factory_productivity_pct", 0.0) or 0.0)
+    if not trade_pct and not factory_pct:
+        return 0.0
+    weights = objective_profile(context)
+    score = 0.0
+    for room in context_rooms(context).values():
+        facility = str(room.get("facility_id") or "")
+        products = room.get("product_options") or [room.get("product_id")]
+        if facility == "trading_post" and trade_pct:
+            base_scores = [metric_score(trading_base_metrics(str(product)), weights) for product in products]
+            score += max(base_scores or [0.0]) * trade_pct / 100.0
+        elif facility == "factory" and factory_pct:
+            base_scores = [metric_score(factory_base_metrics(str(product)), weights) for product in products]
+            score += max(base_scores or [0.0]) * factory_pct / 100.0
+    return score
+
+
 def build_room_combinations(
     context: dict[str, Any],
     room: dict[str, Any],
@@ -249,6 +272,13 @@ def build_room_combinations(
     reception_room_level = int(
         (((context.get("base_state") or {}).get("right_side_levels") or {}).get("reception_room", 3))
     )
+    base_state = context.get("base_state") or {}
+    right_levels = base_state.get("right_side_levels") or {}
+    facility_level_sum = (
+        sum(int(value.get("level", 0) or 0) for value in context_rooms(context).values())
+        + sum(int(value or 0) for value in dormitory_levels)
+        + sum(int(value or 0) for value in right_levels.values())
+    )
 
     individual_records: list[dict[str, Any]] = []
     for op in eligible:
@@ -256,6 +286,7 @@ def build_room_combinations(
             facility, product, [op], trading_count, power_count, drone_capacity,
             int(room.get("level", 1)), dormitory_levels,
             training_room_level, reception_room_level,
+            facility_level_sum,
         )
         metrics, fixed = _metrics_per_hour(room, result, [op])
         score = metric_score(metrics, objective_profile(context)) + fixed["fixed_lmd_per_trigger"] * 0.001
@@ -335,11 +366,17 @@ def build_room_combinations(
                 facility, product, selected, trading_count, power_count, drone_capacity,
                 int(room.get("level", 1)), dormitory_levels,
                 training_room_level, reception_room_level,
+                facility_level_sum,
             )
             metrics, fixed = _metrics_per_hour(room, result, selected)
             effect_resolution = _effect_resolution(facility, product, selected, result)
             score = metric_score(metrics, objective_profile(context))
             score += fixed["fixed_lmd_per_trigger"] * objective_profile(context).get("fixed_lmd", 0)
+            cross_facility_proxy = (
+                _cross_facility_proxy_score(context, result)
+                if facility == "control_center" else 0.0
+            )
+            score += cross_facility_proxy
             source_quality = 1.0 if all(op.get("skill_source") == "local_versioned_data" for op in selected) else 0.9
             score *= source_quality
             payload = {
@@ -370,6 +407,7 @@ def build_room_combinations(
                         for op in selected
                     ],
                     "proxy_score_per_hour": score,
+                    "cross_facility_proxy_score_per_hour": cross_facility_proxy,
                     "metrics_per_hour": metrics,
                     "fixed_metrics": fixed,
                     "warehouse_capacity": warehouse_capacity(room, selected),
@@ -514,13 +552,41 @@ def build_library(
 ) -> dict[str, Any]:
     room_results: dict[str, Any] = {}
     for room_id, room in context_rooms(context).items():
-        room_results[room_id] = build_room_combinations(
-            context,
-            room,
-            top_k=top_k,
-            operator_pool_size=operator_pool_size,
-            allow_partial=allow_partial,
-        )
+        product_options = list(dict.fromkeys(
+            str(value)
+            for value in (room.get("product_options") or [room.get("product_id")])
+            if value
+        ))
+        product_results = []
+        for product_id in product_options:
+            product_room = dict(room, product_id=product_id)
+            product_results.append(build_room_combinations(
+                context,
+                product_room,
+                top_k=top_k,
+                operator_pool_size=operator_pool_size,
+                allow_partial=allow_partial,
+            ))
+        if len(product_results) == 1:
+            room_results[room_id] = product_results[0]
+        else:
+            combinations = [combo for value in product_results for combo in value.get("combinations", [])]
+            combinations.sort(key=lambda item: (-float(item.get("proxy_score_per_hour", 0.0)), item["combination_id"]))
+            room_results[room_id] = {
+                "room": dict(room, product_options=product_options),
+                "combinations": combinations,
+                "enumerated_count": sum(int(value.get("enumerated_count", 0)) for value in product_results),
+                "kept_count": len(combinations),
+                "truncated": any(bool(value.get("truncated")) for value in product_results),
+                "product_results": {
+                    product_id: {
+                        "enumerated_count": value.get("enumerated_count"),
+                        "kept_count": value.get("kept_count"),
+                        "truncated": value.get("truncated"),
+                    }
+                    for product_id, value in zip(product_options, product_results)
+                },
+            }
         if not room_results[room_id]["combinations"]:
             raise ValueError(f"房间 {room_id} 没有可行组合；请补充技能数据或外部证据")
     return {

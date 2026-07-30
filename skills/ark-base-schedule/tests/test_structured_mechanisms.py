@@ -20,6 +20,8 @@ from optimizer_common import warehouse_capacity
 from preflight import PreflightError
 from run_project import run_project
 from validate_data import granted_effect_conflicts, singleton_semantic_tag_conflicts
+from tag_registry import registration_for, unregistered_tags
+from data_loader import load_operator_data
 
 
 class StructuredMechanismTests(unittest.TestCase):
@@ -39,6 +41,120 @@ class StructuredMechanismTests(unittest.TestCase):
                     drone_capacity=capacity,
                 ).compute()
                 self.assertEqual(result["estimated_efficiency_bonus_pct"], bonus)
+
+    def test_every_asset_tag_has_a_declared_consumer(self) -> None:
+        data = load_operator_data()
+        tags = {
+            str(tag)
+            for operator in data["operators"]
+            for skill in operator.get("skills", [])
+            for tag in skill.get("tags", [])
+        }
+        self.assertEqual(unregistered_tags(tags), [])
+        self.assertIsNone(registration_for("unreviewed_magic_tag"))
+
+    def test_automation_uses_skill_stage_and_eunectes_virtual_plants(self) -> None:
+        cases = (("异客", 2, 5), ("森蚺", 0, 5), ("森蚺", 2, 10), ("温蒂", 0, 10), ("温蒂", 2, 15))
+        for name, elite, per_plant in cases:
+            with self.subTest(name=name, elite=elite):
+                worker = self.assigned(name, elite, "factory")
+                result = EfficiencyCalculator(
+                    "factory", [worker], "pure_gold", power_plant_count=2,
+                    global_operators=[worker],
+                ).compute()
+                self.assertEqual(result["layers"]["facility_bonus_pct"], per_plant * 2)
+
+        worker = self.assigned("森蚺", 2, "factory")
+        controller = self.assigned("森蚺", 2, "control_center")
+        lancet = self.assigned("Lancet-2", 0, "power_plant")
+        virtual = EfficiencyCalculator(
+            "factory", [worker], "pure_gold", power_plant_count=2,
+            global_operators=[worker, controller, lancet],
+        ).compute()
+        self.assertEqual(virtual["layers"]["facility_bonus_pct"], 40)
+
+    def test_sui_morale_threshold_switches_non_consuming_chains(self) -> None:
+        jieyun = self.assigned("截云", 2, "factory")
+        ling_high = dict(self.assigned("令", 2, "control_center"), morale=13)
+        high = EfficiencyCalculator(
+            "factory", [jieyun], "battle_record", global_operators=[jieyun, ling_high],
+        ).compute()
+        self.assertEqual(high["intermediate_products"]["human_fireworks"], 15)
+        self.assertEqual(high["intermediate_products"]["witchcraft_crystal"], 3)
+
+        ling_low = dict(self.assigned("令", 2, "control_center"), morale=12)
+        rosemary = self.assigned("迷迭香", 2, "factory")
+        low = EfficiencyCalculator(
+            "factory", [rosemary], "battle_record", global_operators=[rosemary, ling_low],
+        ).compute()
+        self.assertEqual(low["intermediate_products"]["perception_information"], 10)
+        self.assertEqual(low["intermediate_products"]["thought_chain"], 10)
+
+    def test_sui_control_morale_immunity_keeps_room_recovery(self) -> None:
+        dusk = self.assigned("夕", 0, "control_center")
+        without_ling = EfficiencyCalculator(
+            "control_center", [dusk], "base_management", global_operators=[dusk],
+        ).morale_cost_rates()
+        self.assertAlmostEqual(without_ling["夕"], 1.40)
+
+        ling = self.assigned("令", 2, "control_center")
+        with_ling = EfficiencyCalculator(
+            "control_center", [ling, dusk], "base_management", global_operators=[ling, dusk],
+        ).morale_cost_rates()
+        self.assertAlmostEqual(with_ling["夕"], 0.85)
+        self.assertAlmostEqual(with_ling["令"], 0.85)
+
+    def test_order_capacity_converters_ignore_negative_capacity(self) -> None:
+        swire = self.assigned("琳琅诗怀雅", 2, "trading_post")
+        steward = self.assigned("史都华德", 0, "trading_post")
+        dagger = self.assigned("锏", 2, "trading_post")
+        positive = EfficiencyCalculator(
+            "trading_post", [swire, steward], "lmd_order", global_operators=[swire, steward],
+        ).compute()
+        self.assertEqual(positive["positive_order_capacity_increase"], 5)
+        self.assertEqual(positive["layers"]["global_bonus_pct"], 20)
+        mixed = EfficiencyCalculator(
+            "trading_post", [dagger, steward], "lmd_order", global_operators=[dagger, steward],
+        ).compute()
+        self.assertEqual(mixed["positive_order_capacity_increase"], 5)
+        self.assertEqual(mixed["order_capacity_decrease"], 6)
+        self.assertEqual(mixed["layers"]["global_bonus_pct"], 25)
+
+    def test_hongxue_lines_require_hongxue_source(self) -> None:
+        durin = self.assigned("桃金娘", 0, "office")
+        hongxue = self.assigned("鸿雪", 2, "trading_post")
+        active = EfficiencyCalculator(
+            "trading_post", [hongxue], "lmd_order", global_operators=[hongxue, durin],
+        ).compute()
+        self.assertEqual(active["layers"]["global_bonus_pct"], 5)
+
+        qiliang = self.assigned("齐良", 2, "trading_post")
+        inactive = EfficiencyCalculator(
+            "trading_post", [qiliang], "lmd_order", global_operators=[qiliang, durin],
+        ).compute()
+        self.assertEqual(inactive["layers"]["global_bonus_pct"], 0)
+
+    def test_dorm_level_and_skill_category_cross_facility_formulas(self) -> None:
+        archetto = self.assigned("空弦", 2, "trading_post")
+        trade = EfficiencyCalculator(
+            "trading_post", [archetto], "lmd_order", dormitory_levels=[5, 4, 3, 2],
+            global_operators=[archetto],
+        ).compute()
+        self.assertEqual(trade["layers"]["facility_bonus_pct"], 28)
+
+        philae = self.assigned("菲莱", 2, "power_plant")
+        power = EfficiencyCalculator(
+            "power_plant", [philae], "drone_recovery", dormitory_levels=[5, 4, 3, 2],
+            global_operators=[philae],
+        ).compute()
+        self.assertEqual(power["estimated_efficiency_bonus_pct"], 17)
+
+        dorothy = self.assigned("多萝西", 2, "factory")
+        muelsyse = self.assigned("缪尔赛思", 0, "factory")
+        category = EfficiencyCalculator(
+            "factory", [dorothy, muelsyse], "battle_record", global_operators=[dorothy, muelsyse],
+        ).compute()
+        self.assertGreaterEqual(category["layers"]["global_bonus_pct"], 5)
 
     def test_model_status_distinguishes_zero_and_unmodeled(self) -> None:
         self.assertEqual(skill_model_status({"base_bonus_pct": 0, "tags": [], "description": "效率不变"}), "description_only")
@@ -510,14 +626,14 @@ class StructuredMechanismTests(unittest.TestCase):
             "factory", factory, "pure_gold", power_plant_count=2,
             global_operators=factory + [grey],
         ).compute()
-        self.assertEqual(with_grey["layers"]["facility_bonus_pct"], 45)
+        self.assertEqual(with_grey["layers"]["facility_bonus_pct"], 30)
 
         platform = self.assigned("Lancet-2", 0, "power_plant")
         with_real_platform = EfficiencyCalculator(
             "factory", factory, "pure_gold", power_plant_count=2,
             global_operators=factory + [grey, platform],
         ).compute()
-        self.assertEqual(with_real_platform["layers"]["facility_bonus_pct"], 30)
+        self.assertEqual(with_real_platform["layers"]["facility_bonus_pct"], 20)
 
     def test_work_platform_skills_count_actual_platform_operators(self) -> None:
         factory = [self.assigned("阿兰娜", 0, "factory")]

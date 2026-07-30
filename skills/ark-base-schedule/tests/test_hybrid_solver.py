@@ -245,6 +245,38 @@ class HybridSolverTests(unittest.TestCase):
         self.assertIsNotNone(sim["room_results"][0]["warehouse_overflow"])
         self.assertTrue(any("仓库封顶" in item for item in sim["warnings"]))
 
+    def test_factory_product_can_switch_at_operation_nodes(self):
+        rooms = {
+            "factory_1": {
+                "facility_id": "factory", "level": 3, "product_id": "pure_gold",
+                "product_options": ["pure_gold", "battle_record"],
+            }
+        }
+        segments = {
+            "segment_1": {"name": "一班", "start": "00:00", "end": "12:00", "hours": 12.0, "rooms": {}},
+            "segment_2": {"name": "二班", "start": "12:00", "end": "00:00", "hours": 12.0, "rooms": {}},
+        }
+        context = self._context(
+            rooms, segments=segments,
+            roster=[{"name": "芬", "elite": 1, "level": 55, "recruited": True, "morale": 24}],
+            solver={"max_daily_work_hours": 24, "allocate_drones": False},
+        )
+        library = build_library(context, top_k=10, operator_pool_size=2, allow_partial=True)
+        products = {combo["product_id"] for combo in library["rooms"]["factory_1"]["combinations"]}
+        self.assertEqual(products, {"pure_gold", "battle_record"})
+        selected = {
+            product: next(
+                combo for combo in library["rooms"]["factory_1"]["combinations"]
+                if combo["product_id"] == product and combo["operators"]
+            )
+            for product in products
+        }
+        simulation = simulate_assignment(context, library, [
+            {"segment_id": "segment_1", "room_id": "factory_1", "combination_id": selected["pure_gold"]["combination_id"]},
+            {"segment_id": "segment_2", "room_id": "factory_1", "combination_id": selected["battle_record"]["combination_id"]},
+        ])
+        self.assertEqual([item["product_id"] for item in simulation["room_results"]], ["pure_gold", "battle_record"])
+
     def test_simulator_exposes_jaye_e0_queue_state_per_operation_interval(self):
         rooms = {"trading_post_1": {"facility_id": "trading_post", "level": 1, "product_id": "lmd_order"}}
         segments = {
@@ -256,7 +288,12 @@ class HybridSolverTests(unittest.TestCase):
             rooms,
             segments=segments,
             roster=[{"name": "孑", "elite": 0, "level": 1, "recruited": True, "morale": 24}],
-            solver={"max_daily_work_hours": 24, "allocate_drones": False},
+            solver={
+                "max_daily_work_hours": 24,
+                "allocate_drones": False,
+                "random_order_trials": 3,
+                "random_order_seed": 17,
+            },
         )
         library = build_library(context, top_k=10, operator_pool_size=2, allow_partial=True)
         combo = next(
@@ -273,6 +310,9 @@ class HybridSolverTests(unittest.TestCase):
         self.assertTrue(all(queue["jaye_e0_dynamic"] for queue in queues))
         self.assertTrue(all(queue["state"]["completed_orders"] > 0 for queue in queues))
         self.assertEqual(simulation["simulation_type"], "segment_global_recalculation_with_trade_queue_and_drone_inventory")
+        self.assertEqual(len(simulation["inventory_timeline"]["events"]), 6)
+        self.assertIn("order_overflow_segments", simulation["inventory_timeline"])
+        self.assertEqual(simulation["random_order_monte_carlo"]["trial_count"], 3)
 
 
     def test_xlsx_roster_is_supported(self):

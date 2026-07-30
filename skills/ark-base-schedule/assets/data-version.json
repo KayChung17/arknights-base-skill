@@ -3,7 +3,7 @@
   "source_type": "full_operator_skill_table_with_structured_overlay",
   "source_file": "skills_parsed.txt",
   "retrieved_at": "2026-07-30",
-  "data_version": "2026-07-30-full-skills-parsed-421-v11",
+  "data_version": "2026-07-30-full-skills-parsed-421-v12",
   "canonical_operator_count": 421,
   "canonical_skill_count": 905,
   "personal_roster_state_removed": true,

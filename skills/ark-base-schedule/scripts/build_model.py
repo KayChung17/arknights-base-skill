@@ -29,6 +29,7 @@ from scipy.sparse import coo_matrix
 from data_loader import load_mechanics
 from efficiency_calculator import production_bonus_for_duration
 from drone_model import drone_metrics_per_drone, drone_rules, recovery_rate_per_hour
+from dormitory_planner import dormitory_base_recovery
 from optimizer_common import (
     context_roster,
     context_segments,
@@ -182,6 +183,7 @@ def build_milp(
                         "segment_id": segment.segment_id,
                         "room_id": room_id,
                         "combination_id": combo["combination_id"],
+                        "product_id": combo.get("product_id"),
                         "operators": [item["name"] for item in combo.get("operators") or []],
                         "hours": segment.hours,
                         "objective_coefficient": metric_score(metrics, weights)
@@ -232,14 +234,18 @@ def build_milp(
                 room = room_result.get("room") or {}
                 if room.get("facility_id") not in {"factory", "trading_post"}:
                     continue
-                if str(room.get("product_id") or "") not in target_products:
-                    continue
                 profiles: dict[tuple[tuple[str, float], ...], dict[str, Any]] = {}
                 for combo in room_result.get("combinations") or []:
-                    metrics = drone_metrics_per_drone(room, combo)
+                    product_id = str(combo.get("product_id") or room.get("product_id") or "")
+                    if product_id not in target_products:
+                        continue
+                    active_room = dict(room, product_id=product_id)
+                    metrics = drone_metrics_per_drone(active_room, combo)
                     if not metrics:
                         continue
-                    signature = tuple(sorted((str(key), round(float(value), 12)) for key, value in metrics.items()))
+                    signature = (("__product__", product_id),) + tuple(
+                        sorted((str(key), round(float(value), 12)) for key, value in metrics.items())
+                    )
                     profile = profiles.setdefault(signature, {"metrics": metrics, "combos": []})
                     profile["combos"].append(combo)
                 room_drone_indices: list[int] = []
@@ -374,6 +380,27 @@ def build_milp(
                 {"type": "one_combination", "segment_id": segment.segment_id, "room_id": room_id},
             )
 
+    product_count_bounds = {
+        "orundum_order": (None, settings.get("max_orundum_trading_posts")),
+        "orundum_shard": (None, settings.get("max_shard_factories")),
+        "battle_record": (settings.get("minimum_battle_record_factories"), None),
+    }
+    for segment in segments:
+        for product_id, (minimum, maximum) in product_count_bounds.items():
+            if minimum is None and maximum is None:
+                continue
+            coeff: dict[int, float] = {}
+            for room_id, room_result in rooms.items():
+                for combo in room_result.get("combinations") or []:
+                    if str(combo.get("product_id") or "") == product_id:
+                        coeff[x_lookup[(segment.segment_id, room_id, combo["combination_id"])]] = 1.0
+            add_constraint(
+                coeff,
+                float(minimum) if minimum is not None else -np.inf,
+                float(maximum) if maximum is not None else np.inf,
+                {"type": "product_room_count", "segment_id": segment.segment_id, "product_id": product_id},
+            )
+
     roster_names = [item["name"] for item in roster]
     right_side_work = fixed_work_by_segment(context)
     right_side_hours = fixed_hours_by_operator(context)
@@ -401,6 +428,24 @@ def build_milp(
 
     # Daily work-hour limit.
     default_max_hours = float(settings.get("max_daily_work_hours", 12.0))
+    dormitory_cycle_max_hours: float | None = None
+    if settings.get("require_dormitory_cycle"):
+        dormitories = (context.get("facility_configuration") or {}).get("dormitories") or []
+        levels = [int(item.get("level", 0) or 0) for item in dormitories]
+        if not levels:
+            levels = [int(value) for value in ((context.get("base_state") or {}).get("dormitory_levels") or [])]
+        if levels:
+            ambience = (context.get("base_state") or {}).get("dormitory_ambience")
+            recoveries = [
+                dormitory_base_recovery(
+                    level,
+                    None if ambience is None else float(ambience[index]),
+                )
+                for index, level in enumerate(levels)
+            ]
+            best_recovery = max(recoveries)
+            dormitory_cycle_max_hours = 24.0 * best_recovery / (1.0 + best_recovery)
+            default_max_hours = min(default_max_hours, dormitory_cycle_max_hours)
     overrides = settings.get("operator_max_daily_hours") or {}
     for operator in roster_names:
         max_hours = float(overrides.get(operator, default_max_hours))
@@ -423,6 +468,7 @@ def build_milp(
                     "operator": operator,
                     "max_hours": max_hours,
                     "fixed_right_side_hours": fixed_hours,
+                    "dormitory_cycle_conservative_max_hours": dormitory_cycle_max_hours,
                 },
             )
 

@@ -88,6 +88,14 @@ def _project_sections(value: dict[str, Any]) -> list[str]:
                 f"- 房间组合库完整：{complete.get('all_rooms_untruncated', '—')}",
                 f"- 发生截断的房间：{'、'.join(complete.get('truncated_rooms') or []) or '无'}",
             ]
+    online = value.get("online_time_search") or {}
+    if online:
+        lines += [
+            "", "## 上线时间搜索", "",
+            f"- 选中时刻：{'、'.join(online.get('selected_online_times') or [])}",
+            f"- 全部已评估：{online.get('evaluated_count', '—')}；分钟级细化：{online.get('refinement_evaluated_count', 0)}",
+            f"- 最终时间精度：{online.get('time_resolution_minutes', '—')} 分钟",
+        ]
     manifest = value.get("project_reproducibility") or value.get("reproducibility") or {}
     if manifest:
         lines += ["", "## 可复现信息", ""]
@@ -112,6 +120,14 @@ def _plan_sections(plan: dict[str, Any] | None, simulation: dict[str, Any] | Non
         lines += ["", "### 无人机分配", "", "| 节点 | 房间 | 产品 | 无人机 |", "|---|---|---|---:|"]
         for item in allocations:
             lines.append(f"| {item.get('operation_time', '—')} | {item.get('room_id', '—')} | {item.get('product_id', '—')} | {_n(item.get('drones'), 0)} |")
+    inventory = (simulation or {}).get("inventory_timeline") or {}
+    if inventory:
+        lines += ["", "### 日内库存", ""]
+        minimum = inventory.get("minimum_balance") or {}
+        lines.append(
+            f"- 最低余额：赤金 {_n(minimum.get('pure_gold'))}；源石碎片 {_n(minimum.get('originium_shard'))}；龙门币 {_n(minimum.get('lmd'))}"
+        )
+        lines.append(f"- 爆单区间：{len(inventory.get('order_overflow_segments') or [])}")
     return lines
 
 
@@ -144,6 +160,7 @@ def _layout_report(value: dict[str, Any]) -> str:
         f"| 布局 | {selected.get('layout', '—')} |",
         f"| 配置ID | {selected.get('profile_id', '—')} |",
         f"| 合成玉/天 | {_n(selected.get('orundum_per_day'))} |",
+        f"| 等价龙门币收益/天 | {_n(selected.get('economic_utility_lmd_per_day'))} |",
         f"| 龙门币净变化/天 | {_n(selected.get('net_lmd_per_day'))} |",
         f"| 源石碎片净变化/天 | {_n(selected.get('orundum_shard_balance'))} |",
         f"| 赤金净变化/天 | {_n(selected.get('pure_gold_balance'))} |",
@@ -163,9 +180,9 @@ def _layout_report(value: dict[str, Any]) -> str:
         lines.append(f"- {key}: {item}")
     results = value.get("results") or []
     if results:
-        lines += ["", "## 前五名候选", "", "| 排名 | 配置 | 布局 | 合成玉/天 | 龙门币净变化/天 |", "|---:|---|---:|---:|---:|"]
+        lines += ["", "## 前五名候选", "", "| 排名 | 配置 | 布局 | 等价龙门币/天 | 合成玉/天 | 龙门币净变化/天 |", "|---:|---|---:|---:|---:|---:|"]
         for index, item in enumerate(results[:5], start=1):
-            lines.append(f"| {index} | {item.get('profile_id')} | {item.get('layout')} | {_n(item.get('orundum_per_day'))} | {_n(item.get('net_lmd_per_day'))} |")
+            lines.append(f"| {index} | {item.get('profile_id')} | {item.get('layout')} | {_n(item.get('economic_utility_lmd_per_day'))} | {_n(item.get('orundum_per_day'))} | {_n(item.get('net_lmd_per_day'))} |")
     solver_result = selected.get("solver_result") or {}
     plan = selected.get("plan") or solver_result.get("candidate_plan")
     simulation = ((solver_result.get("selected_solution") or {}).get("simulation") or {})

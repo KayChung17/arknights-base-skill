@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+import random
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +66,8 @@ class DroneModelTests(unittest.TestCase):
         self.assertAlmostEqual(target["metrics_per_drone"]["orundum_shard_consumption"], 0.05)
 
     def test_closure_and_proviso_special_orders(self):
+        closure_e0 = expected_lmd_order(1, {"operators": [{"name": "可露希尔", "elite": 0}]})
+        self.assertNotEqual(closure_e0["model"], "closure_special_order")
         closure = expected_lmd_order(1, {"operators": [{"name": "可露希尔", "elite": 2}]})
         self.assertEqual(closure["minutes"], 144)
         self.assertEqual(closure["lmd"], 1200)
@@ -72,6 +75,20 @@ class DroneModelTests(unittest.TestCase):
         self.assertEqual(proviso["minutes"], 144)
         self.assertEqual(proviso["pure_gold"], 4)
         self.assertEqual(proviso["lmd"], 2000)
+
+    def test_random_orders_expose_second_moments(self):
+        order = expected_lmd_order(3, {"operators": []})
+        self.assertGreater(order["variance_lmd"], 0)
+        self.assertGreater(order["variance_pure_gold"], 0)
+        self.assertGreater(order["covariance_lmd_pure_gold"], 0)
+        fixed = expected_lmd_order(1, {"operators": [{"name": "可露希尔", "elite": 2}]})
+        self.assertEqual(fixed["variance_lmd"], 0)
+        sampled = simulate_lmd_order_queue(
+            3, {"operators": []}, elapsed_hours=12, base_efficiency_bonus_pct=0,
+            rng=random.Random(7),
+        )
+        self.assertEqual(sampled["order_quality_model"], "sampled_random_sequence")
+        self.assertTrue(sampled["completed_order_sequence"])
 
     def test_tequila_applies_only_to_four_gold_orders(self):
         tequila = expected_lmd_order(3, {"operators": [{"name": "龙舌兰", "elite": 2}]})
@@ -115,6 +132,8 @@ class DroneModelTests(unittest.TestCase):
         self.assertAlmostEqual(refraction_beta["pure_gold"], 3.8)
 
     def test_special_order_priority_is_exclusive(self):
+        pepe_e0 = expected_lmd_order(3, {"operators": [{"name": "佩佩", "elite": 0}]})
+        self.assertNotEqual(pepe_e0["model"], "pepe_exclusive_order")
         combo = {"operators": [
             {"name": "佩佩", "elite": 2},
             {"name": "可露希尔", "elite": 2},

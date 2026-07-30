@@ -41,6 +41,8 @@ GOAL_ALIASES = {
     "gold_origin": "gold_origin",
     "合成玉优先+龙门币平衡": "orundum_lmd_balance",
     "orundum_lmd_balance": "orundum_lmd_balance",
+    "等价龙门币": "lmd_equivalent",
+    "lmd_equivalent": "lmd_equivalent",
 }
 
 

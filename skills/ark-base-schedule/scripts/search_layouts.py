@@ -32,6 +32,40 @@ from solve_schedule import solve_hybrid
 # Backward-compatible public name used by existing callers and tests.
 COMMON_PROFILES = REPRESENTATIVE_PROFILES
 
+DEFAULT_ECONOMIC_VALUES = {
+    "orundum_lmd": 160.0,
+    "orundum_shard_shortfall_lmd": 1600.0,
+    "pure_gold_shortfall_lmd": 500.0,
+}
+
+
+def economic_utility_lmd(
+    orundum: float,
+    net_lmd: float,
+    shard_balance: float,
+    gold_balance: float,
+    values: dict[str, float] | None = None,
+) -> float:
+    """Convert output and inventory drawdown into one LMD-equivalent value."""
+    rates = dict(DEFAULT_ECONOMIC_VALUES)
+    rates.update(values or {})
+    return (
+        float(orundum) * float(rates["orundum_lmd"])
+        + float(net_lmd)
+        - max(0.0, -float(shard_balance)) * float(rates["orundum_shard_shortfall_lmd"])
+        - max(0.0, -float(gold_balance)) * float(rates["pure_gold_shortfall_lmd"])
+    )
+
+
+def economic_result_sort_key(item: dict[str, Any]) -> tuple[float, float, float, float, float]:
+    return (
+        -float(item["economic_utility_lmd_per_day"]),
+        -float(item["net_lmd_per_day"]),
+        -float(item["orundum_per_day"]),
+        -float(item["battle_record_exp_per_day"]),
+        float(item["resource_balance_deviation"]),
+    )
+
 
 def power_summary(profile: dict[str, Any], right_side_levels: dict[str, int] | None = None) -> dict[str, float]:
     return _power_summary(profile, right_side_levels=right_side_levels)
@@ -43,6 +77,7 @@ def product_splits(
     max_orundum_trading_posts: int | None = None,
     max_shard_factories: int | None = None,
     minimum_battle_record_factories: int = 0,
+    allow_zero_orundum: bool = False,
 ) -> list[tuple[int, int, int]]:
     """Return feasible product choices for trading posts and factories.
 
@@ -64,7 +99,7 @@ def product_splits(
     if max_shard_factories is not None:
         max_f = min(max_f, max(0, int(max_shard_factories)))
     minimum_battle = max(0, int(minimum_battle_record_factories))
-    return [
+    splits = [
         (origin_rooms, shard_factories, battle_record_factories)
         for origin_rooms in range(1, max_tp + 1)
         for shard_factories in range(1, max_f + 1)
@@ -74,6 +109,16 @@ def product_splits(
             else (0,)
         )
     ]
+    if allow_zero_orundum:
+        splits.extend(
+            (0, 0, battle_record_factories)
+            for battle_record_factories in (
+                range(minimum_battle, factory_count)
+                if minimum_battle > 0
+                else (0,)
+            )
+        )
+    return splits
 
 
 def facility_configuration(
@@ -138,6 +183,7 @@ def build_context(
     gold_balance_policy: dict[str, Any] | None = None,
     inventory: dict[str, Any] | None = None,
     horizon: dict[str, Any] | None = None,
+    economic_values: dict[str, float] | None = None,
     *,
     drone_capacity: float = 235.0,
     initial_drone_stock: float | None = None,
@@ -154,7 +200,7 @@ def build_context(
     shard_policy = dict(shard_balance_policy or {})
     gold_policy = dict(gold_balance_policy or {})
     preferences = {
-        "priority": "orundum_lmd_balance",
+        "priority": "lmd_equivalent",
         "solver": {
             "max_daily_work_hours": max_daily_work_hours,
             "require_resource_balance": True,
@@ -188,7 +234,7 @@ def build_context(
     }
     context = build_decision_packet(
         roster_path,
-        "orundum_lmd_balance",
+        "lmd_equivalent",
         profile["layout"],
         len(online_times),
         preferences,
@@ -232,21 +278,30 @@ def compact_result(
     result: dict[str, Any],
     *,
     right_side_levels: dict[str, int] | None = None,
+    economic_values: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     selected = result["selected_solution"]
     simulation = selected["simulation"]
     aggregate = simulation["aggregate_metrics"]
     shift_scores: dict[str, float] = {}
+    product_hours: dict[str, float] = {}
+    room_products: dict[str, set[str]] = {}
     for room_result in simulation.get("room_results") or []:
         segment_id = str(room_result.get("segment_id") or "")
         hours = float(room_result.get("hours", 0.0) or 0.0)
         rate = float(room_result.get("local_proxy_score_per_hour", 0.0) or 0.0)
         shift_scores[segment_id] = shift_scores.get(segment_id, 0.0) + rate * hours
+        product_id = str(room_result.get("product_id") or "")
+        if product_id:
+            product_hours[product_id] = product_hours.get(product_id, 0.0) + hours
+            room_products.setdefault(str(room_result.get("room_id") or ""), set()).add(product_id)
     score_values = list(shift_scores.values())
     mean_score = sum(score_values) / len(score_values) if score_values else 0.0
     variance = sum((value - mean_score) ** 2 for value in score_values) / len(score_values) if score_values else 0.0
     shard_balance = float(simulation.get("orundum_shard_balance", 0.0))
     gold_balance = float(simulation.get("pure_gold_balance", 0.0))
+    orundum = float(aggregate.get("orundum", 0.0))
+    net_lmd = float(simulation.get("net_lmd_balance", 0.0))
     return {
         "profile_id": profile_id,
         "layout": profile["layout"],
@@ -261,14 +316,21 @@ def compact_result(
             "orundum_shard_factories": split[1],
             "pure_gold_factories": len(profile["factory_levels"]) - split[1] - split[2],
             "battle_record_factories": split[2],
+            "role": "initial_room_products_before_per_segment_selection",
         },
-        "orundum_per_day": float(aggregate.get("orundum", 0.0)),
+        "product_hours": product_hours,
+        "product_switching_used": any(len(products) > 1 for products in room_products.values()),
+        "products_by_room": {room_id: sorted(products) for room_id, products in room_products.items()},
+        "orundum_per_day": orundum,
         "gross_lmd_per_day": float(aggregate.get("lmd", 0.0)),
         "shard_lmd_cost_per_day": float(aggregate.get("lmd_cost", 0.0)),
-        "net_lmd_per_day": float(simulation.get("net_lmd_balance", 0.0)),
+        "net_lmd_per_day": net_lmd,
         "orundum_shard_balance": shard_balance,
         "pure_gold_balance": gold_balance,
         "resource_balance_deviation": abs(shard_balance) + abs(gold_balance),
+        "economic_utility_lmd_per_day": economic_utility_lmd(
+            orundum, net_lmd, shard_balance, gold_balance, economic_values
+        ),
         "orundum_shard_produced": float(aggregate.get("orundum_shard", 0.0)),
         "orundum_shard_consumed": float(aggregate.get("orundum_shard_consumption", 0.0)),
         "pure_gold_produced": float(aggregate.get("pure_gold", 0.0)),
@@ -341,6 +403,7 @@ def search_layouts(
     gold_balance_policy: dict[str, Any] | None = None,
     inventory: dict[str, Any] | None = None,
     horizon: dict[str, Any] | None = None,
+    economic_values: dict[str, float] | None = None,
     profile_mode: str = "representative",
     profiles_file: str | Path | None = None,
     grid_layouts: list[str] | None = None,
@@ -356,6 +419,13 @@ def search_layouts(
     minimum_battle_record_factories: int = 0,
     operator_overrides: dict[str, dict[str, Any]] | None = None,
     right_side_schedule: list[dict[str, list[str]]] | None = None,
+    allow_product_switching: bool = False,
+    adaptive_candidate_expansion_rounds: int = 2,
+    adaptive_candidate_expansion_factor: float = 2.0,
+    adaptive_candidate_max_top_k: int | None = None,
+    adaptive_candidate_max_operator_pool_size: int | None = None,
+    random_order_trials: int = 0,
+    random_order_seed: int = 20260730,
 ) -> dict[str, Any]:
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
     right.update(right_side_levels or {})
@@ -382,6 +452,7 @@ def search_layouts(
             max_orundum_trading_posts=max_orundum_trading_posts,
             max_shard_factories=max_shard_factories,
             minimum_battle_record_factories=minimum_battle_record_factories,
+            allow_zero_orundum=True,
         )
         if not splits:
             failures.append({
@@ -391,6 +462,16 @@ def search_layouts(
                 "power": power,
             })
             continue
+        if allow_product_switching:
+            factory_count = len(profile["factory_levels"])
+            if minimum_battle_record_factories > factory_count:
+                failures.append({
+                    "profile_id": profile_id,
+                    "layout": profile["layout"],
+                    "reason": "minimum_battle_record_factories_exceeds_factory_count",
+                })
+                continue
+            splits = [(0, 0, minimum_battle_record_factories)]
         for split in splits:
             attempted_configurations += 1
             context = build_context(
@@ -412,6 +493,7 @@ def search_layouts(
                 gold_balance_policy,
                 inventory,
                 horizon,
+                economic_values,
                 drone_capacity=drone_capacity,
                 initial_drone_stock=initial_drone_stock,
                 right_side_levels=right,
@@ -420,6 +502,30 @@ def search_layouts(
                 operator_overrides=operator_overrides,
                 right_side_schedule=right_side_schedule,
             )
+            solver_settings = context["objective"]["preferences"]["solver"]
+            solver_settings["adaptive_candidate_expansion_rounds"] = max(0, int(adaptive_candidate_expansion_rounds))
+            solver_settings["adaptive_candidate_expansion_factor"] = max(1.1, float(adaptive_candidate_expansion_factor))
+            if adaptive_candidate_max_top_k is not None:
+                solver_settings["adaptive_candidate_max_top_k"] = int(adaptive_candidate_max_top_k)
+            if adaptive_candidate_max_operator_pool_size is not None:
+                solver_settings["adaptive_candidate_max_operator_pool_size"] = int(adaptive_candidate_max_operator_pool_size)
+            solver_settings["random_order_trials"] = max(0, int(random_order_trials))
+            solver_settings["random_order_seed"] = int(random_order_seed)
+            if allow_product_switching:
+                for room in (context.get("facility_configuration") or {}).get("rooms", {}).values():
+                    if room.get("facility_id") == "factory":
+                        room["product_options"] = ["pure_gold", "orundum_shard", "battle_record"]
+                    elif room.get("facility_id") == "trading_post":
+                        room["product_options"] = ["lmd_order", "orundum_order"]
+                solver_settings["max_orundum_trading_posts"] = (
+                    len(profile["trading_levels"])
+                    if max_orundum_trading_posts is None else int(max_orundum_trading_posts)
+                )
+                solver_settings["max_shard_factories"] = (
+                    len(profile["factory_levels"])
+                    if max_shard_factories is None else int(max_shard_factories)
+                )
+                solver_settings["minimum_battle_record_factories"] = int(minimum_battle_record_factories)
             try:
                 library = build_library(context, top_k=top_k, operator_pool_size=operator_pool_size, allow_partial=True)
                 result = solve_hybrid(
@@ -432,7 +538,14 @@ def search_layouts(
                     mip_rel_gap=mip_rel_gap,
                     max_proxy_attempts=max_proxy_attempts,
                 )
-                rows.append(compact_result(profile_id, profile, split, result, right_side_levels=right))
+                rows.append(compact_result(
+                    profile_id,
+                    profile,
+                    split,
+                    result,
+                    right_side_levels=right,
+                    economic_values=economic_values,
+                ))
             except Exception as exc:
                 failures.append({
                     "profile_id": profile_id,
@@ -444,37 +557,17 @@ def search_layouts(
                     },
                     "reason": str(exc),
                 })
-    soft_balance = any(
-        str((policy or {}).get("mode", "hard")) == "soft"
-        for policy in (shard_balance_policy, gold_balance_policy)
-    )
-    if soft_balance:
-        rows.sort(key=lambda item: (
-            -item["orundum_per_day"],
-            -item["actual_objective_score"],
-            -item["battle_record_exp_per_day"],
-            -item["net_lmd_per_day"],
-            item["resource_balance_deviation"],
-        ))
-    else:
-        rows.sort(key=lambda item: (
-            -item["orundum_per_day"],
-            -item["net_lmd_per_day"],
-            item["resource_balance_deviation"],
-            -float((item.get("shift_profile") or {}).get("minimum_score", 0.0)),
-            float((item.get("shift_profile") or {}).get("variance", 0.0)),
-            -item["actual_objective_score"],
-        ))
+    rows.sort(key=economic_result_sort_key)
+    resolved_economic_values = dict(DEFAULT_ECONOMIC_VALUES)
+    resolved_economic_values.update(economic_values or {})
     result = {
         "schema_version": 2,
         "search_type": "outer_layout_configuration_plus_inner_hybrid_schedule_solver",
         "objective": {
-            "primary": "maximize_orundum",
-            "selection_policy": (
-                "orundum_then_penalized_actual_objective_experience_lmd"
-                if soft_balance else "orundum_then_lmd_then_resource_deviation"
-            ),
-            "default_resource_balance_policy": "nonnegative_daily_balance_then_minimize_surplus_on_primary_ties",
+            "primary": "maximize_lmd_equivalent_utility",
+            "selection_policy": "lmd_equivalent_then_net_lmd_then_orundum",
+            "economic_values": resolved_economic_values,
+            "default_resource_balance_policy": "soft_shortfall_valued_as_inventory_drawdown",
             "constraints": {
                 "minimum_net_lmd_per_day": lmd_floor,
                 "minimum_orundum_shard_balance": minimum_shard_balance,
@@ -508,12 +601,19 @@ def search_layouts(
             "proxy_lmd_cost_factor": proxy_lmd_cost_factor,
             "opportunity_postprocess_max_iterations": opportunity_postprocess_max_iterations,
             "attempted_configurations": attempted_configurations,
+            "allow_product_switching": bool(allow_product_switching),
+            "random_order_trials": int(random_order_trials),
+            "random_order_seed": int(random_order_seed),
         },
         "results": rows,
         "failures": failures,
         "selected": rows[0] if rows else None,
         "limitations": [
-            "产品分配在一天内固定，当前版本未搜索操作节点切换制造配方。",
+            (
+                "制造站和贸易站产品可在上线节点切换，切换发生在收取后。"
+                if allow_product_switching
+                else "产品分配在一天内固定；可通过 allow_product_switching 开启节点切换。"
+            ),
             "房间组合库可能截断，最终结论是当前搜索设置中的最高分候选。",
             (
                 "level_grid枚举了选定布局的房间等级多重集，但求解前profile数量发生截断。"

@@ -15,11 +15,46 @@ from build_combinations import build_library, build_room_combinations
 from data_loader import load_mechanics
 from optimizer_common import context_rooms
 from layout_profiles import facility_configuration_power_summary, fixed_right_power_consumption
-from search_layouts import COMMON_PROFILES, facility_configuration, power_summary, product_splits
+from search_layouts import (
+    COMMON_PROFILES,
+    economic_result_sort_key,
+    economic_utility_lmd,
+    facility_configuration,
+    power_summary,
+    product_splits,
+)
 from simulate_schedule import simulate_assignment
+from schedule_generator import normalize_goal
 
 
 class LayoutOptimizerTests(unittest.TestCase):
+    def test_economic_utility_uses_explicit_lmd_exchange_rates(self):
+        self.assertEqual(normalize_goal("lmd_equivalent"), "lmd_equivalent")
+        self.assertEqual(economic_utility_lmd(20, 0, 0, 0), 3200)
+        self.assertEqual(economic_utility_lmd(20, 0, -1, 0), 1600)
+        self.assertEqual(economic_utility_lmd(20, 0, 0, -2), 2200)
+
+    def test_economic_sort_does_not_make_orundum_absolute_priority(self):
+        more_orundum_lower_value = {
+            "economic_utility_lmd_per_day": 9000,
+            "net_lmd_per_day": -15000,
+            "orundum_per_day": 200,
+            "battle_record_exp_per_day": 0,
+            "resource_balance_deviation": 0,
+        }
+        less_orundum_higher_value = {
+            "economic_utility_lmd_per_day": 10000,
+            "net_lmd_per_day": 2000,
+            "orundum_per_day": 50,
+            "battle_record_exp_per_day": 0,
+            "resource_balance_deviation": 0,
+        }
+        ranked = sorted(
+            [more_orundum_lower_value, less_orundum_higher_value],
+            key=economic_result_sort_key,
+        )
+        self.assertIs(ranked[0], less_orundum_higher_value)
+
     def _base_context(self, rooms, roster):
         return {
             "schema_version": 2,
@@ -112,6 +147,21 @@ class LayoutOptimizerTests(unittest.TestCase):
         self.assertTrue(all(split[2] >= 1 for split in splits))
         config = facility_configuration(profile, *splits[0])
         products = [room["product_id"] for room in config["rooms"].values()]
+        self.assertIn("battle_record", products)
+        self.assertIn("pure_gold", products)
+
+    def test_economic_search_can_compare_zero_orundum_configuration(self):
+        profile = COMMON_PROFILES["252-output"]
+        splits = product_splits(
+            profile,
+            minimum_battle_record_factories=1,
+            allow_zero_orundum=True,
+        )
+        self.assertIn((0, 0, 1), splits)
+        config = facility_configuration(profile, 0, 0, 1)
+        products = [room["product_id"] for room in config["rooms"].values()]
+        self.assertNotIn("orundum_order", products)
+        self.assertNotIn("orundum_shard", products)
         self.assertIn("battle_record", products)
         self.assertIn("pure_gold", products)
 

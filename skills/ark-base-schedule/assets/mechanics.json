@@ -282,6 +282,22 @@
         "battle_record"
       ],
       "selection_rule": "Run search_layouts.py for the owned roster; do not assume a universal layout."
+    },
+    "lmd_equivalent": {
+      "display_name": "等价龙门币",
+      "recommended_layout": "layout_search_required",
+      "trading_product": "orundum_order",
+      "factory_strategy": "mixed",
+      "factory_products": [
+        "orundum_shard",
+        "pure_gold",
+        "battle_record"
+      ],
+      "trading_products": [
+        "orundum_order",
+        "lmd_order"
+      ],
+      "selection_rule": "Value orundum, net LMD and resource shortfalls with explicit economic_values, then rank simulated candidates by LMD-equivalent utility."
     }
   },
   "shift_templates": {

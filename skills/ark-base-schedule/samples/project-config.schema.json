@@ -42,7 +42,9 @@
             "mode": {"enum": ["fixed", "optimize"]},
             "count": {"type": "integer", "minimum": 1, "maximum": 4},
             "candidate_step_minutes": {"type": "integer", "minimum": 1},
-            "max_candidates": {"type": "integer", "minimum": 1}
+            "max_candidates": {"type": "integer", "minimum": 1},
+            "continuous_refinement": {"type": "boolean"},
+            "refinement_max_candidates": {"type": "integer", "minimum": 0, "maximum": 500}
           },
           "additionalProperties": false
         },
@@ -50,6 +52,7 @@
         "minimum_originium_shard_balance": {"type": "number", "default": 0},
         "minimum_orundum_shard_balance": {"type": "number", "deprecated": true},
         "minimum_pure_gold_balance": {"type": "number", "default": 0},
+        "economic_values": {"$ref": "#/$defs/economicValues"},
         "max_daily_work_hours": {"type": "number", "minimum": 0, "maximum": 24},
         "max_orundum_trading_posts": {"type": "integer", "minimum": 1},
         "max_shard_factories": {"type": "integer", "minimum": 1},
@@ -130,6 +133,13 @@
         ,"proxy_gold_consumption_factor": {"type": "number", "minimum": 1}
         ,"proxy_lmd_cost_factor": {"type": "number", "minimum": 1}
         ,"opportunity_postprocess_max_iterations": {"type": "integer", "minimum": 0, "maximum": 20}
+        ,"allow_product_switching": {"type": "boolean"}
+        ,"adaptive_candidate_expansion_rounds": {"type": "integer", "minimum": 0, "maximum": 8}
+        ,"adaptive_candidate_expansion_factor": {"type": "number", "minimum": 1.1, "maximum": 4}
+        ,"adaptive_candidate_max_top_k": {"type": "integer", "minimum": 1}
+        ,"adaptive_candidate_max_operator_pool_size": {"type": "integer", "minimum": 1}
+        ,"random_order_trials": {"type": "integer", "minimum": 0, "maximum": 10000}
+        ,"random_order_seed": {"type": "integer"}
       }
     },
     "upgrades": {
@@ -165,6 +175,15 @@
     "facility_configuration": {"type": "object"}
   },
   "$defs": {
+    "economicValues": {
+      "type": "object",
+      "properties": {
+        "orundum_lmd": {"type": "number", "minimum": 0},
+        "orundum_shard_shortfall_lmd": {"type": "number", "minimum": 0},
+        "pure_gold_shortfall_lmd": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
     "resourceBalancePolicy": {
       "type": "object",
       "required": ["mode"],

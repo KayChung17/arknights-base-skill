@@ -312,6 +312,12 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
             not is_project_output or dormitory_plan.get("automation_rules_used") is False,
             "宿舍计划只能使用游戏机制，不得依赖外部自动化脚本或副表规则。",
         )
+        _check(
+            checks,
+            "dormitory_joint_iteration_converged",
+            not is_project_output or dormitory_plan.get("joint_iteration_converged") is True,
+            "宿舍居民、心情阈值和生产联动必须迭代到稳定。",
+        )
         right_side_names = {
             name
             for rooms in right_side_by_segment.values()

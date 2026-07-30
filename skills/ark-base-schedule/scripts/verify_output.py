@@ -278,6 +278,12 @@ def verify_output(
         not dormitory_plan or (dormitory_plan.get("repeating_day_verified") is True and bool(dormitory_operators)),
         "长期排班的 schedule.json 必须写出宿舍轮换名单。",
     )
+    _check(
+        checks,
+        "dormitory_joint_iteration_converged",
+        not dormitory_plan or dormitory_plan.get("joint_iteration_converged") is True,
+        "宿舍与生产心情联动必须迭代到稳定。",
+    )
 
     metrics = extract_core_metrics(result)
     _check(checks, "finite_core_metrics", all(math.isfinite(value) for value in metrics.values()), "核心收益指标必须是有限数值。")
