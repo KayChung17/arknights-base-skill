@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "data_version": "2026-07-29-structured-mechanisms-v7",
+  "data_version": "2026-07-30-structured-mechanisms-v8",
   "source": "Sanitized community base-skill snapshot with PRTS cross-checks; personal roster level/elite state and raw export removed",
   "operators": [
     {
@@ -422,23 +422,7 @@
       "groups": [
         "abyssal_hunter"
       ],
-      "skills": [
-        {
-          "facility": "factory",
-          "elite": 0,
-          "skill_name": "深海猎人·制造",
-          "description": "制造站生产力+20%。",
-          "base_bonus_pct": 20,
-          "tags": [
-            "abyssal_factory"
-          ],
-          "products": [
-            "pure_gold",
-            "battle_record",
-            "orundum_shard"
-          ]
-        }
-      ],
+      "skills": [],
       "id": "op_030"
     },
     {
@@ -2270,23 +2254,7 @@
       "groups": [
         "abyssal_hunter"
       ],
-      "skills": [
-        {
-          "facility": "factory",
-          "elite": 0,
-          "skill_name": "深海猎人·制造",
-          "description": "制造站生产力+20%。",
-          "base_bonus_pct": 20,
-          "tags": [
-            "abyssal_factory"
-          ],
-          "products": [
-            "pure_gold",
-            "battle_record",
-            "orundum_shard"
-          ]
-        }
-      ],
+      "skills": [],
       "id": "op_031"
     },
     {
@@ -2743,21 +2711,7 @@
       "groups": [
         "abyssal_hunter"
       ],
-      "skills": [
-        {
-          "facility": "factory",
-          "elite": 0,
-          "skill_name": "剪不断理还乱",
-          "description": "制造站生产力+25%。",
-          "base_bonus_pct": 25,
-          "tags": [],
-          "products": [
-            "pure_gold",
-            "battle_record",
-            "orundum_shard"
-          ]
-        }
-      ],
+      "skills": [],
       "id": "op_028"
     },
     {
@@ -2959,19 +2913,6 @@
           "products": [
             "hr_network"
           ]
-        },
-        {
-          "facility": "control_center",
-          "elite": 0,
-          "skill_name": "格拉斯哥帮·中枢",
-          "description": "按外部设施中的格拉斯哥帮成员提供贸易站加成。",
-          "base_bonus_pct": 0,
-          "tags": [
-            "glasgow_center"
-          ],
-          "products": [],
-          "required_level": 1,
-          "variant_group": "control_center:skill:格拉斯哥帮·中枢"
         }
       ]
     },
@@ -3354,21 +3295,7 @@
       "groups": [
         "abyssal_hunter"
       ],
-      "skills": [
-        {
-          "facility": "factory",
-          "elite": 0,
-          "skill_name": "晨夜间巡",
-          "description": "制造站生产力+25%。",
-          "base_bonus_pct": 25,
-          "tags": [],
-          "products": [
-            "pure_gold",
-            "battle_record",
-            "orundum_shard"
-          ]
-        }
-      ],
+      "skills": [],
       "id": "op_027"
     },
     {
@@ -4371,7 +4298,12 @@
               "target_group": "abyssal_hunter",
               "count_facility": "factory",
               "bonus_pct_per_member": 10.0,
-              "cap_pct_per_operator": 90.0,
+              "cap_pct_per_room": 90.0,
+              "granted_effect_skill_names": [
+                "深海猎人·制造",
+                "晨夜间巡",
+                "剪不断理还乱"
+              ],
               "non_stacking_skill_names": [
                 "自动化·α",
                 "自动化·β",
@@ -4407,7 +4339,12 @@
               "target_group": "abyssal_hunter",
               "count_facility": "factory",
               "bonus_pct_per_member": 5.0,
-              "cap_pct_per_operator": 45.0,
+              "cap_pct_per_room": 45.0,
+              "granted_effect_skill_names": [
+                "深海猎人·制造",
+                "晨夜间巡",
+                "剪不断理还乱"
+              ],
               "non_stacking_skill_names": [
                 "自动化·α",
                 "自动化·β",
@@ -4443,19 +4380,39 @@
     {
       "name": "正义骑士号",
       "groups": [
-        "red_pine"
+        "red_pine",
+        "work_platform"
       ],
       "skills": [
         {
           "facility": "power_plant",
           "elite": 0,
-          "skill_name": "红松骑士·能源",
-          "description": "红松骑士团能源联动；模型记录激活状态。",
+          "required_level": 1,
+          "skill_name": "备用能源",
+          "variant_group": "power_plant:skill:备用能源",
+          "description": "进驻发电站时，无人机充能速度+10%",
+          "base_bonus_pct": 10,
+          "model_status": "structured",
+          "tags": [],
+          "products": [
+            "drone_recovery"
+          ]
+        },
+        {
+          "facility": "power_plant",
+          "elite": 0,
+          "required_level": 30,
+          "skill_name": "“滴滴，启动！”",
+          "variant_group": "power_plant:skill:“滴滴，启动！”",
+          "description": "进驻发电站时，野鬃所在的制造站生产力+5%",
           "base_bonus_pct": 0,
+          "model_status": "structured",
           "tags": [
-            "red_pine_power"
+            "justice_wild_mane_factory_5"
           ],
-          "products": []
+          "products": [
+            "drone_recovery"
+          ]
         }
       ],
       "id": "op_040"
@@ -5442,10 +5399,29 @@
       "skills": [
         {
           "facility": "factory",
-          "elite": 0,
-          "skill_name": "红松骑士·制造",
-          "description": "制造站生产力+25%。",
+          "elite": 2,
+          "required_level": 1,
+          "skill_name": "红松骑士团·β",
+          "variant_group": "factory:name:红松骑士团",
+          "description": "进驻制造站时，生产力+25%",
           "base_bonus_pct": 25,
+          "model_status": "structured",
+          "tags": [],
+          "products": [
+            "pure_gold",
+            "battle_record",
+            "orundum_shard"
+          ]
+        },
+        {
+          "facility": "factory",
+          "elite": 0,
+          "required_level": 1,
+          "skill_name": "红松骑士团·α",
+          "variant_group": "factory:name:红松骑士团",
+          "description": "进驻制造站时，生产力+15%",
+          "base_bonus_pct": 15,
+          "model_status": "structured",
           "tags": [],
           "products": [
             "pure_gold",
@@ -8028,10 +8004,29 @@
       "skills": [
         {
           "facility": "factory",
-          "elite": 0,
-          "skill_name": "红松骑士·制造",
-          "description": "制造站生产力+25%。",
+          "elite": 2,
+          "required_level": 1,
+          "skill_name": "红松骑士团·β",
+          "variant_group": "factory:name:红松骑士团",
+          "description": "进驻制造站时，生产力+25%",
           "base_bonus_pct": 25,
+          "model_status": "structured",
+          "tags": [],
+          "products": [
+            "pure_gold",
+            "battle_record",
+            "orundum_shard"
+          ]
+        },
+        {
+          "facility": "factory",
+          "elite": 0,
+          "required_level": 1,
+          "skill_name": "红松骑士团·α",
+          "variant_group": "factory:name:红松骑士团",
+          "description": "进驻制造站时，生产力+15%",
+          "base_bonus_pct": 15,
+          "model_status": "structured",
           "tags": [],
           "products": [
             "pure_gold",

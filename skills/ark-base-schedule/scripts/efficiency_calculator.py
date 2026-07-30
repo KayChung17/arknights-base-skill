@@ -279,6 +279,15 @@ class EfficiencyCalculator:
                 active.append((op, skill))
         return active
 
+    def _global_power_skills(self) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+        active: list[tuple[dict[str, Any], dict[str, Any]]] = []
+        for op in self.global_operators:
+            if op.get("assigned_facility") != "power_plant":
+                continue
+            for skill in self._skills(op, "power_plant", "drone_recovery"):
+                active.append((op, skill))
+        return active
+
     def _global_control_heat(self) -> float:
         heat = 0.0
         for op, skill in self._global_control_skills():
@@ -906,11 +915,45 @@ class EfficiencyCalculator:
                 for skill in self._skills(op)
             )
         }
+        if (
+            "野鬃" in room_names
+            and not automation_reset_names
+            and any(
+                "justice_wild_mane_factory_5" in skill.get("tags", [])
+                for _, skill in self._global_power_skills()
+            )
+        ):
+            global_bonus += 5.0
+            result["warnings"].append("正义骑士号/“滴滴，启动！”：野鬃所在制造站生产力 +5%")
         bubble_active = any(
             "bubble_capacity_conversion" in skill.get("tags", [])
             for room_op in self.operators
             for skill in self._skills(room_op)
         )
+        room_skill_names = {
+            str(skill.get("skill_name") or "")
+            for room_op in self.operators
+            for skill in self._skills(room_op)
+        }
+        gladiia_room_bonus = 0.0
+        if (
+            gladiia_rule
+            and abyssal_factory_count > 0
+            and any(
+                str(gladiia_rule.get("target_group") or "abyssal_hunter") in self._groups(op)
+                for op in self.operators
+            )
+            and not room_skill_names.intersection(gladiia_rule.get("non_stacking_skill_names") or [])
+        ):
+            gladiia_room_bonus = min(
+                float(
+                    gladiia_rule.get(
+                        "cap_pct_per_room",
+                        gladiia_rule.get("cap_pct_per_operator", 0.0),
+                    ) or 0.0
+                ),
+                abyssal_factory_count * float(gladiia_rule.get("bonus_pct_per_member", 0.0) or 0.0),
+            )
         capacity_by_operator: dict[str, float] = {}
         for room_op in self.operators:
             extra = 0.0
@@ -936,6 +979,13 @@ class EfficiencyCalculator:
             for skill in skills:
                 tags = set(skill.get("tags", []))
                 bonus = float(skill.get("base_bonus_pct", 0))
+                if (
+                    gladiia_room_bonus > 0
+                    and str(skill.get("skill_name") or "")
+                    in set(gladiia_rule.get("non_amplifying_skill_names") or [])
+                ):
+                    detail["notes"].append("集群狩猎优先生效，配合意识不叠加")
+                    continue
                 if "hourly_growth_15_to_25" in tags:
                     if reset_by_teammate:
                         detail["notes"].append("自动化·α使该干员的时变生产力归零")
@@ -1085,23 +1135,6 @@ class EfficiencyCalculator:
                 if bonus:
                     detail["notes"].append(f"直接生产力 +{bonus:.0f}%")
 
-            if (
-                gladiia_rule
-                and not automation_reset_names
-                and str(gladiia_rule.get("target_group") or "abyssal_hunter") in self._groups(op)
-            ):
-                excluded = set(gladiia_rule.get("non_stacking_skill_names") or [])
-                available_names = {str(skill.get("skill_name") or "") for skill in skills}
-                if not available_names.intersection(excluded):
-                    value = min(
-                        float(gladiia_rule.get("cap_pct_per_operator", 0.0) or 0.0),
-                        abyssal_factory_count * float(gladiia_rule.get("bonus_pct_per_member", 0.0) or 0.0),
-                    )
-                    op_global += value
-                    detail["notes"].append(
-                        f"集群狩猎：制造站深海猎人 {abyssal_factory_count} 人，当前干员 +{value:g}%"
-                    )
-
             if reset_by_teammate:
                 removed = op_direct + op_global + max(0.0, op_facility - op_facility_count)
                 op_direct = 0.0
@@ -1122,6 +1155,12 @@ class EfficiencyCalculator:
                 "global_bonus_pct": op_global,
             })
             result["operator_details"].append(detail)
+
+        if gladiia_room_bonus:
+            global_bonus += gladiia_room_bonus
+            result["warnings"].append(
+                f"集群狩猎：全局制造站深海猎人 {abyssal_factory_count} 人，当前制造站 +{gladiia_room_bonus:g}%"
+            )
 
         if dongshi_values:
             direct_bonus = max(dongshi_values)

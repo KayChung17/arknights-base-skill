@@ -12,6 +12,53 @@ from data_loader import ASSETS_DIR, load_mechanics, load_operator_data
 from coverage_report import skill_structure_issues
 
 
+def granted_effect_conflicts(operator_data: dict) -> list[str]:
+    """Reject effect aliases that were flattened into standalone operator skills."""
+    granted_aliases: dict[tuple[str, str], list[str]] = {}
+    for operator in operator_data.get("operators", []):
+        for skill in operator.get("skills", []):
+            for rule in skill.get("special_rules") or []:
+                aliases = [str(value) for value in rule.get("granted_effect_skill_names") or [] if value]
+                facility = str(rule.get("count_facility") or "")
+                source = f"{operator.get('name')}/{skill.get('skill_name')}"
+                for alias in aliases:
+                    granted_aliases.setdefault((facility, alias), []).append(source)
+
+    errors: list[str] = []
+    for operator in operator_data.get("operators", []):
+        for skill in operator.get("skills", []):
+            key = (str(skill.get("facility") or ""), str(skill.get("skill_name") or ""))
+            sources = granted_aliases.get(key)
+            if sources:
+                errors.append(
+                    f"{operator.get('name')}/{skill.get('skill_name')}: "
+                    f"授予型效果不得作为独立技能计入；来源 {', '.join(sorted(sources))}"
+                )
+    return errors
+
+
+def singleton_semantic_tag_conflicts(operator_data: dict) -> list[str]:
+    """Detect stale aliases that duplicate one activation mechanism on an operator."""
+    singleton_tags = {"glasgow_center", "siracusa_center"}
+    errors: list[str] = []
+    for operator in operator_data.get("operators", []):
+        slots_by_tag: dict[str, set[str]] = {}
+        names_by_tag: dict[str, set[str]] = {}
+        for skill in operator.get("skills", []):
+            for tag in singleton_tags.intersection(skill.get("tags") or []):
+                slots_by_tag.setdefault(tag, set()).add(
+                    str(skill.get("variant_group") or skill.get("skill_name") or "")
+                )
+                names_by_tag.setdefault(tag, set()).add(str(skill.get("skill_name") or ""))
+        for tag, slots in slots_by_tag.items():
+            if len(slots) > 1:
+                errors.append(
+                    f"{operator.get('name')}: 单例联动标签 {tag} 出现在多个独立技能槽："
+                    f"{', '.join(sorted(names_by_tag[tag]))}"
+                )
+    return errors
+
+
 def validate() -> list[str]:
     errors: list[str] = []
     operator_data = load_operator_data()
@@ -135,6 +182,20 @@ def validate() -> list[str]:
             for rule in special_rules:
                 if rule.get("type") not in {"group_factory_bonus", "amplifier_exclusion"}:
                     errors.append(f"{name}/{skill.get('skill_name')}: 未支持 special rule {rule.get('type')}")
+                if rule.get("type") == "group_factory_bonus":
+                    if not str(rule.get("target_group") or ""):
+                        errors.append(f"{name}/{skill.get('skill_name')}: group_factory_bonus 缺少 target_group")
+                    if not str(rule.get("count_facility") or ""):
+                        errors.append(f"{name}/{skill.get('skill_name')}: group_factory_bonus 缺少 count_facility")
+                    if float(rule.get("bonus_pct_per_member", 0.0) or 0.0) <= 0:
+                        errors.append(f"{name}/{skill.get('skill_name')}: group_factory_bonus 缺少正数 bonus_pct_per_member")
+                    if float(rule.get("cap_pct_per_room", 0.0) or 0.0) <= 0:
+                        errors.append(f"{name}/{skill.get('skill_name')}: group_factory_bonus 缺少正数 cap_pct_per_room")
+                    if not rule.get("granted_effect_skill_names"):
+                        errors.append(
+                            f"{name}/{skill.get('skill_name')}: group_factory_bonus "
+                            "必须声明 granted_effect_skill_names"
+                        )
 
         variant_sets: dict[tuple[str, str], set[str]] = {}
         for skill in operator.get("skills", []):
@@ -147,6 +208,9 @@ def validate() -> list[str]:
         for (facility, normalized), groups in variant_sets.items():
             if len(groups) > 1:
                 errors.append(f"{name}/{facility}/{normalized}: αβγ升级技能必须使用同一 variant_group")
+
+    errors.extend(granted_effect_conflicts(operator_data))
+    errors.extend(singleton_semantic_tag_conflicts(operator_data))
 
     for layout_id, layout in mechanics.get("layouts", {}).items():
         total = sum(int(layout.get(key, 0)) for key in ("trading_post", "factory", "power_plant"))

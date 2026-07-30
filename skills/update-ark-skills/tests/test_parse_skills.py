@@ -99,6 +99,59 @@ class ParseTests(unittest.TestCase):
             self.assertEqual(skill["effects"][0]["stacking"], "max")
             self.assertEqual(skill["special_rules"][0]["rule_id"], "test_rule")
 
+    def test_export_explicit_zero_status_clears_stale_numeric_bonus(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            existing = {
+                "schema_version": 1,
+                "data_version": "old",
+                "operators": [{
+                    "id": "op_1",
+                    "name": "成员",
+                    "groups": [],
+                    "skills": [{
+                        "facility": "factory",
+                        "elite": 0,
+                        "skill_name": "旧占位技能",
+                        "description": "生产力+20%",
+                        "base_bonus_pct": 20,
+                        "model_status": "structured",
+                        "tags": [],
+                        "products": ["pure_gold"],
+                    }],
+                }],
+            }
+            parsed = {
+                "schema_version": 1,
+                "records": [{
+                    "name": "成员",
+                    "elite": 0,
+                    "facility": "factory",
+                    "skill_name": "旧占位技能",
+                    "description": "仅由其他技能授予",
+                    "base_bonus_pct": 0,
+                    "model_status": "description_only",
+                    "tags": [],
+                    "products": ["pure_gold"],
+                }],
+            }
+            existing_path = tmp_path / "existing.json"
+            parsed_path = tmp_path / "parsed.json"
+            output_path = tmp_path / "output.json"
+            existing_path.write_text(json.dumps(existing, ensure_ascii=False), encoding="utf-8")
+            parsed_path.write_text(json.dumps(parsed, ensure_ascii=False), encoding="utf-8")
+            subprocess.run([
+                sys.executable,
+                str(SCRIPTS / "export_operator_skills.py"),
+                "--parsed", str(parsed_path),
+                "--existing", str(existing_path),
+                "--output", str(output_path),
+                "--data-version", "new",
+            ], check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+            skill = json.loads(output_path.read_text(encoding="utf-8"))["operators"][0]["skills"][0]
+            self.assertEqual(skill["base_bonus_pct"], 0)
+            self.assertEqual(skill["model_status"], "description_only")
+
 
 class OwnedSkillTableImportTests(unittest.TestCase):
     def test_roster_scoped_block_format(self):

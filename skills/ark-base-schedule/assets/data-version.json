@@ -3,9 +3,9 @@
   "source_type": "sanitized_community_structured_snapshot",
   "source_file": null,
   "retrieved_at": "2026-07-29",
-  "data_version": "2026-07-29-structured-mechanisms-v7",
+  "data_version": "2026-07-30-structured-mechanisms-v8",
   "canonical_operator_count": 248,
-  "canonical_skill_count": 505,
+  "canonical_skill_count": 503,
   "personal_roster_state_removed": true,
   "sources": [
     {
@@ -43,6 +43,18 @@
       "url": "https://prts.wiki/w/%E6%A8%A1%E6%9D%BF:BaseSkill/info",
       "retrieved_at": "2026-07-29",
       "scope": "仓库容量转生产力、同站工作范围及大就是好！覆盖回收利用；泡泡分项链接见 mechanic-sources.md"
+    },
+    {
+      "name": "PRTS 歌蕾蒂娅",
+      "url": "https://prts.wiki/w/%E6%AD%8C%E8%95%BE%E8%92%82%E5%A8%85",
+      "retrieved_at": "2026-07-30",
+      "scope": "集群狩猎的中枢激活、制造站人数公式、上限与特殊叠加规则"
+    },
+    {
+      "name": "PRTS 灰毫、野鬃、正义骑士号、戴菲恩",
+      "url": "https://prts.wiki/w/Ashlock",
+      "retrieved_at": "2026-07-30",
+      "scope": "红松骑士团制造技能解锁阶段、正义骑士号联动、戴菲恩运筹好手解锁阶段；分项链接见 mechanic-sources.md"
     }
   ],
   "notes": "The public repository excludes the original owned-roster export and removes source account levels, elite states and source line numbers. Structured rules preserve source descriptions and use explicit effects, variant groups and special rules. The snapshot is not a complete game database."

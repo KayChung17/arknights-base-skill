@@ -19,6 +19,7 @@ from effect_resolver import EffectContribution, resolve_effects
 from optimizer_common import warehouse_capacity
 from preflight import PreflightError
 from run_project import run_project
+from validate_data import granted_effect_conflicts, singleton_semantic_tag_conflicts
 
 
 class StructuredMechanismTests(unittest.TestCase):
@@ -166,14 +167,123 @@ class StructuredMechanismTests(unittest.TestCase):
             self.assigned("乌尔比安", 0, "factory"),
             self.assigned("安哲拉", 0, "factory"),
         ]
-        expected = {0: 20, 2: 40}
+        expected = {0: 10, 2: 20}
         for elite, bonus in expected.items():
             with self.subTest(elite=elite):
                 result = EfficiencyCalculator(
                     "factory", factory, "orundum_shard",
                     global_operators=factory + [self.assigned("歌蕾蒂娅", elite, "control_center")],
                 ).compute()
+                self.assertEqual(result["layers"]["direct_bonus_pct"], 0)
                 self.assertEqual(result["layers"]["global_bonus_pct"], bonus)
+                self.assertEqual(result["paper_bonus_pct"], bonus)
+
+    def test_gladiia_bonus_is_applied_once_per_eligible_factory_room(self) -> None:
+        first = self.assigned("乌尔比安", 0, "factory")
+        first["assigned_room_id"] = "factory_1"
+        second = self.assigned("安哲拉", 0, "factory")
+        second["assigned_room_id"] = "factory_2"
+        gladiia = self.assigned("歌蕾蒂娅", 2, "control_center")
+        global_ops = [first, second, gladiia]
+
+        one_abyssal_room = EfficiencyCalculator(
+            "factory", [first], "orundum_shard", global_operators=global_ops,
+        ).compute()
+        self.assertEqual(one_abyssal_room["layers"]["global_bonus_pct"], 20)
+
+        two_abyssal_same_room = EfficiencyCalculator(
+            "factory", [first, second], "orundum_shard", global_operators=global_ops,
+        ).compute()
+        self.assertEqual(two_abyssal_same_room["layers"]["global_bonus_pct"], 20)
+
+        ordinary_room = [self.assigned("泡普卡", 0, "factory")]
+        no_abyssal = EfficiencyCalculator(
+            "factory", ordinary_room, "orundum_shard", global_operators=global_ops + ordinary_room,
+        ).compute()
+        self.assertEqual(no_abyssal["layers"]["global_bonus_pct"], 0)
+
+    def test_abyssal_factory_bonus_requires_gladiia_in_control_center(self) -> None:
+        index = operator_index()
+        for name in ("乌尔比安", "安哲拉", "斯卡蒂", "幽灵鲨"):
+            with self.subTest(name=name):
+                self.assertEqual(select_available_skills(index[name], "factory", 2, "orundum_shard", 90), [])
+                factory = [self.assigned(name, 2, "factory")]
+                result = EfficiencyCalculator(
+                    "factory", factory, "orundum_shard", global_operators=factory,
+                ).compute()
+                self.assertEqual(result["paper_bonus_pct"], 0)
+                self.assertEqual(result["layers"]["global_bonus_pct"], 0)
+
+    def test_granted_effect_alias_cannot_be_reintroduced_as_standalone_skill(self) -> None:
+        fixture = {
+            "operators": [
+                {
+                    "name": "授予者",
+                    "skills": [{
+                        "facility": "control_center",
+                        "skill_name": "体系技能",
+                        "special_rules": [{
+                            "type": "group_factory_bonus",
+                            "count_facility": "factory",
+                            "granted_effect_skill_names": ["体系授予·制造"],
+                        }],
+                    }],
+                },
+                {
+                    "name": "成员",
+                    "skills": [{
+                        "facility": "factory",
+                        "skill_name": "体系授予·制造",
+                        "base_bonus_pct": 20,
+                    }],
+                },
+            ],
+        }
+        conflicts = granted_effect_conflicts(fixture)
+        self.assertEqual(len(conflicts), 1)
+        self.assertIn("授予型效果不得作为独立技能计入", conflicts[0])
+
+    def test_red_pine_factory_skill_unlock_stages_are_preserved(self) -> None:
+        index = operator_index()
+        for name in ("灰毫", "野鬃"):
+            with self.subTest(name=name):
+                alpha = select_available_skills(index[name], "factory", 0, "battle_record", 1)
+                beta = select_available_skills(index[name], "factory", 2, "battle_record", 90)
+                self.assertEqual([(s["skill_name"], s["base_bonus_pct"]) for s in alpha], [("红松骑士团·α", 15)])
+                self.assertEqual([(s["skill_name"], s["base_bonus_pct"]) for s in beta], [("红松骑士团·β", 25)])
+
+    def test_justice_knight_power_and_wild_mane_link_use_actual_assignment(self) -> None:
+        justice = self.assigned("正义骑士号", 0, "power_plant")
+        justice["level"] = 30
+        power = EfficiencyCalculator(
+            "power_plant", [justice], "drone_recovery", global_operators=[justice],
+        ).compute()
+        self.assertEqual(power["estimated_efficiency_bonus_pct"], 10)
+
+        wild_mane = [self.assigned("野鬃", 2, "factory")]
+        active = EfficiencyCalculator(
+            "factory", wild_mane, "battle_record", global_operators=wild_mane + [justice],
+        ).compute()
+        self.assertEqual(active["layers"]["direct_bonus_pct"], 25)
+        self.assertEqual(active["layers"]["global_bonus_pct"], 5)
+
+        justice["level"] = 29
+        locked = EfficiencyCalculator(
+            "factory", wild_mane, "battle_record", global_operators=wild_mane + [justice],
+        ).compute()
+        self.assertEqual(locked["layers"]["global_bonus_pct"], 0)
+
+    def test_singleton_activation_tag_rejects_legacy_alias_slot(self) -> None:
+        fixture = {"operators": [{
+            "name": "测试干员",
+            "skills": [
+                {"skill_name": "正式技能", "variant_group": "slot:a", "tags": ["glasgow_center"]},
+                {"skill_name": "旧占位", "variant_group": "slot:b", "tags": ["glasgow_center"]},
+            ],
+        }]}
+        conflicts = singleton_semantic_tag_conflicts(fixture)
+        self.assertEqual(len(conflicts), 1)
+        self.assertIn("多个独立技能槽", conflicts[0])
 
     def test_jaye_and_snowant_do_not_amplify_each_other_alone(self) -> None:
         jaye_snowant = [
@@ -423,11 +533,13 @@ class StructuredMechanismTests(unittest.TestCase):
             self.assigned("推进之王", 0, "trading_post"),
             self.assigned("因陀罗", 0, "trading_post"),
         ]
-        control = [self.assigned("戴菲恩", 0, "control_center")]
-        result = EfficiencyCalculator(
-            "trading_post", trading, "lmd_order", global_operators=trading + control,
-        ).compute()
-        self.assertEqual(result["layers"]["global_bonus_pct"], 20)
+        for elite, expected in ((0, 0), (2, 20)):
+            with self.subTest(dagda_elite=elite):
+                control = [self.assigned("戴菲恩", elite, "control_center")]
+                result = EfficiencyCalculator(
+                    "trading_post", trading, "lmd_order", global_operators=trading + control,
+                ).compute()
+                self.assertEqual(result["layers"]["global_bonus_pct"], expected)
 
     def test_conditional_power_plant_skills_use_actual_assignments(self) -> None:
         friston = self.assigned("Friston-3", 0, "power_plant")

@@ -56,9 +56,15 @@ def main() -> int:
         parsed_bonus = record.get("base_bonus_pct")
         parsed_mechanism = record.get("mechanism")
         parsed_status = record.get("model_status")
+        explicit_zero_statuses = {"verified_zero", "conservative_zero", "description_only", "unsupported"}
         resolved_bonus = (
             float(parsed_bonus)
-            if parsed_bonus not in (None, "") and (float(parsed_bonus) != 0 or not existing_match)
+            if parsed_bonus not in (None, "")
+            and (
+                float(parsed_bonus) != 0
+                or not existing_match
+                or parsed_status in explicit_zero_statuses
+            )
             else float(existing_match.get("base_bonus_pct", 0))
         )
         resolved_tags = parsed_tags or list(existing_match.get("tags", []))
