@@ -194,21 +194,54 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
                 f"龙门币净变化必须不低于{float(lmd_floor):.3f}。",
             )
         shard_floor = constraints.get("minimum_orundum_shard_balance", constraints.get("orundum_shard_balance_min"))
+        balance_policy = constraints.get("balance_policy") or {}
+        shard_policy = balance_policy.get("originium_shard") or {"mode": "hard"}
+        gold_policy = balance_policy.get("pure_gold") or {"mode": "hard"}
         if shard_floor is not None:
+            shard_mode = str(shard_policy.get("mode", "hard"))
+            shard_minimum = shard_policy.get("hard_minimum") if shard_mode == "soft" else shard_floor
             _check(
                 checks,
-                "shard_balance_floor",
-                float(selected.get("orundum_shard_balance", -math.inf)) + TOLERANCE >= float(shard_floor),
-                f"源石碎片净变化必须不低于{float(shard_floor):.3f}。",
+                "shard_balance_floor" if shard_mode == "hard" else "shard_balance_soft_safety_floor",
+                shard_minimum is None or float(selected.get("orundum_shard_balance", -math.inf)) + TOLERANCE >= float(shard_minimum),
+                (
+                    f"源石碎片净变化必须不低于{float(shard_floor):.3f}。"
+                    if shard_mode == "hard"
+                    else f"源石碎片目标为{float(shard_floor):.3f}，软约束实际值为{float(selected.get('orundum_shard_balance', 0.0)):.3f}，硬安全线为{shard_minimum}。"
+                ),
             )
+            if shard_mode == "soft":
+                shard_actual = float(selected.get("orundum_shard_balance", -math.inf))
+                _check(
+                    checks,
+                    "shard_balance_soft_target",
+                    shard_actual + TOLERANCE >= float(shard_floor),
+                    f"源石碎片软目标为{float(shard_floor):.3f}，实际值为{shard_actual:.3f}；该方案会消耗库存。",
+                    severity="warning",
+                )
         gold_floor = constraints.get("minimum_pure_gold_balance", constraints.get("pure_gold_balance_min"))
         if gold_floor is not None:
+            gold_mode = str(gold_policy.get("mode", "hard"))
+            gold_minimum = gold_policy.get("hard_minimum") if gold_mode == "soft" else gold_floor
             _check(
                 checks,
-                "pure_gold_balance_floor",
-                float(selected.get("pure_gold_balance", -math.inf)) + TOLERANCE >= float(gold_floor),
-                f"赤金净变化必须不低于{float(gold_floor):.3f}。",
+                "pure_gold_balance_floor" if gold_mode == "hard" else "pure_gold_balance_soft_safety_floor",
+                gold_minimum is None or float(selected.get("pure_gold_balance", -math.inf)) + TOLERANCE >= float(gold_minimum),
+                (
+                    f"赤金净变化必须不低于{float(gold_floor):.3f}。"
+                    if gold_mode == "hard"
+                    else f"赤金目标为{float(gold_floor):.3f}，软约束实际值为{float(selected.get('pure_gold_balance', 0.0)):.3f}，硬安全线为{gold_minimum}。"
+                ),
             )
+            if gold_mode == "soft":
+                gold_actual = float(selected.get("pure_gold_balance", -math.inf))
+                _check(
+                    checks,
+                    "pure_gold_balance_soft_target",
+                    gold_actual + TOLERANCE >= float(gold_floor),
+                    f"赤金软目标为{float(gold_floor):.3f}，实际值为{gold_actual:.3f}；该方案会消耗库存。",
+                    severity="warning",
+                )
 
         solver_result = selected.get("solver_result") or value
         solver = solver_result.get("solver") or {}
@@ -298,6 +331,20 @@ def audit_result(value: dict[str, Any]) -> dict[str, Any]:
             _check(checks, "secondary_output_dominance_checked", secondary.get("checked") is True, "必须执行免费副产出支配检查。")
             remaining = secondary.get("remaining_dominated_empty_slots") or []
             _check(checks, "no_dominated_empty_slot", not remaining, f"仍存在可免费提高产出的空位: {remaining}")
+        opportunity = ((solver_result.get("selected_solution") or {}).get("opportunity_cost_postprocess"))
+        if opportunity is not None:
+            _check(
+                checks,
+                "opportunity_cost_reoptimization_checked",
+                opportunity.get("checked") is True,
+                "被覆盖的高价值技能必须经过释放与全日反事实重排。",
+            )
+            _check(
+                checks,
+                "opportunity_cost_neighborhood_reported",
+                isinstance(opportunity.get("remaining_opportunity_risks"), list),
+                "机会成本搜索必须记录剩余风险，供候选截断范围解释。",
+            )
 
     errors = [item for item in checks if not item["ok"] and item["severity"] == "error"]
     warnings = [item for item in checks if not item["ok"] and item["severity"] == "warning"]

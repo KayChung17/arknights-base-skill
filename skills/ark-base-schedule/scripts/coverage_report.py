@@ -147,7 +147,7 @@ def build_coverage_report(
             seen: set[tuple[str, str]] = set()
             for product in product_candidates:
                 for skill in select_available_skills(record, facility, op.elite, product, op.level):
-                    key = (str(skill.get("variant_group") or skill.get("skill_name") or ""), product)
+                    key = (str(skill.get("facility") or ""), str(skill.get("variant_group") or skill.get("skill_name") or ""))
                     if key in seen:
                         continue
                     seen.add(key)

@@ -116,6 +116,68 @@ def _normalise_drone_allocations(items: list[dict[str, Any]] | None) -> dict[str
     return result
 
 
+def resource_sustainability(
+    shard_balance: float,
+    pure_gold_balance: float,
+    *,
+    inventory: dict[str, Any] | None = None,
+    horizon: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Classify whether a daily resource flow can repeat from configured stock."""
+    stock = inventory or {}
+    balances = {
+        "orundum_shard": float(shard_balance),
+        "pure_gold": float(pure_gold_balance),
+    }
+    stock_keys = {
+        "orundum_shard": ("originium_shard", "orundum_shard"),
+        "pure_gold": ("pure_gold",),
+    }
+    daily_drawdown = {key: max(0.0, -value) for key, value in balances.items()}
+    runway_days: dict[str, float | None] = {}
+    for resource, drawdown in daily_drawdown.items():
+        if drawdown <= 1e-9:
+            runway_days[resource] = None
+            continue
+        configured = next((stock.get(key) for key in stock_keys[resource] if key in stock), None)
+        runway_days[resource] = None if configured is None else max(0.0, float(configured)) / drawdown
+
+    consuming = [key for key, value in daily_drawdown.items() if value > 1e-9]
+    known_runways = [runway_days[key] for key in consuming if runway_days[key] is not None]
+    if known_runways and min(known_runways) <= 1e-9:
+        overall_runway = 0.0
+    elif len(known_runways) == len(consuming) and consuming:
+        overall_runway = min(known_runways)
+    else:
+        overall_runway = None
+    repeatable = not consuming
+    horizon_value = horizon or {}
+    horizon_mode = str(horizon_value.get("mode", "steady_state"))
+    required_days = float(horizon_value.get("days", 0.0) or 0.0) if horizon_mode == "finite_days" else None
+    if repeatable:
+        feasible_for_horizon: bool | None = True
+    elif horizon_mode == "steady_state":
+        feasible_for_horizon = False
+    elif overall_runway is None:
+        feasible_for_horizon = None
+    else:
+        feasible_for_horizon = overall_runway + 1e-9 >= float(required_days or 0.0)
+    return {
+        "repeatable_without_inventory": repeatable,
+        "classification": "sustainable_repeating_day" if repeatable else "inventory_consuming_candidate",
+        "daily_drawdown": daily_drawdown,
+        "configured_inventory": {
+            resource: next((stock.get(key) for key in stock_keys[resource] if key in stock), None)
+            for resource in balances
+        },
+        "runway_days": runway_days,
+        "overall_runway_days": overall_runway,
+        "horizon_mode": horizon_mode,
+        "required_days": required_days,
+        "feasible_for_configured_horizon": feasible_for_horizon,
+    }
+
+
 def simulate_assignment(
     context: dict[str, Any],
     library: dict[str, Any],
@@ -209,6 +271,12 @@ def simulate_assignment(
                     facility_level=int(room.get("level", 1)),
                     training_room_level=int(
                         (((context.get("base_state") or {}).get("right_side_levels") or {}).get("training_room", 3))
+                    ),
+                    office_level=int(
+                        (((context.get("base_state") or {}).get("right_side_levels") or {}).get("office", 3))
+                    ),
+                    reception_room_level=int(
+                        (((context.get("base_state") or {}).get("right_side_levels") or {}).get("reception_room", 3))
                     ),
                     dormitory_levels=list((context.get("base_state") or {}).get("dormitory_levels") or [1, 1, 1, 1]),
                     dormitory_occupant_count=dormitory_occupant_count,
@@ -541,6 +609,39 @@ def simulate_assignment(
     shard_balance = aggregate.get("orundum_shard", 0.0) - aggregate.get("orundum_shard_consumption", 0.0)
     net_lmd_balance = aggregate.get("lmd", 0.0) - aggregate.get("lmd_cost", 0.0)
     pure_gold_balance = aggregate.get("pure_gold", 0.0) - aggregate.get("pure_gold_consumption", 0.0)
+    balance_evaluation = {
+        "orundum_shard": {
+            "mode": str(settings.get("orundum_shard_balance_mode", "hard")),
+            "target": float(settings.get("minimum_orundum_shard_balance", 0.0)),
+            "hard_minimum": settings.get("hard_minimum_orundum_shard_balance"),
+            "actual": shard_balance,
+            "shortfall": max(0.0, float(settings.get("minimum_orundum_shard_balance", 0.0)) - shard_balance),
+        },
+        "pure_gold": {
+            "mode": str(settings.get("pure_gold_balance_mode", "hard")),
+            "target": float(settings.get("minimum_pure_gold_balance", 0.0)),
+            "hard_minimum": settings.get("hard_minimum_pure_gold_balance"),
+            "actual": pure_gold_balance,
+            "shortfall": max(0.0, float(settings.get("minimum_pure_gold_balance", 0.0)) - pure_gold_balance),
+        },
+    }
+    soft_shortfall_penalty = 0.0
+    if balance_evaluation["orundum_shard"]["mode"] == "soft":
+        soft_shortfall_penalty += balance_evaluation["orundum_shard"]["shortfall"] * float(
+            settings.get("orundum_shard_shortfall_penalty", 0.0)
+        )
+    if balance_evaluation["pure_gold"]["mode"] == "soft":
+        soft_shortfall_penalty += balance_evaluation["pure_gold"]["shortfall"] * float(
+            settings.get("pure_gold_shortfall_penalty", 0.0)
+        )
+    actual_score -= soft_shortfall_penalty
+    balance_evaluation["soft_shortfall_objective_penalty"] = soft_shortfall_penalty
+    sustainability = resource_sustainability(
+        shard_balance,
+        pure_gold_balance,
+        inventory=((context.get("base_state") or {}).get("inventory") or {}),
+        horizon=context.get("horizon") or {},
+    )
     if shard_balance < -1e-6:
         warnings.append(f"源石碎片经济流为负：{shard_balance:.2f}")
     if net_lmd_balance < -1e-6:
@@ -561,6 +662,8 @@ def simulate_assignment(
         "orundum_shard_balance": shard_balance,
         "net_lmd_balance": net_lmd_balance,
         "pure_gold_balance": pure_gold_balance,
+        "resource_balance_evaluation": balance_evaluation,
+        "resource_sustainability": sustainability,
         "continuity_matches": continuity_matches,
         "room_results": room_results,
         "drone_plan": {

@@ -14,6 +14,11 @@ from typing import Any, Iterable
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 ASSETS_DIR = SKILL_ROOT / "assets"
 
+OPERATOR_NAME_ALIASES = {
+    "阿米娅（医疗）": "阿米娅",
+    "阿米娅（近卫）": "阿米娅",
+}
+
 
 @dataclass(frozen=True)
 class OwnedOperator:
@@ -64,6 +69,9 @@ def operator_index() -> dict[str, dict]:
     for name, groups in operator_group_index().items():
         if name in index:
             index[name]["groups"] = sorted(groups)
+    for alias, canonical in OPERATOR_NAME_ALIASES.items():
+        if canonical in index:
+            index[alias] = index[canonical]
     return index
 
 

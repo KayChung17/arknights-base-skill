@@ -173,11 +173,13 @@
                             "enum": [
                               "layout_external_gte_field",
                               "layout_field_gt_external",
-                              "control_center_group_companion"
+                              "control_center_group_companion",
+                              "global_group_at_facility_minimum"
                             ]
                           },
                           "group": {"type": "string"},
-                          "minimum_count": {"type": "integer", "minimum": 1}
+                          "minimum_count": {"type": "integer", "minimum": 1},
+                          "facility": {"type": "string"}
                         },
                         "additionalProperties": false
                       }

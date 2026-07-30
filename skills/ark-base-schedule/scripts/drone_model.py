@@ -117,6 +117,44 @@ def _operator_elite(combo: dict[str, Any] | None, name: str) -> int:
     return 0
 
 
+def special_order_resolution(combo: dict[str, Any] | None) -> dict[str, Any]:
+    """Explain active and suppressed order effects for one trading-post crew."""
+
+    names = _operator_names(combo)
+    present: list[dict[str, str]] = []
+    definitions = (
+        ("佩佩", "pepe_exclusive_order"),
+        ("可露希尔", "closure_special_order"),
+        ("U-Official", "u_official_two_gold_order"),
+        ("但书", "proviso_breach_order"),
+        ("龙舌兰", "tequila_investment_order"),
+    )
+    for operator, effect in definitions:
+        if operator in names:
+            present.append({"operator": operator, "effect": effect})
+
+    active: list[dict[str, str]] = []
+    suppressed: list[dict[str, str]] = []
+    exclusive_index = next(
+        (index for index, item in enumerate(present) if item["effect"] in {
+            "pepe_exclusive_order", "closure_special_order", "u_official_two_gold_order",
+        }),
+        None,
+    )
+    if exclusive_index is not None:
+        active.append(present[exclusive_index])
+        suppressed.extend(present[exclusive_index + 1:])
+    else:
+        # Proviso and Tequila apply to disjoint original-order classes and can
+        # therefore both remain live when no higher-priority fixed order exists.
+        active.extend(present)
+    return {
+        "active": active,
+        "suppressed": suppressed,
+        "has_suppressed_high_value_effect": bool(suppressed),
+    }
+
+
 def _weighted_order(distribution: Iterable[dict[str, Any]]) -> dict[str, float]:
     total_probability = 0.0
     totals = {"minutes": 0.0, "pure_gold": 0.0, "lmd": 0.0}
@@ -137,6 +175,7 @@ def _tailoring_grade(combo: dict[str, Any] | None, name: str, elite: int) -> str
         "卡夫卡": (0, 2),
         "贝娜": (2, None),
         "明椒": (0, 2),
+        "折光": (0, 2),
     }
     alpha_elite, beta_elite = known.get(name, (None, None))
     if beta_elite is not None and elite >= beta_elite:

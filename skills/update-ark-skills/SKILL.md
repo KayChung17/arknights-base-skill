@@ -23,9 +23,9 @@ description: 导入、解析、规范化、合并并校验明日方舟基建技�
 - 合并旧数据时，带显式零值 `model_status` 的记录必须允许清除历史数值；禁止把旧的非零占位值静默带回。
 - 同一干员的单例联动标签只能出现在一个独立技能槽；发现旧占位与正式技能并存时停止发布。
 - `model_status` 必须区分 `structured`、`verified_zero`、`description_only` 和 `unsupported`。
-- 内置拥有干员表只是回归快照，不得宣传为游戏全部干员数据。
+- 全量 `skills_parsed.txt` 作为干员与技能主集合；现有 `operator-skills.json` 只作为复杂机制、阵营和特殊叠加规则的覆盖层。用户 roster 仅提供拥有状态与练度。
 
-## 导入拥有干员技能表
+## 导入全量或账号范围技能表
 
 ```bash
 python scripts/import_owned_skill_table.py \

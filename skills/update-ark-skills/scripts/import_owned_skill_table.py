@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Import the roster-scoped Chinese base-skill table into operator-skills.json.
+"""Import full or roster-scoped Chinese base-skill tables into operator-skills.json.
 
 Expected block format::
 
@@ -60,7 +60,7 @@ EXTRA_GROUPS = {
         "安洁莉娜", "拉普兰德", "普罗旺斯", "红云", "布洛卡", "巫恋", "铃兰", "贾维", "奥斯塔",
         "斥罪", "子月", "伺夜", "阿罗玛", "忍冬", "裁度", "荒芜拉普兰德", "贝洛内", "复奏", "德克萨斯",
     },
-    "lungmen_guard_department": {"陈", "星熊", "诗怀雅"},
+    "lungmen_guard_department": {"陈", "星熊", "诗怀雅", "斩业星熊"},
     "alternate": {
         "百炼嘉维尔", "承曦格雷伊", "赤刃明霄陈", "纯烬艾雅法拉", "淬羽赫默", "涤火杰西卡",
         "归溟幽灵鲨", "寒芒克洛丝", "荒芜拉普兰德", "火龙S黑角", "假日威龙陈", "缄默德克萨斯",
@@ -135,17 +135,62 @@ KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
     ("戴菲恩", "运筹好手"): ["glasgow_center"],
     ("红隼", "捍卫之道"): ["control_room_all_morale_recovery_0.05"],
     ("魔王", "“未完的故事”"): ["demon_king_amiya_pair_morale_recovery_0.10"],
+    ("折光", "鉴定师的眼光"): ["morale_cost_minus_0.25", "time_dependent_probability", "tailoring_alpha_empirical"],
+    ("折光", "鉴定师的手段"): ["morale_cost_minus_0.25", "time_dependent_probability", "tailoring_beta_empirical"],
+    ("贝洛内", "家族经营·α"): ["vigil_anywhere_trade_bonus_5"],
+    ("贝洛内", "家族经营·β"): ["vigil_anywhere_trade_bonus_10"],
+    ("贝洛内", "未偿还的债务"): ["vigil_same_room_order_capacity_2", "vigil_same_room_morale_reduction_0.1"],
+    ("黑键", "乐感"): ["perception_per_dorm_occupant_1", "perception_to_silent_resonance_1"],
+    ("黑键", "徘徊旋律"): ["trade_per_silent_resonance_4_1"],
+    ("黑键", "怅惘和声"): ["trade_per_silent_resonance_2_1"],
+    ("深律", "心声图绘"): ["silent_resonance_per_extra_recruitment_slot_15"],
+    ("伺夜", "新城贸易"): ["trade_reception_room_level_5_cap_40"],
 }
 
 KNOWN_BASE_BONUS_OVERRIDES: dict[tuple[str, str], float] = {
     ("巫恋", "低语"): 0.0,
     ("龙舌兰", "投资·α"): 0.0,
     ("龙舌兰", "投资·β"): 0.0,
+    ("深律", "心声图绘"): 0.0,
+}
+
+KNOWN_EFFECTS: dict[tuple[str, str], list[dict[str, Any]]] = {
+    ("Mon3tr", "最高权限"): [{
+        "effect_key": "global_factory_productivity_pct",
+        "stacking": "max",
+        "value_pct": 2.0,
+    }],
+    ("布丁", "超频"): [{
+        "effect_key": "global_factory_productivity_pct",
+        "stacking": "max",
+        "value_pct": 2.0,
+        "condition": {
+            "type": "global_group_at_facility_minimum",
+            "group": "work_platform",
+            "facility": "power_plant",
+            "minimum_count": 2,
+        },
+    }],
+    ("斩业星熊", "共事情谊"): [{
+        "effect_key": "global_factory_productivity_pct",
+        "stacking": "max",
+        "value_pct": 3.0,
+        "condition": {
+            "type": "control_center_group_companion",
+            "group": "lungmen_guard_department",
+            "minimum_count": 2,
+        },
+    }],
+}
+
+LEGACY_SKILL_RENAMES: dict[tuple[str, str], str] = {
+    ("缪尔赛思", "莱茵科技·能源"): "生态科主任",
 }
 
 OBSOLETE_TAGS_BY_SKILL: dict[tuple[str, str], set[str]] = {
     ("巫恋", "低语"): {"override_room_direct_bonus", "morale_cost_plus_0.25"},
     ("龙舌兰", "投资·β"): {"independent_order_lmd_500"},
+    ("贝洛内", "未偿还的债务"): {"order_capacity_2", "morale_cost_minus_0.1"},
 }
 
 
@@ -167,6 +212,8 @@ KNOWN_VARIANT_GROUPS: dict[str, list[set[str]]] = {
     "维娜·维多利亚": [{"外贸决议·β", "外贸决议·α"}],
     "雷蛇": [{"脉冲电弧·β", "脉冲电弧·α"}],
     "雪猎": [{"独当一面", "虔信"}],
+    "折光": [{"鉴定师的眼光", "鉴定师的手段"}],
+    "黑键": [{"徘徊旋律", "怅惘和声"}],
 }
 
 def normalized_variant_name(skill_name: str) -> str:
@@ -280,7 +327,9 @@ def infer_tags(name: str, skill_name: str, description: str) -> list[str]:
     if "订单上限+" in description:
         match = re.search(r"订单上限\+([0-9]+)", description)
         if match:
-            tags.append(f"order_capacity_{match.group(1)}")
+            clause = description[:match.start()].rsplit("；", 1)[-1]
+            if not any(word in clause for word in ("如果", "当与", "当自身", "每有", "每个", "每名", "根据")):
+                tags.append(f"order_capacity_{match.group(1)}")
     if "最终达到" in description and "%" in description:
         tags.append("time_dependent")
     if "工作时长影响概率" in description:
@@ -292,6 +341,8 @@ def infer_tags(name: str, skill_name: str, description: str) -> list[str]:
 
 def parse_table(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     lines = path.read_text(encoding="utf-8-sig").splitlines()
+    if not any(HEADER_RE.match(line.strip()) for line in lines):
+        return parse_full_delimited_table(lines)
     operators: list[dict[str, Any]] = []
     warnings: list[str] = []
     current: dict[str, Any] | None = None
@@ -351,7 +402,63 @@ def parse_table(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     return operators, warnings
 
 
-def merge_existing(parsed: list[dict[str, Any]], existing_path: Path | None) -> list[dict[str, Any]]:
+def parse_full_delimited_table(lines: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Parse one complete skill per line: operator|unlock|facility|name|description."""
+    by_name: dict[str, dict[str, Any]] = {}
+    warnings: list[str] = []
+    for line_no, raw in enumerate(lines, 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("|", 4)]
+        if len(parts) != 5:
+            warnings.append(f"第 {line_no} 行字段数不是5: {line[:120]}")
+            continue
+        name, unlock, facility_label, skill_name, description = parts
+        if name in {"干员名", "干员名称", "operator", "name"}:
+            continue
+        facility = FACILITY_ALIASES.get(facility_label, "")
+        if not all((name, skill_name, description)) or not facility:
+            warnings.append(f"第 {line_no} 行字段无效或设施未知: {line[:120]}")
+            continue
+        operator = by_name.setdefault(name, {
+            "id": stable_operator_id(name),
+            "name": name,
+            "groups": [],
+            "skills": [],
+        })
+        elite, required_level = unlock_requirement(unlock)
+        base_bonus = KNOWN_BASE_BONUS_OVERRIDES.get(
+            (name, skill_name), first_direct_percent(description, facility),
+        )
+        tags = infer_tags(name, skill_name, description)
+        operator["skills"].append({
+            "facility": facility,
+            "elite": elite,
+            "required_level": required_level,
+            "skill_name": skill_name,
+            "variant_group": variant_group(name, facility, skill_name),
+            "description": description,
+            "base_bonus_pct": base_bonus,
+            "model_status": "structured" if abs(base_bonus) > 1e-12 or tags else "description_only",
+            "tags": tags,
+            "products": products_for(facility, description, name, skill_name),
+            "source_line": line_no,
+            **({"effects": KNOWN_EFFECTS[(name, skill_name)]} if (name, skill_name) in KNOWN_EFFECTS else {}),
+        })
+    for operator in by_name.values():
+        for group, members in EXTRA_GROUPS.items():
+            if operator["name"] in members:
+                operator["groups"].append(group)
+    return sorted(by_name.values(), key=lambda item: item["name"]), warnings
+
+
+def merge_existing(
+    parsed: list[dict[str, Any]],
+    existing_path: Path | None,
+    *,
+    retain_existing_only: bool = True,
+) -> list[dict[str, Any]]:
     by_name = {item["name"]: item for item in parsed}
     if not existing_path or not existing_path.exists():
         return sorted(by_name.values(), key=lambda item: item["name"])
@@ -359,7 +466,8 @@ def merge_existing(parsed: list[dict[str, Any]], existing_path: Path | None) -> 
     for old in existing.get("operators", []):
         target = by_name.get(old["name"])
         if target is None:
-            by_name[old["name"]] = old
+            if retain_existing_only:
+                by_name[old["name"]] = old
             continue
         target["groups"] = sorted(set(target.get("groups", [])) | set(old.get("groups", [])))
         for old_skill in old.get("skills", []):
@@ -370,11 +478,19 @@ def merge_existing(parsed: list[dict[str, Any]], existing_path: Path | None) -> 
             model_status = old_skill.get("model_status")
             if not tags and not mechanism and not effects and not special_rules and model_status is None:
                 continue
+            matched_skill_name = LEGACY_SKILL_RENAMES.get(
+                (old["name"], str(old_skill.get("skill_name") or "")),
+                old_skill.get("skill_name"),
+            )
+            renamed_legacy_skill = matched_skill_name != old_skill.get("skill_name")
             exact = next((
                 skill for skill in target["skills"]
                 if skill.get("facility") == old_skill.get("facility")
-                and skill.get("skill_name") == old_skill.get("skill_name")
-                and int(skill.get("elite", 0)) == int(old_skill.get("elite", 0))
+                and skill.get("skill_name") == matched_skill_name
+                and (
+                    renamed_legacy_skill
+                    or int(skill.get("elite", 0)) == int(old_skill.get("elite", 0))
+                )
             ), None)
             if exact is not None:
                 obsolete = OBSOLETE_TAGS_BY_SKILL.get((target["name"], str(exact.get("skill_name") or "")), set())
@@ -434,13 +550,23 @@ def main() -> int:
     args = parser.parse_args()
 
     source_operators, warnings = parse_table(Path(args.input))
+    source_lines = Path(args.input).read_text(encoding="utf-8-sig").splitlines()
+    full_delimited_source = not any(HEADER_RE.match(line.strip()) for line in source_lines)
     source_operator_count = len(source_operators)
     source_skill_count = sum(len(item.get("skills", [])) for item in source_operators)
-    operators = merge_existing(source_operators, Path(args.existing) if args.existing else None)
+    operators = merge_existing(
+        source_operators,
+        Path(args.existing) if args.existing else None,
+        retain_existing_only=not full_delimited_source,
+    )
     payload = {
         "schema_version": 1,
         "data_version": args.data_version,
-        "source": "Roster-scoped owned operator base-skill table; imported with conservative structured extraction",
+        "source": (
+            "Full operator base-skill table with structured-rule overlay"
+            if full_delimited_source
+            else "Roster-scoped operator base-skill table with structured-rule overlay"
+        ),
         "operators": operators,
         "import_summary": {
             "source_operator_count": source_operator_count,

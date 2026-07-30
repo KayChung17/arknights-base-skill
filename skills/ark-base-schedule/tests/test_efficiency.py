@@ -70,6 +70,8 @@ class EfficiencyTests(unittest.TestCase):
         closure = next(x for x in result["operator_details"] if x["name"] == "可露希尔")
         jaye = next(x for x in result["operator_details"] if x["name"] == "孑")
         self.assertEqual(closure["direct_bonus_pct"], 0)
+        self.assertEqual(closure["cleared_efficiency_pct"], 10)
+        self.assertEqual(closure["efficiency_cleared_by"], "shamare_whisper")
         self.assertEqual(jaye["global_bonus_pct"], 0)
 
     def test_shamare_whisper_roomwide_morale_cost(self):

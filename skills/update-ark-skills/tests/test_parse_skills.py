@@ -154,6 +154,53 @@ class ParseTests(unittest.TestCase):
 
 
 class OwnedSkillTableImportTests(unittest.TestCase):
+    def test_full_delimited_table_format(self):
+        from import_owned_skill_table import parse_table
+
+        source = """机械师|精2|制造站|“我睡过了”|进驻制造站时，若单次工作时长达到12小时，生产力+10%
+机械师|无|制造站|作战指导录像|进驻制造站时，作战记录类配方的生产力+30%
+佩德洛|精2|训练室|实战技巧：游击手|进驻训练室协助位时，辅助干员的专精技能训练速度+30%
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "skills_parsed.txt"
+            path.write_text(source, encoding="utf-8")
+            operators, warnings = parse_table(path)
+        self.assertEqual(warnings, [])
+        self.assertEqual(len(operators), 2)
+        mechanic = next(item for item in operators if item["name"] == "机械师")
+        self.assertEqual(len(mechanic["skills"]), 2)
+        record_skill = next(item for item in mechanic["skills"] if item["skill_name"] == "作战指导录像")
+        self.assertEqual(record_skill["base_bonus_pct"], 30)
+        self.assertEqual(record_skill["products"], ["battle_record"])
+
+    def test_full_table_drops_old_only_aliases_and_migrates_renamed_skill(self):
+        from import_owned_skill_table import merge_existing, parse_table
+
+        source = "缪尔赛思|精2|发电站|生态科主任|进驻发电站时，无人机充能速度+10%\n"
+        existing = {"operators": [
+            {
+                "id": "old_muelsyse", "name": "缪尔赛思", "groups": ["rhine_lab"],
+                "skills": [{
+                    "facility": "power_plant", "elite": 0, "skill_name": "莱茵科技·能源",
+                    "description": "旧名", "base_bonus_pct": 0,
+                    "tags": ["muelsyse_drone_per_rhine"], "products": [], "model_status": "structured",
+                }],
+            },
+            {"id": "alias", "name": "旧别名", "groups": [], "skills": []},
+        ]}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_path = root / "skills_parsed.txt"
+            existing_path = root / "existing.json"
+            source_path.write_text(source, encoding="utf-8")
+            existing_path.write_text(json.dumps(existing, ensure_ascii=False), encoding="utf-8")
+            parsed, _ = parse_table(source_path)
+            merged = merge_existing(parsed, existing_path, retain_existing_only=False)
+        self.assertEqual([item["name"] for item in merged], ["缪尔赛思"])
+        self.assertEqual(len(merged[0]["skills"]), 1)
+        self.assertEqual(merged[0]["skills"][0]["skill_name"], "生态科主任")
+        self.assertIn("muelsyse_drone_per_rhine", merged[0]["skills"][0]["tags"])
+
     def test_roster_scoped_block_format(self):
         from import_owned_skill_table import parse_table
 

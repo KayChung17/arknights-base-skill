@@ -18,10 +18,26 @@ from drone_model import (
     recovered_drones,
     recovery_rate_per_hour,
     simulate_lmd_order_queue,
+    special_order_resolution,
 )
 
 
 class DroneModelTests(unittest.TestCase):
+    def test_special_order_resolution_reports_suppressed_high_value_effects(self):
+        resolution = special_order_resolution({"operators": [
+            {"name": "巫恋", "elite": 2},
+            {"name": "可露希尔", "elite": 2},
+            {"name": "但书", "elite": 2},
+        ]})
+        self.assertEqual(resolution["active"], [
+            {"operator": "可露希尔", "effect": "closure_special_order"}
+        ])
+        self.assertIn(
+            {"operator": "但书", "effect": "proviso_breach_order"},
+            resolution["suppressed"],
+        )
+        self.assertTrue(resolution["has_suppressed_high_value_effect"])
+
     def test_recovery_formula(self):
         self.assertAlmostEqual(recovery_rate_per_hour(0), 10.0)
         self.assertAlmostEqual(recovery_rate_per_hour(45), 14.5)
@@ -88,6 +104,15 @@ class DroneModelTests(unittest.TestCase):
         mature = expected_lmd_order(3, beta, warmup_hours=5.0)
         self.assertAlmostEqual(warming["pure_gold"], 3.7333333333)
         self.assertAlmostEqual(mature["pure_gold"], 3.8)
+
+        refraction_alpha = expected_lmd_order(
+            3, {"operators": [{"name": "折光", "elite": 0}]}, warmup_hours=3.0,
+        )
+        refraction_beta = expected_lmd_order(
+            3, {"operators": [{"name": "折光", "elite": 2}]}, warmup_hours=5.0,
+        )
+        self.assertAlmostEqual(refraction_alpha["pure_gold"], 3.4)
+        self.assertAlmostEqual(refraction_beta["pure_gold"], 3.8)
 
     def test_special_order_priority_is_exclusive(self):
         combo = {"operators": [

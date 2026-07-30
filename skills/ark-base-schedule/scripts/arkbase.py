@@ -10,6 +10,8 @@ import sys
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="arkbase", description="明日方舟基建布局、排班、无人机和培养优化")
     sub = parser.add_subparsers(dest="command", required=True)
 

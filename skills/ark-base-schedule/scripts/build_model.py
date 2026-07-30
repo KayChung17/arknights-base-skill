@@ -102,6 +102,9 @@ def _solver_settings(context: dict[str, Any]) -> dict[str, Any]:
         except (TypeError, ValueError):
             baseline_delta = -4.0
     settings.setdefault("minimum_orundum_shard_balance", baseline_delta)
+    settings.setdefault("orundum_shard_balance_mode", "hard")
+    settings.setdefault("orundum_shard_shortfall_penalty", 0.0)
+    settings.setdefault("hard_minimum_orundum_shard_balance", None)
     settings.setdefault(
         "resource_balance_safety_factor",
         1.07 if goal in {"gold_origin", "all_origin", "max_origin"} else 1.0,
@@ -113,6 +116,9 @@ def _solver_settings(context: dict[str, Any]) -> dict[str, Any]:
     settings.setdefault("lmd_proxy_floor_slack", 3000.0 if priority == "orundum_lmd_balance" else 0.0)
     settings.setdefault("require_pure_gold_balance", priority == "orundum_lmd_balance")
     settings.setdefault("minimum_pure_gold_balance", 0.0)
+    settings.setdefault("pure_gold_balance_mode", "hard")
+    settings.setdefault("pure_gold_shortfall_penalty", 0.0)
+    settings.setdefault("hard_minimum_pure_gold_balance", None)
     settings.setdefault("pure_gold_consumption_safety_factor", 1.0)
 
     # Drone defaults are a sustainable repeating-day policy. A non-cyclic run
@@ -302,6 +308,33 @@ def build_milp(
                 }
             )
             drone_waste_indices.append(index)
+
+    # Soft resource targets use explicit shortage variables. They keep the
+    # target visible in the model while allowing a higher-value schedule to
+    # cross it at a declared marginal penalty. Optional hard minima remain
+    # available as inventory safety lines.
+    resource_shortfall_indices: dict[str, int] = {}
+    for resource, mode_key, penalty_key, hard_minimum_key in (
+        ("orundum_shard", "orundum_shard_balance_mode", "orundum_shard_shortfall_penalty", "hard_minimum_orundum_shard_balance"),
+        ("pure_gold", "pure_gold_balance_mode", "pure_gold_shortfall_penalty", "hard_minimum_pure_gold_balance"),
+    ):
+        if str(settings.get(mode_key, "hard")) != "soft":
+            continue
+        hard_minimum = settings.get(hard_minimum_key)
+        maximum = 1_000_000.0 if hard_minimum is None else max(
+            0.0,
+            float(settings.get(
+                "minimum_orundum_shard_balance" if resource == "orundum_shard" else "minimum_pure_gold_balance",
+                0.0,
+            )) - float(hard_minimum),
+        )
+        resource_shortfall_indices[resource] = len(variable_records)
+        variable_records.append({
+            "kind": "resource_shortfall",
+            "resource": resource,
+            "objective_coefficient": -float(settings.get(penalty_key, 0.0)),
+            "max_value": maximum,
+        })
 
     n = len(variable_records)
     c = np.zeros(n, dtype=float)
@@ -516,12 +549,19 @@ def build_milp(
                 settings.get("resource_balance_safety_factor", 1.0)
             ) * float(metrics.get("orundum_shard_consumption", 0.0))
             coeff[record_index] = balance
+        shortfall_index = resource_shortfall_indices.get("orundum_shard")
+        if shortfall_index is not None:
+            coeff[shortfall_index] = 1.0
         add_constraint(
             coeff,
             float(settings.get("minimum_orundum_shard_balance", 0.0)),
             np.inf,
             {"type": "orundum_shard_balance_including_drones"},
         )
+        hard_minimum = settings.get("hard_minimum_orundum_shard_balance")
+        if shortfall_index is not None and hard_minimum is not None:
+            raw_coeff = {index: value for index, value in coeff.items() if index != shortfall_index}
+            add_constraint(raw_coeff, float(hard_minimum), np.inf, {"type": "orundum_shard_hard_safety_floor"})
 
     def add_metric_balance_constraint(
         positive_key: str,
@@ -557,13 +597,34 @@ def build_milp(
         )
 
     if settings.get("require_pure_gold_balance"):
-        add_metric_balance_constraint(
-            "pure_gold",
-            "pure_gold_consumption",
+        coeff: dict[int, float] = {}
+        factor = float(settings.get("pure_gold_consumption_safety_factor", 1.0))
+        for segment in segments:
+            for room_id, room_result in rooms.items():
+                for combo in room_result.get("combinations") or []:
+                    metrics = _segment_metrics(combo, segment.hours)
+                    coeff[x_lookup[(segment.segment_id, room_id, combo["combination_id"])]] = (
+                        float(metrics.get("pure_gold", 0.0))
+                        - factor * float(metrics.get("pure_gold_consumption", 0.0))
+                    )
+        for record_index, record in enumerate(variable_records):
+            if record.get("kind") != "drone_allocation":
+                continue
+            metrics = record.get("metrics_per_drone") or {}
+            coeff[record_index] = float(metrics.get("pure_gold", 0.0)) - factor * float(metrics.get("pure_gold_consumption", 0.0))
+        shortfall_index = resource_shortfall_indices.get("pure_gold")
+        if shortfall_index is not None:
+            coeff[shortfall_index] = 1.0
+        add_constraint(
+            coeff,
             float(settings.get("minimum_pure_gold_balance", 0.0)),
-            "pure_gold_balance_including_drones",
-            float(settings.get("pure_gold_consumption_safety_factor", 1.0)),
+            np.inf,
+            {"type": "pure_gold_balance_including_drones"},
         )
+        hard_minimum = settings.get("hard_minimum_pure_gold_balance")
+        if shortfall_index is not None and hard_minimum is not None:
+            raw_coeff = {index: value for index, value in coeff.items() if index != shortfall_index}
+            add_constraint(raw_coeff, float(hard_minimum), np.inf, {"type": "pure_gold_hard_safety_floor"})
 
     # Continuity linearization: y == x_left AND x_right.
     for y_index, left_index, right_index in continuity_records:
@@ -611,7 +672,7 @@ def build_milp(
         elif kind == "drone_allocation":
             ub[index] = float(record.get("max_value", max_drone_use))
             integrality[index] = 1
-        elif kind in {"drone_inventory", "drone_waste"}:
+        elif kind in {"drone_inventory", "drone_waste", "resource_shortfall"}:
             ub[index] = float(record.get("max_value", settings.get("drone_capacity", 235)))
             integrality[index] = 0
         else:
@@ -629,6 +690,7 @@ def build_milp(
         "drone_allocation_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_allocation"),
         "drone_target_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_target"),
         "drone_inventory_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_inventory"),
+        "resource_shortfall_variable_count": sum(1 for item in variable_records if item["kind"] == "resource_shortfall"),
         "constraint_count": len(lower),
         "constraint_summary": {
             key: sum(1 for item in constraint_records if item["type"] == key)

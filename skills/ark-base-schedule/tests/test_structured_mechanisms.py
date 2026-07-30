@@ -78,6 +78,38 @@ class StructuredMechanismTests(unittest.TestCase):
         ).compute()
         self.assertEqual(result["layers"]["global_bonus_pct"], 0)
 
+    def test_new_full_table_control_factory_effect_conditions(self) -> None:
+        factory = [self.assigned("夜烟", 0, "factory")]
+
+        mon3tr = self.assigned("Mon3tr", 2, "control_center")
+        unconditional = EfficiencyCalculator(
+            "factory", factory, "pure_gold",
+            global_operators=factory + [mon3tr],
+        ).compute()
+        self.assertEqual(unconditional["layers"]["global_bonus_pct"], 2)
+
+        pudding = self.assigned("布丁", 1, "control_center")
+        one_platform = self.assigned("Lancet-2", 0, "power_plant")
+        inactive = EfficiencyCalculator(
+            "factory", factory, "pure_gold",
+            global_operators=factory + [pudding, one_platform],
+        ).compute()
+        self.assertEqual(inactive["layers"]["global_bonus_pct"], 0)
+        two_platforms = one_platform, self.assigned("Castle-3", 0, "power_plant")
+        active = EfficiencyCalculator(
+            "factory", factory, "pure_gold",
+            global_operators=factory + [pudding, *two_platforms],
+        ).compute()
+        self.assertEqual(active["layers"]["global_bonus_pct"], 2)
+
+        hoshi = self.assigned("斩业星熊", 2, "control_center")
+        chen = self.assigned("陈", 2, "control_center")
+        companion = EfficiencyCalculator(
+            "factory", factory, "pure_gold",
+            global_operators=factory + [hoshi, chen],
+        ).compute()
+        self.assertEqual(companion["layers"]["global_bonus_pct"], 3)
+
     def test_hachiman_e2_counts_siracusa_operators_in_each_trading_post(self) -> None:
         trading = [
             self.assigned("巫恋", 2, "trading_post"),
@@ -91,6 +123,106 @@ class StructuredMechanismTests(unittest.TestCase):
                     global_operators=trading + [self.assigned("八幡海铃", elite, "control_center")],
                 ).compute()
                 self.assertEqual(result["layers"]["global_bonus_pct"], expected)
+
+    def test_bellone_vigil_conditions_and_independent_debt_skill(self) -> None:
+        bellone = self.assigned("贝洛内", 2, "trading_post")
+        alone = EfficiencyCalculator(
+            "trading_post", [bellone], "lmd_order", global_operators=[bellone],
+        )
+        alone_result = alone.compute()
+        self.assertEqual(alone_result["paper_bonus_pct"], 30)
+        self.assertEqual(alone_result["order_capacity"], 10)
+
+        vigil_office = self.assigned("伺夜", 2, "office")
+        anywhere_result = EfficiencyCalculator(
+            "trading_post", [bellone], "lmd_order",
+            global_operators=[bellone, vigil_office],
+        ).compute()
+        self.assertEqual(anywhere_result["paper_bonus_pct"], 40)
+        self.assertEqual(anywhere_result["order_capacity"], 10)
+
+        vigil_same_room = self.assigned("伺夜", 2, "trading_post")
+        same_room = EfficiencyCalculator(
+            "trading_post", [bellone, vigil_same_room], "lmd_order",
+            global_operators=[bellone, vigil_same_room],
+        )
+        same_room_result = same_room.compute()
+        self.assertEqual(same_room_result["order_capacity"], 12)
+        self.assertAlmostEqual(same_room.morale_cost_rates()["贝洛内"], 0.85)
+
+    def test_vigil_trade_bonus_reads_reception_room_level(self) -> None:
+        vigil = self.assigned("伺夜", 2, "trading_post")
+        for level, expected in ((1, 30), (2, 35), (3, 40)):
+            with self.subTest(level=level):
+                result = EfficiencyCalculator(
+                    "trading_post", [vigil], "lmd_order",
+                    reception_room_level=level,
+                    global_operators=[vigil],
+                ).compute()
+                self.assertEqual(result["paper_bonus_pct"], expected)
+
+    def test_black_key_reuses_perception_and_counts_direct_silent_resonance(self) -> None:
+        black_key = self.assigned("黑键", 2, "trading_post")
+        black_only = EfficiencyCalculator(
+            "trading_post", [black_key], "lmd_order",
+            dormitory_occupant_count=20,
+            global_operators=[black_key],
+        ).compute()
+        self.assertEqual(black_only["intermediate_products"], {
+            "perception_information": 20.0,
+            "silent_resonance": 20.0,
+        })
+        self.assertEqual(black_only["paper_bonus_pct"], 10)
+
+        basline = self.assigned("深律", 2, "office")
+        full_chain = EfficiencyCalculator(
+            "trading_post", [black_key], "lmd_order",
+            office_level=3,
+            dormitory_occupant_count=20,
+            global_operators=[black_key, basline],
+        ).compute()
+        self.assertEqual(full_chain["intermediate_products"], {
+            "perception_information": 20.0,
+            "silent_resonance": 65.0,
+        })
+        self.assertEqual(full_chain["paper_bonus_pct"], 32)
+
+    def test_black_key_skill_slot_upgrades_without_replacing_musicality(self) -> None:
+        skills = select_available_skills(
+            operator_index()["黑键"], "trading_post", 2, "lmd_order", 90,
+        )
+        self.assertEqual({skill["skill_name"] for skill in skills}, {"乐感", "怅惘和声"})
+
+    def test_guide_trade_groups_reproduce_paper_efficiencies(self) -> None:
+        shamare_group = [
+            self.assigned("巫恋", 2, "trading_post"),
+            self.assigned("折光", 2, "trading_post"),
+            self.assigned("龙舌兰", 2, "trading_post"),
+        ]
+        self.assertEqual(EfficiencyCalculator(
+            "trading_post", shamare_group, "lmd_order", global_operators=shamare_group,
+        ).compute()["paper_bonus_pct"], 90)
+
+        vigil_group = [
+            self.assigned("伺夜", 2, "trading_post"),
+            self.assigned("贝洛内", 2, "trading_post"),
+            self.assigned("但书", 2, "trading_post"),
+        ]
+        self.assertEqual(EfficiencyCalculator(
+            "trading_post", vigil_group, "lmd_order", reception_room_level=3,
+            global_operators=vigil_group + [self.assigned("八幡海铃", 2, "control_center")],
+        ).compute()["paper_bonus_pct"], 90)
+
+        black_key_group = [
+            self.assigned("黑键", 2, "trading_post"),
+            self.assigned("吉星", 2, "trading_post"),
+            self.assigned("可露希尔", 2, "trading_post"),
+        ]
+        self.assertEqual(EfficiencyCalculator(
+            "trading_post", black_key_group, "lmd_order", office_level=3,
+            dormitory_occupant_count=20,
+            global_operators=black_key_group + [self.assigned("深律", 2, "office")],
+        ).compute()["paper_bonus_pct"], 82)
 
     def test_siracusa_group_data_covers_owned_link_candidates(self) -> None:
         index = operator_index()

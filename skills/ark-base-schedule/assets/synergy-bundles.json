@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "description": "Cross-room operator bundles preserved during candidate pruning; they are optional evidence, not forced assignments.",
+  "bundles": [
+    {
+      "id": "shamare_tailoring_refraction_tequila",
+      "label": "巫恋·折光·龙舌兰裁缝组",
+      "source": "用户提供攻略组合与裁缝概率统计",
+      "confidence": "verified_formula",
+      "placements": {
+        "trading_post": {
+          "all_of": ["巫恋", "龙舌兰"],
+          "one_of": ["折光", "明椒", "贝娜"]
+        }
+      },
+      "preserve_alternatives": true
+    },
+    {
+      "id": "vigil_bellone_proviso_hachiman",
+      "label": "伺夜·贝洛内·但书·八幡海铃组",
+      "source": "用户提供攻略组合与当前版本技能文字",
+      "confidence": "verified_formula",
+      "placements": {
+        "trading_post": {
+          "all_of": ["伺夜", "贝洛内", "但书"]
+        },
+        "control_center": {
+          "all_of": ["八幡海铃"]
+        }
+      }
+    },
+    {
+      "id": "blackkey_jixing_closure_baslin",
+      "label": "黑键·吉星·可露希尔·深律组",
+      "source": "用户提供攻略组合与 PRTS 中间产物规则",
+      "confidence": "verified_formula",
+      "placements": {
+        "trading_post": {
+          "all_of": ["黑键", "吉星", "可露希尔"]
+        },
+        "office": {
+          "all_of": ["深律"]
+        }
+      }
+    },
+    {
+      "id": "gladiia_abyssal_factory_cluster",
+      "label": "歌蕾蒂娅·深海猎人制造体系",
+      "source": "PRTS 歌蕾蒂娅与本地深海猎人结构化规则",
+      "confidence": "verified_formula",
+      "placements": {
+        "control_center": {
+          "all_of": ["歌蕾蒂娅"]
+        },
+        "factory": {
+          "group": "abyssal_hunter",
+          "minimum": 1
+        }
+      },
+      "preserve_alternatives": true
+    },
+    {
+      "id": "ave_heat_gold_factory_chain",
+      "label": "热情值·丰川祥子贵金属制造链",
+      "source": "PRTS 中间产物规则与本地热情值结构化技能",
+      "confidence": "verified_formula",
+      "placements": {
+        "control_center": {
+          "all_of": ["若叶睦", "八幡海铃", "祐天寺若麦", "三角初华", "丰川祥子"]
+        }
+      }
+    }
+  ]
+}

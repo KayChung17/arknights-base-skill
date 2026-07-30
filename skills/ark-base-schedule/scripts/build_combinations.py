@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from data_loader import load_operator_data, operator_index, select_available_skills
-from drone_model import drone_rules, natural_lmd_metrics_per_hour
+from drone_model import drone_rules, natural_lmd_metrics_per_hour, special_order_resolution
 from efficiency_calculator import EfficiencyCalculator, production_bonus_for_duration
 from optimizer_common import (
     context_rooms,
@@ -33,6 +33,47 @@ from optimizer_common import (
     write_json,
 )
 
+SYNERGY_BUNDLE_PATH = Path(__file__).resolve().parents[1] / "assets" / "synergy-bundles.json"
+
+
+def load_synergy_bundles() -> list[dict[str, Any]]:
+    try:
+        value = json.loads(SYNERGY_BUNDLE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    return [
+        item for item in value.get("bundles", [])
+        if isinstance(item, dict) and item.get("confidence") == "verified_formula"
+    ]
+
+
+def _bundle_facility_spec(bundle: dict[str, Any], facility: str) -> dict[str, Any]:
+    value = (bundle.get("placements") or {}).get(facility) or {}
+    return value if isinstance(value, dict) else {}
+
+
+def _bundle_operator_names(bundle: dict[str, Any], facility: str) -> set[str]:
+    spec = _bundle_facility_spec(bundle, facility)
+    names = {str(name) for name in spec.get("all_of", [])}
+    names.update(str(name) for name in (spec.get("one_of") or []) if isinstance(name, str))
+    return names
+
+
+def _bundle_ids_for_selection(facility: str, selected_names: set[str]) -> list[str]:
+    result: list[str] = []
+    index = operator_index()
+    for bundle in load_synergy_bundles():
+        spec = _bundle_facility_spec(bundle, facility)
+        explicit = _bundle_operator_names(bundle, facility)
+        group = str(spec.get("group") or "")
+        group_selected = any(
+            group and group in set(index.get(name, {}).get("groups") or [])
+            for name in selected_names
+        )
+        if explicit.intersection(selected_names) or group_selected:
+            result.append(str(bundle.get("id") or ""))
+    return sorted(item for item in result if item)
+
 
 
 
@@ -46,6 +87,7 @@ def _compute_efficiency(
     facility_level: int = 1,
     dormitory_levels: list[int] | None = None,
     training_room_level: int = 3,
+    reception_room_level: int = 3,
 ) -> dict[str, Any]:
     if facility not in {"trading_post", "factory", "power_plant", "control_center"}:
         return {"error": f"calculator_unsupported:{facility}", "warnings": []}
@@ -59,6 +101,7 @@ def _compute_efficiency(
         drone_capacity=drone_capacity,
         facility_level=facility_level,
         training_room_level=training_room_level,
+        reception_room_level=reception_room_level,
         dormitory_levels=dormitory_levels,
         global_operators=assigned,
     ).compute()
@@ -130,6 +173,57 @@ def _metrics_per_hour(
     return metrics, fixed
 
 
+def _effect_resolution(
+    facility: str,
+    product: str,
+    operators: list[dict[str, Any]],
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    details = {
+        str(item.get("name") or ""): item
+        for item in (result.get("operator_details") or [])
+    }
+    order = (
+        special_order_resolution({"operators": operators})
+        if facility == "trading_post" and product == "lmd_order"
+        else {"active": [], "suppressed": [], "has_suppressed_high_value_effect": False}
+    )
+    suppressed_by_name: dict[str, list[str]] = {}
+    for item in order.get("suppressed") or []:
+        suppressed_by_name.setdefault(str(item.get("operator") or ""), []).append(str(item.get("effect") or ""))
+    operator_effects: list[dict[str, Any]] = []
+    for operator in operators:
+        name = str(operator.get("name") or "")
+        detail = details.get(name) or {}
+        suppressed = suppressed_by_name.get(name, [])
+        operator_effects.append({
+            "operator": name,
+            "efficiency_contribution_pct": sum(
+                float(detail.get(key, 0.0) or 0.0)
+                for key in ("direct_bonus_pct", "facility_bonus_pct", "global_bonus_pct")
+            ),
+            "cleared_efficiency_pct": float(detail.get("cleared_efficiency_pct", 0.0) or 0.0),
+            "efficiency_cleared_by": detail.get("efficiency_cleared_by"),
+            "active_special_order_effects": [
+                str(item.get("effect") or "")
+                for item in (order.get("active") or [])
+                if str(item.get("operator") or "") == name
+            ],
+            "suppressed_special_order_effects": suppressed,
+            "fungible_support_slot": bool(
+                "shamare_whisper_reset" in (result.get("special_flags") or []) and name != "巫恋"
+            ),
+            "opportunity_risk": bool(suppressed),
+        })
+    return {
+        "special_order": order,
+        "operators": operator_effects,
+        "opportunity_risk_operators": sorted(
+            item["operator"] for item in operator_effects if item["opportunity_risk"]
+        ),
+    }
+
+
 def build_room_combinations(
     context: dict[str, Any],
     room: dict[str, Any],
@@ -152,18 +246,31 @@ def build_room_combinations(
     training_room_level = int(
         (((context.get("base_state") or {}).get("right_side_levels") or {}).get("training_room", 3))
     )
+    reception_room_level = int(
+        (((context.get("base_state") or {}).get("right_side_levels") or {}).get("reception_room", 3))
+    )
 
     individual_records: list[dict[str, Any]] = []
     for op in eligible:
         result = _compute_efficiency(
             facility, product, [op], trading_count, power_count, drone_capacity,
             int(room.get("level", 1)), dormitory_levels,
-            training_room_level,
+            training_room_level, reception_room_level,
         )
         metrics, fixed = _metrics_per_hour(room, result, [op])
         score = metric_score(metrics, objective_profile(context)) + fixed["fixed_lmd_per_trigger"] * 0.001
         individual_records.append({"score": score, "operator": op, "metrics": metrics})
     individual_records.sort(key=lambda item: (-float(item["score"]), item["operator"]["name"]))
+    index = operator_index()
+    bundle_preserved_names: set[str] = set()
+    for bundle in load_synergy_bundles():
+        spec = _bundle_facility_spec(bundle, facility)
+        required = _bundle_operator_names(bundle, facility)
+        group = str(spec.get("group") or "")
+        for item in individual_records:
+            name = str(item["operator"].get("name") or "")
+            if name in required or (group and group in set(index.get(name, {}).get("groups") or [])):
+                bundle_preserved_names.add(name)
     if capacity == 1:
         # Single-slot rooms are cheap to enumerate; retain every verified
         # operator so special-order workers such as Proviso/Closure are never
@@ -177,6 +284,20 @@ def build_room_combinations(
         # infeasible.
         pool_records = list(individual_records[: max(capacity, operator_pool_size)])
         pool_names = {item["operator"]["name"] for item in pool_records}
+        for item in individual_records:
+            op = item["operator"]
+            skills = select_available_skills(
+                index.get(op["name"], {}), facility, int(op.get("elite", 0)),
+                product, int(op.get("level", 90) or 90),
+            )
+            if any(
+                any(str(tag).startswith("trade_per_silent_resonance_") for tag in skill.get("tags", []))
+                for skill in skills
+            ) or op["name"] in bundle_preserved_names:
+                if op["name"] in pool_names:
+                    continue
+                pool_records.append(item)
+                pool_names.add(op["name"])
         metric_keys = sorted({key for item in individual_records for key in item["metrics"]})
         preserve_per_metric = max(capacity * 2, 4)
         for key in metric_keys:
@@ -213,9 +334,10 @@ def build_room_combinations(
             result = _compute_efficiency(
                 facility, product, selected, trading_count, power_count, drone_capacity,
                 int(room.get("level", 1)), dormitory_levels,
-                training_room_level,
+                training_room_level, reception_room_level,
             )
             metrics, fixed = _metrics_per_hour(room, result, selected)
+            effect_resolution = _effect_resolution(facility, product, selected, result)
             score = metric_score(metrics, objective_profile(context))
             score += fixed["fixed_lmd_per_trigger"] * objective_profile(context).get("fixed_lmd", 0)
             source_quality = 1.0 if all(op.get("skill_source") == "local_versioned_data" for op in selected) else 0.9
@@ -232,6 +354,9 @@ def build_room_combinations(
                     "room_id": room["room_id"],
                     "facility_id": facility,
                     "product_id": product,
+                    "synergy_bundle_ids": _bundle_ids_for_selection(
+                        facility, {op["name"] for op in selected},
+                    ),
                     "level": room["level"],
                     "capacity": capacity,
                     "staffed_slots": size,
@@ -250,6 +375,7 @@ def build_room_combinations(
                     "warehouse_capacity": warehouse_capacity(room, selected),
                     "morale_cost_per_operator_hour": 1.0,
                     "efficiency_result": result,
+                    "effect_resolution": effect_resolution,
                     "warnings": list(result.get("warnings") or []),
                     "source_quality": source_quality,
                 }
@@ -268,7 +394,12 @@ def build_room_combinations(
     # core-operator exclusion, then samples the full score range.
     kept = list(combinations[:top_k])
     selected_ids = {item["combination_id"] for item in kept}
-    target = min(len(combinations), max(top_k, top_k * 3))
+    bundle_pattern_count = sum(
+        max(1, len((_bundle_facility_spec(bundle, facility).get("one_of") or [])))
+        for bundle in load_synergy_bundles()
+        if _bundle_facility_spec(bundle, facility)
+    )
+    target = min(len(combinations), max(top_k, top_k * 3, top_k + bundle_pattern_count + 4))
 
     def add_item(item: dict[str, Any] | None) -> None:
         if item is None or len(kept) >= target:
@@ -283,6 +414,40 @@ def build_room_combinations(
         # These candidates can be essential for LMD, pure-gold, and shard
         # balance even when their weighted proxy score is low.
         add_item(next((item for item in combinations if int(item.get("staffed_slots", 0)) == 0), None))
+        # Preserve equal-yield substitutes for workers whose high-value order
+        # effect is suppressed. This gives the global post-solve pass a way to
+        # release them for another room instead of losing the alternative to
+        # deterministic name ordering or top-k truncation.
+        for anchor in list(kept[:top_k]):
+            risk_names = set((anchor.get("effect_resolution") or {}).get("opportunity_risk_operators") or [])
+            if not risk_names:
+                continue
+            active_effects = {
+                str(item.get("effect") or "")
+                for item in (((anchor.get("effect_resolution") or {}).get("special_order") or {}).get("active") or [])
+            }
+            for risk_name in sorted(risk_names):
+                add_item(next((
+                    item for item in combinations
+                    if risk_name not in {op["name"] for op in item.get("operators") or []}
+                    and {
+                        str(effect.get("effect") or "")
+                        for effect in ((((item.get("effect_resolution") or {}).get("special_order") or {}).get("active") or []))
+                    } == active_effects
+                    and abs(float(item.get("proxy_score_per_hour", 0.0)) - float(anchor.get("proxy_score_per_hour", 0.0))) <= 1e-9
+                ), None))
+        for bundle in load_synergy_bundles():
+            spec = _bundle_facility_spec(bundle, facility)
+            required = {str(name) for name in spec.get("all_of", [])}
+            alternatives = [str(name) for name in (spec.get("one_of") or [])]
+            targets = [required | {name} for name in alternatives] if alternatives else [required]
+            for target_names in targets:
+                if not target_names:
+                    continue
+                add_item(next((
+                    item for item in combinations
+                    if target_names.issubset({op["name"] for op in item["operators"]})
+                ), None))
         metric_keys = {
             key
             for item in combinations
@@ -292,7 +457,7 @@ def build_room_combinations(
             add_item(max(combinations, key=lambda item: float((item.get("metrics_per_hour") or {}).get(key, 0.0))))
             add_item(min(combinations, key=lambda item: float((item.get("metrics_per_hour") or {}).get(key, 0.0))))
         if facility == "trading_post" and product == "lmd_order":
-            tailoring_names = {"巫恋", "柏喙", "卡夫卡", "贝娜", "明椒"}
+            tailoring_names = {"巫恋", "柏喙", "卡夫卡", "贝娜", "明椒", "折光"}
             for minimum_count in (1, 2, 3):
                 add_item(next((
                     item for item in combinations
@@ -328,6 +493,9 @@ def build_room_combinations(
         "room": room,
         "eligible_operator_count": len(eligible),
         "operator_pool": [op["name"] for op in pool],
+        "preserved_synergy_operators": sorted(bundle_preserved_names.intersection(
+            {op["name"] for op in pool}
+        )),
         "enumerated_count": enumerated,
         "kept_count": len(kept),
         "quality_top_k": min(top_k, len(combinations)),
@@ -366,6 +534,7 @@ def build_library(
             "allow_partial": allow_partial,
         },
         "objective_weights": objective_profile(context),
+        "synergy_bundles": load_synergy_bundles(),
         "rooms": room_results,
         "search_completeness": {
             "all_rooms_untruncated": all(not value["truncated"] for value in room_results.values()),

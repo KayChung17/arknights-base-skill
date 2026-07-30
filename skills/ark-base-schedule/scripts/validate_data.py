@@ -212,6 +212,45 @@ def validate() -> list[str]:
     errors.extend(granted_effect_conflicts(operator_data))
     errors.extend(singleton_semantic_tag_conflicts(operator_data))
 
+    bundle_path = ASSETS_DIR / "synergy-bundles.json"
+    if not bundle_path.exists():
+        errors.append("缺少 synergy-bundles.json")
+    else:
+        bundle_data = json.loads(bundle_path.read_text(encoding="utf-8"))
+        if bundle_data.get("schema_version") != 1:
+            errors.append("synergy-bundles.json schema_version 必须为 1")
+        bundle_ids: set[str] = set()
+        known_groups = {
+            str(group)
+            for operator in operator_data.get("operators", [])
+            for group in operator.get("groups", [])
+        }
+        for bundle in bundle_data.get("bundles", []):
+            bundle_id = str(bundle.get("id") or "")
+            if not bundle_id:
+                errors.append("synergy-bundles.json 存在缺少 id 的组合包")
+            elif bundle_id in bundle_ids:
+                errors.append(f"联动组合包 id 重复: {bundle_id}")
+            bundle_ids.add(bundle_id)
+            if bundle.get("confidence") not in {"verified_formula", "discovery_only"}:
+                errors.append(f"联动组合包 {bundle_id}: confidence 无效")
+            placements = bundle.get("placements") or {}
+            if not placements:
+                errors.append(f"联动组合包 {bundle_id}: 缺少 placements")
+            for facility, spec in placements.items():
+                if facility not in facilities:
+                    errors.append(f"联动组合包 {bundle_id}: 未知设施 {facility}")
+                if not isinstance(spec, dict):
+                    errors.append(f"联动组合包 {bundle_id}/{facility}: 配置必须为对象")
+                    continue
+                for key in ("all_of", "one_of"):
+                    for name in spec.get(key, []) or []:
+                        if name not in names:
+                            errors.append(f"联动组合包 {bundle_id}: 未知干员 {name}")
+                group = str(spec.get("group") or "")
+                if group and group not in known_groups:
+                    errors.append(f"联动组合包 {bundle_id}: 未知分组 {group}")
+
     for layout_id, layout in mechanics.get("layouts", {}).items():
         total = sum(int(layout.get(key, 0)) for key in ("trading_post", "factory", "power_plant"))
         if total != 9:

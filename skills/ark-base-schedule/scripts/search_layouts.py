@@ -130,6 +130,14 @@ def build_context(
     lmd_floor: float,
     max_daily_work_hours: float,
     lmd_proxy_floor_slack: float = 0.0,
+    proxy_shard_consumption_factor: float = 1.0,
+    proxy_gold_consumption_factor: float = 1.0,
+    proxy_lmd_cost_factor: float = 1.0,
+    opportunity_postprocess_max_iterations: int = 4,
+    shard_balance_policy: dict[str, Any] | None = None,
+    gold_balance_policy: dict[str, Any] | None = None,
+    inventory: dict[str, Any] | None = None,
+    horizon: dict[str, Any] | None = None,
     *,
     drone_capacity: float = 235.0,
     initial_drone_stock: float | None = None,
@@ -143,20 +151,28 @@ def build_context(
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
     right.update(right_side_levels or {})
     initial_stock = float(drone_capacity if initial_drone_stock is None else initial_drone_stock)
+    shard_policy = dict(shard_balance_policy or {})
+    gold_policy = dict(gold_balance_policy or {})
     preferences = {
         "priority": "orundum_lmd_balance",
         "solver": {
             "max_daily_work_hours": max_daily_work_hours,
             "require_resource_balance": True,
             "minimum_orundum_shard_balance": float(minimum_shard_balance),
-            "resource_balance_safety_factor": 1.10,
+            "orundum_shard_balance_mode": str(shard_policy.get("mode", "hard")),
+            "orundum_shard_shortfall_penalty": float(shard_policy.get("shortfall_penalty", 0.0)),
+            "hard_minimum_orundum_shard_balance": shard_policy.get("hard_minimum"),
+            "resource_balance_safety_factor": float(proxy_shard_consumption_factor),
             "require_lmd_balance": True,
             "minimum_net_lmd_balance": lmd_floor,
-            "lmd_cost_safety_factor": 1.0,
+            "lmd_cost_safety_factor": float(proxy_lmd_cost_factor),
             "lmd_proxy_floor_slack": float(lmd_proxy_floor_slack),
             "require_pure_gold_balance": True,
-            "pure_gold_consumption_safety_factor": 1.04,
+            "pure_gold_consumption_safety_factor": float(proxy_gold_consumption_factor),
             "minimum_pure_gold_balance": float(minimum_gold_balance),
+            "pure_gold_balance_mode": str(gold_policy.get("mode", "hard")),
+            "pure_gold_shortfall_penalty": float(gold_policy.get("shortfall_penalty", 0.0)),
+            "hard_minimum_pure_gold_balance": gold_policy.get("hard_minimum"),
             "allocate_drones": True,
             "drone_repeating_day_balance": True,
             "drone_capacity": float(drone_capacity),
@@ -167,6 +183,7 @@ def build_context(
             "empty_drone_inventory_at_each_node": True,
             "repeat_day_continuity": False,
             "require_dormitory_cycle": True,
+            "opportunity_postprocess_max_iterations": max(0, int(opportunity_postprocess_max_iterations)),
         },
     }
     context = build_decision_packet(
@@ -201,7 +218,9 @@ def build_context(
         "fixed_right_side_levels": right,
         "dormitory_levels": profile["dorm_levels"],
         "power_plant_levels": profile["power_plant_levels"],
+        "inventory": dict(inventory or {}),
     }
+    context["horizon"] = dict(horizon or {"mode": "steady_state"})
     context["right_side_schedule"] = list(right_side_schedule or [])
     return context
 
@@ -314,6 +333,14 @@ def search_layouts(
     mip_rel_gap: float = 0.01,
     profiles: list[str] | None = None,
     lmd_proxy_floor_slack: float = 0.0,
+    proxy_shard_consumption_factor: float = 1.0,
+    proxy_gold_consumption_factor: float = 1.0,
+    proxy_lmd_cost_factor: float = 1.0,
+    opportunity_postprocess_max_iterations: int = 4,
+    shard_balance_policy: dict[str, Any] | None = None,
+    gold_balance_policy: dict[str, Any] | None = None,
+    inventory: dict[str, Any] | None = None,
+    horizon: dict[str, Any] | None = None,
     profile_mode: str = "representative",
     profiles_file: str | Path | None = None,
     grid_layouts: list[str] | None = None,
@@ -377,6 +404,14 @@ def search_layouts(
                 lmd_floor,
                 max_daily_work_hours,
                 lmd_proxy_floor_slack,
+                proxy_shard_consumption_factor,
+                proxy_gold_consumption_factor,
+                proxy_lmd_cost_factor,
+                opportunity_postprocess_max_iterations,
+                shard_balance_policy,
+                gold_balance_policy,
+                inventory,
+                horizon,
                 drone_capacity=drone_capacity,
                 initial_drone_stock=initial_drone_stock,
                 right_side_levels=right,
@@ -409,19 +444,36 @@ def search_layouts(
                     },
                     "reason": str(exc),
                 })
-    rows.sort(key=lambda item: (
-        -item["orundum_per_day"],
-        -item["net_lmd_per_day"],
-        item["resource_balance_deviation"],
-        -float((item.get("shift_profile") or {}).get("minimum_score", 0.0)),
-        float((item.get("shift_profile") or {}).get("variance", 0.0)),
-        -item["actual_objective_score"],
-    ))
+    soft_balance = any(
+        str((policy or {}).get("mode", "hard")) == "soft"
+        for policy in (shard_balance_policy, gold_balance_policy)
+    )
+    if soft_balance:
+        rows.sort(key=lambda item: (
+            -item["orundum_per_day"],
+            -item["actual_objective_score"],
+            -item["battle_record_exp_per_day"],
+            -item["net_lmd_per_day"],
+            item["resource_balance_deviation"],
+        ))
+    else:
+        rows.sort(key=lambda item: (
+            -item["orundum_per_day"],
+            -item["net_lmd_per_day"],
+            item["resource_balance_deviation"],
+            -float((item.get("shift_profile") or {}).get("minimum_score", 0.0)),
+            float((item.get("shift_profile") or {}).get("variance", 0.0)),
+            -item["actual_objective_score"],
+        ))
     result = {
         "schema_version": 2,
         "search_type": "outer_layout_configuration_plus_inner_hybrid_schedule_solver",
         "objective": {
             "primary": "maximize_orundum",
+            "selection_policy": (
+                "orundum_then_penalized_actual_objective_experience_lmd"
+                if soft_balance else "orundum_then_lmd_then_resource_deviation"
+            ),
             "default_resource_balance_policy": "nonnegative_daily_balance_then_minimize_surplus_on_primary_ties",
             "constraints": {
                 "minimum_net_lmd_per_day": lmd_floor,
@@ -429,12 +481,17 @@ def search_layouts(
                 "minimum_pure_gold_balance": minimum_gold_balance,
                 "minimum_battle_record_factories": minimum_battle_record_factories,
                 "max_daily_work_hours": max_daily_work_hours,
+                "balance_policy": {
+                    "originium_shard": dict(shard_balance_policy or {"mode": "hard"}),
+                    "pure_gold": dict(gold_balance_policy or {"mode": "hard"}),
+                },
             },
         },
         "base_state": {
             "drone_capacity": float(drone_capacity),
             "initial_drone_stock": float(drone_capacity if initial_drone_stock is None else initial_drone_stock),
             "right_side_levels": right,
+            "inventory": dict(inventory or {}),
             "drone_capacity_depends_on_power_plant_count_or_level": False,
         },
         "online_times": online_times,
@@ -446,6 +503,10 @@ def search_layouts(
             "max_proxy_attempts_per_configuration": max_proxy_attempts,
             "mip_rel_gap": mip_rel_gap,
             "lmd_proxy_floor_slack": lmd_proxy_floor_slack,
+            "proxy_shard_consumption_factor": proxy_shard_consumption_factor,
+            "proxy_gold_consumption_factor": proxy_gold_consumption_factor,
+            "proxy_lmd_cost_factor": proxy_lmd_cost_factor,
+            "opportunity_postprocess_max_iterations": opportunity_postprocess_max_iterations,
             "attempted_configurations": attempted_configurations,
         },
         "results": rows,

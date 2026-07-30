@@ -177,6 +177,8 @@ class EfficiencyCalculator:
         drone_capacity: float = 235.0,
         facility_level: int = 1,
         training_room_level: int = 3,
+        office_level: int = 3,
+        reception_room_level: int = 3,
         dormitory_levels: list[int] | None = None,
         dormitory_occupant_count: int | None = None,
         global_operators: list[OwnedOperator | dict | str] | None = None,
@@ -192,6 +194,8 @@ class EfficiencyCalculator:
         self.drone_capacity = float(drone_capacity)
         self.facility_level = int(facility_level)
         self.training_room_level = max(1, min(3, int(training_room_level)))
+        self.office_level = max(1, min(3, int(office_level)))
+        self.reception_room_level = max(1, min(3, int(reception_room_level)))
         self.dormitory_levels = [int(value) for value in (dormitory_levels or [1, 1, 1, 1])]
         self.dormitory_occupant_count = (
             max(0, int(dormitory_occupant_count))
@@ -319,6 +323,11 @@ class EfficiencyCalculator:
                 and group in self._groups(op)
             ]
             return len(members) >= minimum and any(op["name"] == source["name"] for op in members)
+        if condition_type == "global_group_at_facility_minimum":
+            group = str(condition.get("group") or "")
+            facility = str(condition.get("facility") or "")
+            minimum = int(condition.get("minimum_count", 1) or 1)
+            return self.count_global_group(group, facility) >= minimum
         return False
 
     def _effect_value(self, effect: dict[str, Any]) -> float:
@@ -397,6 +406,43 @@ class EfficiencyCalculator:
             if "catnip_per_control_monster_hunter_2" in tags:
                 value += 2.0 * self.count_global_group("monster_hunter", "control_center")
         return value
+
+    def _global_perception_information(self) -> float:
+        """Return the current perception-information counter.
+
+        Intermediate-product conversion is non-consuming: callers may derive
+        multiple downstream counters from the same perception information.
+        """
+        value = 0.0
+        for op in self.global_operators:
+            facility = op.get("assigned_facility")
+            if facility == "trading_post":
+                for skill in self._skills(op, "trading_post", "lmd_order"):
+                    if "perception_per_dorm_occupant_1" in skill.get("tags", []):
+                        value += float(self.dormitory_occupant_count)
+            if facility == "control_center":
+                for skill in self._skills(op, "control_center", ""):
+                    for tag in skill.get("tags", []):
+                        if isinstance(tag, str) and tag.startswith("perception_fixed_"):
+                            value += float(tag.rsplit("_", 1)[1])
+        return value
+
+    def _global_silent_resonance(self) -> float:
+        direct = 0.0
+        converts_perception = False
+        for op in self.global_operators:
+            facility = op.get("assigned_facility")
+            if facility == "trading_post":
+                for skill in self._skills(op, "trading_post", "lmd_order"):
+                    if "perception_to_silent_resonance_1" in skill.get("tags", []):
+                        converts_perception = True
+            elif facility == "office":
+                for skill in self._skills(op, "office", ""):
+                    if "silent_resonance_per_extra_recruitment_slot_15" in skill.get("tags", []):
+                        direct += float(self.office_level * 15)
+        if converts_perception:
+            direct += self._global_perception_information()
+        return direct
 
     def _automation_power_plant_count(self) -> int:
         virtual = 0
@@ -518,6 +564,8 @@ class EfficiencyCalculator:
                         rates[op["name"]] -= float(tag.rsplit("_", 1)[1])
                     elif tag.startswith("morale_cost_plus_") and "ave_trade_per_8_heat_1" not in tags:
                         rates[op["name"]] += float(tag.rsplit("_", 1)[1])
+                if "vigil_same_room_morale_reduction_0.1" in tags and "伺夜" in room_names:
+                    rates[op["name"]] -= 0.1
                 if "ave_trade_per_8_heat_1" in tags:
                     extra = math.floor(self._global_control_heat() / 8.0) * 0.01
                     if "丰川祥子" in room_names and any(
@@ -604,6 +652,10 @@ class EfficiencyCalculator:
                 for room_tag in room_skill.get("tags", []):
                     if room_tag == "order_capacity_per_room_level_1":
                         room_order_capacity += self.facility_level
+                        continue
+                    if room_tag == "vigil_same_room_order_capacity_2":
+                        if "伺夜" in room_names:
+                            room_order_capacity += 2
                         continue
                     if isinstance(room_tag, str) and room_tag.startswith("order_capacity_"):
                         try:
@@ -736,6 +788,34 @@ class EfficiencyCalculator:
                     op_global += value
                     detail["notes"].append(f"基础 +{bonus:g}%；木天蓼 {catnip:g}：订单效率 +{value:g}%")
                     continue
+                if "trade_reception_room_level_5_cap_40" in tags:
+                    value = min(40.0, bonus + self.reception_room_level * 5.0)
+                    op_direct += value
+                    detail["notes"].append(
+                        f"基础 +{bonus:g}%；会客室 {self.reception_room_level} 级 ×5%，合计 +{value:g}%"
+                    )
+                    continue
+                if "vigil_anywhere_trade_bonus_5" in tags or "vigil_anywhere_trade_bonus_10" in tags:
+                    extra = 10.0 if "vigil_anywhere_trade_bonus_10" in tags else 5.0
+                    vigil_active = any(
+                        other["name"] == "伺夜"
+                        and other.get("assigned_facility") not in {None, "", "assistant", "activity_room"}
+                        for other in self.global_operators
+                    )
+                    op_direct += bonus + (extra if vigil_active else 0.0)
+                    detail["notes"].append(
+                        f"基础 +{bonus:g}%；伺夜在基建内：+{extra if vigil_active else 0:g}%"
+                    )
+                    continue
+                if "trade_per_silent_resonance_4_1" in tags or "trade_per_silent_resonance_2_1" in tags:
+                    step = 2.0 if "trade_per_silent_resonance_2_1" in tags else 4.0
+                    resonance = self._global_silent_resonance()
+                    value = math.floor(resonance / step)
+                    op_global += value
+                    detail["notes"].append(
+                        f"无声共鸣 {resonance:g}，每 {step:g} 点 +1%：+{value:g}%"
+                    )
+                    continue
                 if "lemuen_with_exusiai_25" in tags:
                     op_direct += bonus
                     extra = 25 if any("能天使" in name for name in room_names if name != op["name"]) else 0
@@ -792,6 +872,8 @@ class EfficiencyCalculator:
                 op_direct = 0.0
                 op_facility = 0.0
                 op_global = 0.0
+                detail["cleared_efficiency_pct"] = removed
+                detail["efficiency_cleared_by"] = "shamare_whisper"
                 detail["notes"].append(
                     f"巫恋·低语清零该干员提供的订单效率 {removed:g}%；订单类型与心情效果保留"
                 )
@@ -885,6 +967,10 @@ class EfficiencyCalculator:
                 else 0.0
             ),
             "production_lines": production_lines,
+            "intermediate_products": {
+                "perception_information": self._global_perception_information(),
+                "silent_resonance": self._global_silent_resonance(),
+            },
         })
         return result
 

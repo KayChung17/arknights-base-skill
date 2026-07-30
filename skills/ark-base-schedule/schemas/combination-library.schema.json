@@ -13,6 +13,7 @@
       "required": ["top_k_per_room", "operator_pool_size", "allow_partial"]
     },
     "objective_weights": {"type": "object"},
+    "synergy_bundles": {"type": "array", "items": {"type": "object"}},
     "rooms": {
       "type": "object",
       "minProperties": 1,
@@ -24,12 +25,16 @@
           "eligible_operator_count": {"type": "integer", "minimum": 0},
           "enumerated_count": {"type": "integer", "minimum": 0},
           "kept_count": {"type": "integer", "minimum": 0},
+          "preserved_synergy_operators": {"type": "array", "items": {"type": "string"}},
           "truncated": {"type": "boolean"},
           "combinations": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["combination_id", "room_id", "facility_id", "product_id", "operators", "proxy_score_per_hour", "metrics_per_hour"]
+              "required": ["combination_id", "room_id", "facility_id", "product_id", "operators", "proxy_score_per_hour", "metrics_per_hour"],
+              "properties": {
+                "synergy_bundle_ids": {"type": "array", "items": {"type": "string"}}
+              }
             }
           }
         }

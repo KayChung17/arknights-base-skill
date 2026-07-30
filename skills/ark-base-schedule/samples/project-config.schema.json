@@ -54,6 +54,14 @@
         "max_orundum_trading_posts": {"type": "integer", "minimum": 1},
         "max_shard_factories": {"type": "integer", "minimum": 1},
         "minimum_battle_record_factories": {"type": "integer", "minimum": 0}
+        ,"balance_policy": {
+          "type": "object",
+          "properties": {
+            "originium_shard": {"$ref": "#/$defs/resourceBalancePolicy"},
+            "pure_gold": {"$ref": "#/$defs/resourceBalancePolicy"}
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": true
     },
@@ -63,6 +71,14 @@
       "properties": {
         "drone_capacity": {"type": "number", "minimum": 0},
         "initial_drone_stock": {"type": "number", "minimum": 0},
+        "inventory": {
+          "type": "object",
+          "properties": {
+            "originium_shard": {"type": ["number", "null"], "minimum": 0},
+            "pure_gold": {"type": ["number", "null"], "minimum": 0}
+          },
+          "additionalProperties": false
+        },
         "dormitory_levels": {
           "type": "array", "minItems": 4, "maxItems": 4,
           "items": {"type": "integer", "minimum": 1, "maximum": 5}
@@ -110,6 +126,10 @@
         "top_solutions": {"type": "integer", "minimum": 1},
         "mip_rel_gap": {"type": "number", "minimum": 0},
         "lmd_proxy_floor_slack": {"type": "number", "minimum": 0}
+        ,"proxy_shard_consumption_factor": {"type": "number", "minimum": 1}
+        ,"proxy_gold_consumption_factor": {"type": "number", "minimum": 1}
+        ,"proxy_lmd_cost_factor": {"type": "number", "minimum": 1}
+        ,"opportunity_postprocess_max_iterations": {"type": "integer", "minimum": 0, "maximum": 20}
       }
     },
     "upgrades": {
@@ -143,6 +163,18 @@
       "additionalProperties": true
     },
     "facility_configuration": {"type": "object"}
+  },
+  "$defs": {
+    "resourceBalancePolicy": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["hard", "soft"]},
+        "shortfall_penalty": {"type": "number", "minimum": 0},
+        "hard_minimum": {"type": ["number", "null"]}
+      },
+      "additionalProperties": false
+    }
   },
   "allOf": [
     {

@@ -25,6 +25,7 @@ from optimizer_common import (
 )
 from simulate_schedule import simulate_assignment
 from timeline_utils import rotation_analysis
+from right_side_schedule import fixed_hours_by_operator, fixed_work_by_segment
 
 
 def _selected_variables(bundle, vector) -> tuple[list[dict[str, Any]], list[int], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -70,6 +71,14 @@ def _selected_variables(bundle, vector) -> tuple[list[dict[str, Any]], list[int]
     return assignments, selected_indices, drone_allocations, drone_inventory, drone_waste
 
 
+def _selected_resource_shortfalls(bundle, vector) -> dict[str, float]:
+    return {
+        str(record.get("resource") or ""): float(value)
+        for record, value in zip(bundle.variable_records, vector)
+        if record.get("kind") == "resource_shortfall" and float(value) > 1e-7
+    }
+
+
 
 def _simulation_constraint_violations(context: dict[str, Any], simulation: dict[str, Any]) -> list[str]:
     """Check hard constraints again using globally recalculated metrics.
@@ -84,10 +93,11 @@ def _simulation_constraint_violations(context: dict[str, Any], simulation: dict[
     violations: list[str] = []
     if settings.get("require_resource_balance"):
         actual = float(simulation.get("orundum_shard_balance", 0.0))
-        minimum = float(settings.get("minimum_orundum_shard_balance", 0.0))
-        if actual < minimum - 1e-6:
+        mode = str(settings.get("orundum_shard_balance_mode", "hard"))
+        minimum_value = settings.get("hard_minimum_orundum_shard_balance") if mode == "soft" else settings.get("minimum_orundum_shard_balance", 0.0)
+        if minimum_value is not None and actual < float(minimum_value) - 1e-6:
             violations.append(
-                f"actual_orundum_shard_balance:{actual:.6f} < minimum:{minimum:.6f}"
+                f"actual_orundum_shard_balance:{actual:.6f} < minimum:{float(minimum_value):.6f}"
             )
     if settings.get("require_lmd_balance"):
         actual = float(simulation.get("net_lmd_balance", 0.0))
@@ -96,9 +106,10 @@ def _simulation_constraint_violations(context: dict[str, Any], simulation: dict[
             violations.append(f"actual_net_lmd_balance:{actual:.6f} < minimum:{minimum:.6f}")
     if settings.get("require_pure_gold_balance"):
         actual = float(simulation.get("pure_gold_balance", 0.0))
-        minimum = float(settings.get("minimum_pure_gold_balance", 0.0))
-        if actual < minimum - 1e-6:
-            violations.append(f"actual_pure_gold_balance:{actual:.6f} < minimum:{minimum:.6f}")
+        mode = str(settings.get("pure_gold_balance_mode", "hard"))
+        minimum_value = settings.get("hard_minimum_pure_gold_balance") if mode == "soft" else settings.get("minimum_pure_gold_balance", 0.0)
+        if minimum_value is not None and actual < float(minimum_value) - 1e-6:
+            violations.append(f"actual_pure_gold_balance:{actual:.6f} < minimum:{float(minimum_value):.6f}")
     drone_plan = simulation.get("drone_plan")
     if settings.get("allocate_drones") and drone_plan is not None and not bool(drone_plan.get("feasible", False)):
         violations.append("drone_inventory_flow_not_feasible")
@@ -241,6 +252,277 @@ def _apply_free_secondary_improvements(
         "battle_record_exp_gain": sum(float(item["gain"]) for item in improvements),
         "improvements": improvements,
         "remaining_dominated_empty_slots": [],
+    }
+
+
+def _combo_lookup(library: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
+    return {
+        (str(room_id), str(combo.get("combination_id"))): combo
+        for room_id, room in (library.get("rooms") or {}).items()
+        for combo in (room.get("combinations") or [])
+    }
+
+
+def _assignment_opportunity_risks(
+    library: dict[str, Any], assignments: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    lookup = _combo_lookup(library)
+    risks: list[dict[str, str]] = []
+    for assignment in assignments:
+        combo = lookup.get((str(assignment.get("room_id")), str(assignment.get("combination_id")))) or {}
+        for operator in ((combo.get("effect_resolution") or {}).get("opportunity_risk_operators") or []):
+            risks.append({
+                "segment_id": str(assignment.get("segment_id") or ""),
+                "room_id": str(assignment.get("room_id") or ""),
+                "operator": str(operator),
+            })
+    return risks
+
+
+def _assignments_respect_global_limits(
+    context: dict[str, Any], library: dict[str, Any], assignments: list[dict[str, Any]],
+) -> bool:
+    lookup = _combo_lookup(library)
+    segments = {item.segment_id: item for item in context_segments(context)}
+    fixed_by_segment = fixed_work_by_segment(context)
+    hours_by_operator = dict(fixed_hours_by_operator(context))
+    settings = _solver_settings(context)
+    default_max = float(settings.get("max_daily_work_hours", 24.0))
+    overrides = settings.get("operator_max_daily_hours") or {}
+    used_by_segment = {segment_id: set(names) for segment_id, names in fixed_by_segment.items()}
+    for assignment in assignments:
+        segment_id = str(assignment.get("segment_id") or "")
+        room_id = str(assignment.get("room_id") or "")
+        combo = lookup.get((room_id, str(assignment.get("combination_id"))))
+        segment = segments.get(segment_id)
+        if combo is None or segment is None:
+            return False
+        names = {str(item.get("name") or "") for item in combo.get("operators") or []}
+        if names & used_by_segment.setdefault(segment_id, set()):
+            return False
+        used_by_segment[segment_id].update(names)
+        for name in names:
+            hours_by_operator[name] = float(hours_by_operator.get(name, 0.0)) + float(segment.hours)
+    return all(
+        hours <= float(overrides.get(name, default_max)) + 1e-6
+        for name, hours in hours_by_operator.items()
+    )
+
+
+def _active_order_signature(combo: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(sorted(
+        str(item.get("effect") or "")
+        for item in ((((combo.get("effect_resolution") or {}).get("special_order") or {}).get("active") or []))
+    ))
+
+
+def _combo_metrics_not_worse(candidate: dict[str, Any], baseline: dict[str, Any]) -> bool:
+    candidate_metrics = candidate.get("metrics_per_hour") or {}
+    baseline_metrics = baseline.get("metrics_per_hour") or {}
+    return all(
+        float(candidate_metrics.get(key, 0.0) or 0.0) >= float(value or 0.0) - 1e-9
+        for key, value in baseline_metrics.items()
+    )
+
+
+def _metric_value(simulation: dict[str, Any], key: str) -> float:
+    if key == "net_lmd":
+        return float(simulation.get("net_lmd_balance", 0.0) or 0.0)
+    if key == "orundum_shard_balance":
+        return float(simulation.get("orundum_shard_balance", 0.0) or 0.0)
+    if key == "pure_gold_balance":
+        return float(simulation.get("pure_gold_balance", 0.0) or 0.0)
+    return float((simulation.get("aggregate_metrics") or {}).get(key, 0.0) or 0.0)
+
+
+def _release_is_neutral(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    return all(
+        _metric_value(after, key) >= _metric_value(before, key) - 1e-6
+        for key in ("orundum", "battle_record_exp", "net_lmd")
+    ) and float(after.get("actual_objective_score", 0.0)) >= float(before.get("actual_objective_score", 0.0)) - 1e-6
+
+
+def _efficiency_better(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    before_score = float(before.get("actual_objective_score", 0.0))
+    after_score = float(after.get("actual_objective_score", 0.0))
+    if after_score > before_score + 1e-6:
+        return True
+    if after_score < before_score - 1e-6:
+        return False
+    for key in ("orundum", "battle_record_exp", "net_lmd"):
+        old = _metric_value(before, key)
+        new = _metric_value(after, key)
+        if new > old + 1e-6:
+            return True
+        if new < old - 1e-6:
+            return False
+    return False
+
+
+def _replace_assignment(
+    assignments: list[dict[str, Any]], segment_id: str, room_id: str, combination_id: str,
+) -> list[dict[str, Any]]:
+    mutated = [dict(item) for item in assignments]
+    for item in mutated:
+        if item.get("segment_id") == segment_id and item.get("room_id") == room_id:
+            item["combination_id"] = combination_id
+            break
+    return mutated
+
+
+def _apply_opportunity_cost_improvements(
+    context: dict[str, Any],
+    library: dict[str, Any],
+    assignments: list[dict[str, Any]],
+    simulation: dict[str, Any],
+    drone_allocations: list[dict[str, Any]],
+    drone_inventory: list[dict[str, Any]],
+    drone_waste: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+    """Release suppressed high-value skills, then seek productive reassignment."""
+
+    settings = _solver_settings(context)
+    max_iterations = max(0, int(settings.get("opportunity_postprocess_max_iterations", 0)))
+    current_assignments = [dict(item) for item in assignments]
+    current_simulation = simulation
+    lookup = _combo_lookup(library)
+    initial_risks = _assignment_opportunity_risks(library, current_assignments)
+    released: set[str] = set()
+    changes: list[dict[str, Any]] = []
+    drone_rooms = {
+        (str(item.get("segment_id") or ""), str(item.get("room_id") or ""))
+        for item in drone_allocations
+        if float(item.get("drones", 0.0) or 0.0) > 0.0
+    }
+
+    for _ in range(max_iterations):
+        risks = _assignment_opportunity_risks(library, current_assignments)
+        best_release: dict[str, Any] | None = None
+        for risk in risks:
+            if (risk["segment_id"], risk["room_id"]) in drone_rooms:
+                continue
+            key = (risk["room_id"], next(
+                str(item.get("combination_id"))
+                for item in current_assignments
+                if item.get("segment_id") == risk["segment_id"] and item.get("room_id") == risk["room_id"]
+            ))
+            current_combo = lookup.get(key) or {}
+            room = (library.get("rooms") or {}).get(risk["room_id"]) or {}
+            alternatives = sorted(
+                (
+                    combo for combo in (room.get("combinations") or [])
+                    if risk["operator"] not in {str(op.get("name") or "") for op in combo.get("operators") or []}
+                    and _active_order_signature(combo) == _active_order_signature(current_combo)
+                    and _combo_metrics_not_worse(combo, current_combo)
+                ),
+                key=lambda combo: (
+                    len((combo.get("effect_resolution") or {}).get("opportunity_risk_operators") or []),
+                    -float(combo.get("proxy_score_per_hour", 0.0)),
+                ),
+            )[:16]
+            for alternative in alternatives:
+                mutated = _replace_assignment(
+                    current_assignments, risk["segment_id"], risk["room_id"], str(alternative["combination_id"]),
+                )
+                if not _assignments_respect_global_limits(context, library, mutated):
+                    continue
+                candidate_simulation = simulate_assignment(
+                    context, library, mutated, drone_allocations, drone_inventory, drone_waste,
+                )
+                if _simulation_constraint_violations(context, candidate_simulation):
+                    continue
+                old_count = len(risks)
+                new_count = len(_assignment_opportunity_risks(library, mutated))
+                if new_count >= old_count or not _release_is_neutral(current_simulation, candidate_simulation):
+                    continue
+                best_release = {
+                    "assignments": mutated,
+                    "simulation": candidate_simulation,
+                    "kind": "release_suppressed_operator",
+                    "operator": risk["operator"],
+                    "segment_id": risk["segment_id"],
+                    "room_id": risk["room_id"],
+                    "from_operators": [str(op.get("name") or "") for op in current_combo.get("operators") or []],
+                    "to_operators": [str(op.get("name") or "") for op in alternative.get("operators") or []],
+                    "opportunity_risk_reduction": old_count - new_count,
+                }
+                break
+            if best_release:
+                break
+        if best_release is None:
+            break
+        current_assignments = best_release.pop("assignments")
+        current_simulation = best_release.pop("simulation")
+        released.add(str(best_release["operator"]))
+        changes.append(best_release)
+
+    # Once a valuable operator has been released from a suppressed slot, try
+    # every retained room candidate that uses it. Each mutation is checked
+    # against the full-day simulation and all remaining hard constraints.
+    for _ in range(max_iterations):
+        best: dict[str, Any] | None = None
+        for operator in sorted(released):
+            for assignment in current_assignments:
+                segment_id = str(assignment.get("segment_id") or "")
+                room_id = str(assignment.get("room_id") or "")
+                if (segment_id, room_id) in drone_rooms:
+                    continue
+                current_combo = lookup.get((room_id, str(assignment.get("combination_id")))) or {}
+                if operator in {str(op.get("name") or "") for op in current_combo.get("operators") or []}:
+                    continue
+                room = (library.get("rooms") or {}).get(room_id) or {}
+                alternatives = sorted(
+                    (
+                        combo for combo in (room.get("combinations") or [])
+                        if operator in {str(op.get("name") or "") for op in combo.get("operators") or []}
+                    ),
+                    key=lambda combo: -float(combo.get("proxy_score_per_hour", 0.0)),
+                )[:16]
+                for alternative in alternatives:
+                    mutated = _replace_assignment(current_assignments, segment_id, room_id, str(alternative["combination_id"]))
+                    if not _assignments_respect_global_limits(context, library, mutated):
+                        continue
+                    candidate_simulation = simulate_assignment(
+                        context, library, mutated, drone_allocations, drone_inventory, drone_waste,
+                    )
+                    if _simulation_constraint_violations(context, candidate_simulation):
+                        continue
+                    if not _efficiency_better(current_simulation, candidate_simulation):
+                        continue
+                    gain = float(candidate_simulation.get("actual_objective_score", 0.0)) - float(current_simulation.get("actual_objective_score", 0.0))
+                    candidate = {
+                        "assignments": mutated,
+                        "simulation": candidate_simulation,
+                        "kind": "reuse_released_operator",
+                        "operator": operator,
+                        "segment_id": segment_id,
+                        "room_id": room_id,
+                        "from_operators": [str(op.get("name") or "") for op in current_combo.get("operators") or []],
+                        "to_operators": [str(op.get("name") or "") for op in alternative.get("operators") or []],
+                        "actual_objective_gain": gain,
+                    }
+                    if best is None or gain > float(best.get("actual_objective_gain", 0.0)) + 1e-6:
+                        best = candidate
+        if best is None:
+            break
+        current_assignments = best.pop("assignments")
+        current_simulation = best.pop("simulation")
+        changes.append(best)
+
+    remaining = _assignment_opportunity_risks(library, current_assignments)
+    return current_assignments, current_simulation, {
+        "checked": True,
+        "policy": "release_suppressed_high_value_effects_then_full_day_counterfactual_reassignment",
+        "max_iterations": max_iterations,
+        "initial_opportunity_risks": initial_risks,
+        "released_operators": sorted(released),
+        "changes": changes,
+        "remaining_opportunity_risks": remaining,
+        "neighborhood_exhausted": not remaining,
+        "skipped_drone_target_rooms": [
+            {"segment_id": segment_id, "room_id": room_id}
+            for segment_id, room_id in sorted(drone_rooms)
+        ],
     }
 
 def _candidate_plan(
@@ -394,6 +676,7 @@ def solve_hybrid(
                 raise RuntimeError(f"MILP无可行解: {result.message}")
             break
         assignments, selected_indices, drone_allocations, drone_inventory, drone_waste = _selected_variables(bundle, result.x)
+        resource_shortfalls = _selected_resource_shortfalls(bundle, result.x)
         no_good.append(selected_indices)
         simulation = simulate_assignment(
             context,
@@ -405,8 +688,15 @@ def solve_hybrid(
         )
         violations = _simulation_constraint_violations(context, simulation)
         secondary_postprocess: dict[str, Any] | None = None
+        opportunity_postprocess: dict[str, Any] | None = None
         if not violations:
             assignments, simulation, secondary_postprocess = _apply_free_secondary_improvements(
+                context, library, assignments, simulation,
+                drone_allocations, drone_inventory, drone_waste,
+            )
+            violations = _simulation_constraint_violations(context, simulation)
+        if not violations:
+            assignments, simulation, opportunity_postprocess = _apply_opportunity_cost_improvements(
                 context, library, assignments, simulation,
                 drone_allocations, drone_inventory, drone_waste,
             )
@@ -425,9 +715,11 @@ def solve_hybrid(
             "drone_allocations": drone_allocations,
             "drone_inventory": drone_inventory,
             "drone_waste": drone_waste,
+            "resource_shortfalls": resource_shortfalls,
             "simulation": simulation,
             "actual_constraint_violations": violations,
             "secondary_output_postprocess": secondary_postprocess,
+            "opportunity_cost_postprocess": opportunity_postprocess,
         }
         if violations:
             rejected_after_simulation.append({
@@ -470,6 +762,12 @@ def solve_hybrid(
         "top_solutions_requested": top_solutions,
         "top_solutions_returned": len(solutions),
         "proxy_attempts": len(no_good),
+        "synergy_bundle_ids_considered": [
+            str(bundle.get("id") or "")
+            for bundle in (library.get("synergy_bundles") or [])
+            if bundle.get("id")
+        ],
+        "synergy_bundle_candidate_preservation": True,
         "rejected_after_simulation": rejected_after_simulation,
         "optimality_claim": (
             "proxy_optimal_within_complete_candidate_library"
@@ -483,6 +781,7 @@ def solve_hybrid(
             "未结构化特殊技能和随机订单序列不参与实际全局最优性证明。",
         ],
         "secondary_output_policy": "primary_metrics_first_then_free_battle_record_exp",
+        "opportunity_cost_policy": "release_suppressed_effects_then_full_day_counterfactual_reassignment",
     }
     plan = _candidate_plan(context, library, selected["assignments"], selected["simulation"], solver_meta)
     output = {

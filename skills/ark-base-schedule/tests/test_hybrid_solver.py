@@ -11,14 +11,41 @@ SCRIPTS = SKILL_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from build_combinations import build_library
-from data_loader import read_roster
+from data_loader import operator_index, read_roster
 from build_model import build_milp
 from scipy.optimize import milp
-from simulate_schedule import simulate_assignment
-from solve_schedule import _apply_free_secondary_improvements, _simulation_constraint_violations, solve_hybrid
+from simulate_schedule import resource_sustainability, simulate_assignment
+from solve_schedule import (
+    _apply_free_secondary_improvements,
+    _apply_opportunity_cost_improvements,
+    _simulation_constraint_violations,
+    solve_hybrid,
+)
 
 
 class HybridSolverTests(unittest.TestCase):
+    def test_amiya_profession_aliases_use_canonical_skill_record(self):
+        index = operator_index()
+        self.assertIs(index["阿米娅（医疗）"], index["阿米娅"])
+        self.assertIs(index["阿米娅（近卫）"], index["阿米娅"])
+
+    def test_resource_sustainability_marks_zero_stock_as_non_repeatable(self):
+        result = resource_sustainability(
+            -59.36,
+            -16.87,
+            inventory={"originium_shard": 0, "pure_gold": None},
+            horizon={"mode": "steady_state"},
+        )
+        self.assertFalse(result["repeatable_without_inventory"])
+        self.assertEqual(result["classification"], "inventory_consuming_candidate")
+        self.assertEqual(result["runway_days"]["orundum_shard"], 0.0)
+        self.assertEqual(result["overall_runway_days"], 0.0)
+        self.assertFalse(result["feasible_for_configured_horizon"])
+
+    def test_resource_sustainability_marks_nonnegative_flow_as_repeatable(self):
+        result = resource_sustainability(0.0, 2.0, inventory={"originium_shard": 0}, horizon={"mode": "steady_state"})
+        self.assertTrue(result["repeatable_without_inventory"])
+        self.assertEqual(result["classification"], "sustainable_repeating_day")
     def _context(self, rooms, segments=None, roster=None, solver=None):
         segments = segments or {
             "segment_1": {"name": "全天", "start": "08:00", "end": "08:00", "hours": 24.0, "rooms": {}}
@@ -157,6 +184,40 @@ class HybridSolverTests(unittest.TestCase):
         self.assertEqual(len(combos), 1)
         self.assertEqual({item["name"] for item in combos[0]["operators"]}, {"砾", "斑点", "夜烟"})
 
+    def test_synergy_bundle_members_survive_pool_truncation(self):
+        rooms = {
+            "trading_post_1": {"facility_id": "trading_post", "level": 3, "product_id": "lmd_order"},
+        }
+        names = ["巫恋", "折光", "龙舌兰", "伺夜", "贝洛内", "但书", "黑键", "吉星", "可露希尔"]
+        context = self._context(rooms, roster=[
+            {"name": name, "elite": 2, "level": 90, "recruited": True, "morale": 24}
+            for name in names
+        ])
+        library = build_library(context, top_k=1, operator_pool_size=1, allow_partial=False)
+        self.assertIn("shamare_tailoring_refraction_tequila", {
+            bundle["id"] for bundle in library["synergy_bundles"]
+        })
+        room = library["rooms"]["trading_post_1"]
+        preserved = set(room["preserved_synergy_operators"])
+        self.assertTrue({"巫恋", "折光", "龙舌兰"}.issubset(preserved))
+        self.assertTrue({"伺夜", "贝洛内", "但书"}.issubset(preserved))
+        retained_teams = [
+            {operator["name"] for operator in combo["operators"]}
+            for combo in room["combinations"]
+        ]
+        self.assertIn({"巫恋", "折光", "龙舌兰"}, retained_teams)
+        self.assertIn({"伺夜", "贝洛内", "但书"}, retained_teams)
+        self.assertIn("shamare_tailoring_refraction_tequila", {
+            bundle_id
+            for combo in room["combinations"]
+            for bundle_id in combo.get("synergy_bundle_ids", [])
+        })
+        self.assertIn("vigil_bellone_proviso_hachiman", {
+            bundle_id
+            for combo in room["combinations"]
+            for bundle_id in combo.get("synergy_bundle_ids", [])
+        })
+
     def test_simulator_applies_warehouse_cap(self):
         rooms = {"factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"}}
         context = self._context(rooms, roster=[{"name": "砾", "elite": 2, "recruited": True, "morale": 24}])
@@ -291,6 +352,104 @@ class HybridSolverTests(unittest.TestCase):
         self.assertEqual(metadata["scope"]["drone_target_rooms"], "skipped")
         self.assertEqual(metadata["skipped_drone_target_rooms"], [])
         self.assertEqual(metadata["remaining_dominated_empty_slots"], [])
+
+    def test_soft_gold_target_uses_penalized_shortfall_variable(self):
+        rooms = {
+            "trading_post_1": {"facility_id": "trading_post", "level": 3, "product_id": "lmd_order"},
+        }
+        context = self._context(
+            rooms,
+            roster=[
+                {"name": name, "elite": elite, "level": 60, "recruited": True, "morale": 24}
+                for name, elite in (("慕斯", 0), ("玫兰莎", 1), ("月见夜", 1))
+            ],
+            solver={
+                "max_daily_work_hours": 24,
+                "allocate_drones": False,
+                "require_resource_balance": False,
+                "require_lmd_balance": False,
+                "require_pure_gold_balance": True,
+                "minimum_pure_gold_balance": 0,
+                "pure_gold_balance_mode": "soft",
+                "pure_gold_shortfall_penalty": 2.5,
+            },
+        )
+        library = build_library(context, top_k=10, operator_pool_size=2, allow_partial=False)
+        bundle = build_milp(context, library)
+        result = milp(bundle.c, integrality=bundle.integrality, bounds=bundle.bounds, constraints=bundle.constraints)
+        self.assertTrue(result.success)
+        shortfalls = [
+            float(value)
+            for record, value in zip(bundle.variable_records, result.x)
+            if record.get("kind") == "resource_shortfall" and record.get("resource") == "pure_gold"
+        ]
+        self.assertEqual(len(shortfalls), 1)
+        self.assertGreater(shortfalls[0], 0)
+        self.assertEqual(bundle.metadata["resource_shortfall_variable_count"], 1)
+
+    def test_opportunity_postprocess_releases_and_reuses_proviso(self):
+        rooms = {
+            "trading_post_1": {"facility_id": "trading_post", "level": 3, "product_id": "lmd_order"},
+            "trading_post_2": {"facility_id": "trading_post", "level": 3, "product_id": "lmd_order"},
+        }
+        context = self._context(
+            rooms,
+            roster=[
+                {"name": name, "elite": elite, "level": 60, "recruited": True, "morale": 24}
+                for name, elite in (("巫恋", 2), ("可露希尔", 2), ("但书", 2), ("慕斯", 0))
+            ],
+            solver={
+                "max_daily_work_hours": 24,
+                "allocate_drones": False,
+                "require_resource_balance": False,
+                "require_lmd_balance": False,
+                "require_pure_gold_balance": False,
+                "require_dormitory_cycle": False,
+                "opportunity_postprocess_max_iterations": 4,
+            },
+        )
+        context["objective"]["preferences"]["solver_weights"] = {"lmd": 1.0}
+        library = build_library(context, top_k=100, operator_pool_size=10, allow_partial=True)
+
+        def combo_id(room_id, names):
+            target = set(names)
+            return next(
+                combo["combination_id"]
+                for combo in library["rooms"][room_id]["combinations"]
+                if {operator["name"] for operator in combo["operators"]} == target
+            )
+
+        assignments = [
+            {
+                "segment_id": "segment_1",
+                "room_id": "trading_post_1",
+                "combination_id": combo_id("trading_post_1", ["巫恋", "可露希尔", "但书"]),
+            },
+            {
+                "segment_id": "segment_1",
+                "room_id": "trading_post_2",
+                "combination_id": combo_id("trading_post_2", []),
+            },
+        ]
+        before = simulate_assignment(context, library, assignments)
+        improved, after, metadata = _apply_opportunity_cost_improvements(
+            context, library, assignments, before, [], [], [],
+        )
+        selected_names = {
+            item["room_id"]: {
+                operator["name"]
+                for operator in next(
+                    combo for combo in library["rooms"][item["room_id"]]["combinations"]
+                    if combo["combination_id"] == item["combination_id"]
+                )["operators"]
+            }
+            for item in improved
+        }
+        self.assertNotIn("但书", selected_names["trading_post_1"])
+        self.assertIn("但书", selected_names["trading_post_2"])
+        self.assertGreater(after["net_lmd_balance"], before["net_lmd_balance"])
+        self.assertIn("但书", metadata["released_operators"])
+        self.assertTrue(any(item["kind"] == "reuse_released_operator" for item in metadata["changes"]))
 
 
     def test_drone_inventory_is_closed_and_allocated(self):

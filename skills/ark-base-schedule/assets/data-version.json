@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "source_type": "sanitized_community_structured_snapshot",
-  "source_file": null,
-  "retrieved_at": "2026-07-29",
-  "data_version": "2026-07-30-structured-mechanisms-v8",
-  "canonical_operator_count": 248,
-  "canonical_skill_count": 503,
+  "source_type": "full_operator_skill_table_with_structured_overlay",
+  "source_file": "skills_parsed.txt",
+  "retrieved_at": "2026-07-30",
+  "data_version": "2026-07-30-full-skills-parsed-421-v11",
+  "canonical_operator_count": 421,
+  "canonical_skill_count": 905,
   "personal_roster_state_removed": true,
   "sources": [
     {
@@ -55,7 +55,13 @@
       "url": "https://prts.wiki/w/Ashlock",
       "retrieved_at": "2026-07-30",
       "scope": "红松骑士团制造技能解锁阶段、正义骑士号联动、戴菲恩运筹好手解锁阶段；分项链接见 mechanic-sources.md"
+    },
+    {
+      "name": "PRTS 后勤技能中间产物一览与 ArknightsGameData",
+      "url": "https://prts.wiki/w/%E5%90%8E%E5%8B%A4%E6%8A%80%E8%83%BD%E4%B8%AD%E9%97%B4%E4%BA%A7%E7%89%A9%E4%B8%80%E8%A7%88",
+      "retrieved_at": "2026-07-30",
+      "scope": "感知信息的非消耗转换、无声共鸣来源与消费，以及折光、贝洛内、黑键的当前后勤技能数据"
     }
   ],
-  "notes": "The public repository excludes the original owned-roster export and removes source account levels, elite states and source line numbers. Structured rules preserve source descriptions and use explicit effects, variant groups and special rules. The snapshot is not a complete game database."
+  "notes": "The canonical catalog is built from the full skills_parsed.txt table. Personal roster ownership and progression remain separate inputs. Structured overlays preserve explicit effects, variant groups and special rules for complex mechanics."
 }

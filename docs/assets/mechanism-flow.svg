@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="720" viewBox="0 0 1920 720" role="img" aria-labelledby="title desc">
+  <title id="title">明日方舟基建排班优化流程</title>
+  <desc id="desc">从用户输入、输入预检、机制计算、候选枚举、全局求解、逐区间模拟到审计与输出的完整流程。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#54706a"/>
+    </marker>
+    <marker id="return-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c0772a"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#17352f" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="720" fill="#f7faf9"/>
+  <rect x="0" y="0" width="1920" height="12" fill="#16856e"/>
+
+  <text x="960" y="76" text-anchor="middle" fill="#18332e" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="38" font-weight="700">明日方舟基建排班优化流程</text>
+  <text x="960" y="112" text-anchor="middle" fill="#60736f" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="18">从个人数据与约束，到可验证、可执行的排班文件</text>
+
+  <g fill="none" stroke="#54706a" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)">
+    <path d="M 284 316 H 310"/>
+    <path d="M 544 316 H 570"/>
+    <path d="M 804 316 H 830"/>
+    <path d="M 1064 316 H 1090"/>
+    <path d="M 1324 316 H 1350"/>
+    <path d="M 1584 316 H 1610"/>
+  </g>
+
+  <g filter="url(#shadow)" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif">
+    <g>
+      <rect x="50" y="206" width="234" height="220" rx="8" fill="#ffffff" stroke="#a9c7bf" stroke-width="2"/>
+      <circle cx="94" cy="252" r="24" fill="#16856e"/>
+      <text x="94" y="260" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="700">1</text>
+      <text x="78" y="314" fill="#18332e" font-size="26" font-weight="700">用户输入</text>
+      <line x1="78" y1="336" x2="256" y2="336" stroke="#dce8e5" stroke-width="2"/>
+      <text x="78" y="372" fill="#526863" font-size="18">roster.xlsx</text>
+      <text x="78" y="401" fill="#526863" font-size="18">目标与约束</text>
+    </g>
+
+    <g>
+      <rect x="310" y="206" width="234" height="220" rx="8" fill="#ffffff" stroke="#a9c7bf" stroke-width="2"/>
+      <circle cx="354" cy="252" r="24" fill="#16856e"/>
+      <text x="354" y="260" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="700">2</text>
+      <text x="338" y="314" fill="#18332e" font-size="26" font-weight="700">输入预检</text>
+      <line x1="338" y1="336" x2="516" y2="336" stroke="#dce8e5" stroke-width="2"/>
+      <text x="338" y="372" fill="#526863" font-size="18">设施 · 电力 · 上线</text>
+      <text x="338" y="401" fill="#526863" font-size="18">数据覆盖</text>
+    </g>
+
+    <g>
+      <rect x="570" y="206" width="234" height="220" rx="8" fill="#ffffff" stroke="#85b9ad" stroke-width="2"/>
+      <circle cx="614" cy="252" r="24" fill="#16856e"/>
+      <text x="614" y="260" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="700">3</text>
+      <text x="598" y="314" fill="#18332e" font-size="26" font-weight="700">机制计算</text>
+      <line x1="598" y1="336" x2="776" y2="336" stroke="#dce8e5" stroke-width="2"/>
+      <text x="598" y="372" fill="#526863" font-size="18">技能解锁 · 叠加</text>
+      <text x="598" y="401" fill="#526863" font-size="18">全局联动</text>
+    </g>
+
+    <g>
+      <rect x="830" y="206" width="234" height="220" rx="8" fill="#ffffff" stroke="#85b9ad" stroke-width="2"/>
+      <circle cx="874" cy="252" r="24" fill="#16856e"/>
+      <text x="874" y="260" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="700">4</text>
+      <text x="858" y="314" fill="#18332e" font-size="26" font-weight="700">候选枚举</text>
+      <line x1="858" y1="336" x2="1036" y2="336" stroke="#dce8e5" stroke-width="2"/>
+      <text x="858" y="372" fill="#526863" font-size="18">布局 Profile</text>
+      <text x="858" y="401" fill="#526863" font-size="18">单房间组合</text>
+    </g>
+
+    <g>
+      <rect x="1090" y="206" width="234" height="220" rx="8" fill="#ffffff" stroke="#d5b17a" stroke-width="2"/>
+      <circle cx="1134" cy="252" r="24" fill="#c0772a"/>
+      <text x="1134" y="260" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="700">5</text>
+      <text x="1118" y="314" fill="#18332e" font-size="26" font-weight="700">全局求解</text>
+      <line x1="1118" y1="336" x2="1296" y2="336" stroke="#eee2d0" stroke-width="2"/>
+      <text x="1118" y="372" fill="#526863" font-size="18">MILP · 工时 · 资源</text>
+      <text x="1118" y="401" fill="#526863" font-size="18">无人机</text>
+    </g>
+
+    <g>
+      <rect x="1350" y="206" width="234" height="220" rx="8" fill="#ffffff" stroke="#d5b17a" stroke-width="2"/>
+      <circle cx="1394" cy="252" r="24" fill="#c0772a"/>
+      <text x="1394" y="260" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="700">6</text>
+      <text x="1378" y="314" fill="#18332e" font-size="26" font-weight="700">逐区间模拟</text>
+      <line x1="1378" y1="336" x2="1556" y2="336" stroke="#eee2d0" stroke-width="2"/>
+      <text x="1378" y="372" fill="#526863" font-size="18">订单 · 库存 · 心情</text>
+      <text x="1378" y="401" fill="#526863" font-size="18">宿舍</text>
+    </g>
+
+    <g>
+      <rect x="1610" y="206" width="260" height="220" rx="8" fill="#18332e" stroke="#18332e" stroke-width="2"/>
+      <circle cx="1654" cy="252" r="24" fill="#e1a759"/>
+      <text x="1654" y="260" text-anchor="middle" fill="#18332e" font-size="22" font-weight="700">7</text>
+      <text x="1638" y="314" fill="#ffffff" font-size="26" font-weight="700">审计与输出</text>
+      <line x1="1638" y1="336" x2="1842" y2="336" stroke="#49645e" stroke-width="2"/>
+      <text x="1638" y="372" fill="#d8e6e2" font-size="18">验证 · schedule.json</text>
+      <text x="1638" y="401" fill="#d8e6e2" font-size="18">report.md</text>
+    </g>
+  </g>
+
+  <path d="M 1740 446 V 552 Q 1740 582 1710 582 H 457 Q 427 582 427 552 V 448" fill="none" stroke="#c0772a" stroke-width="3" stroke-dasharray="9 8" stroke-linecap="round" marker-end="url(#return-arrow)"/>
+  <rect x="850" y="552" width="470" height="58" rx="8" fill="#fff8ed" stroke="#e4c493" stroke-width="2"/>
+  <text x="1085" y="589" text-anchor="middle" fill="#8e541c" font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="20" font-weight="600">验证失败：修正配置或机制数据</text>
+
+  <g font-family="Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="16">
+    <circle cx="725" cy="660" r="7" fill="#16856e"/>
+    <text x="741" y="666" fill="#526863">数据与机制</text>
+    <circle cx="922" cy="660" r="7" fill="#c0772a"/>
+    <text x="938" y="666" fill="#526863">优化与模拟</text>
+    <circle cx="1139" cy="660" r="7" fill="#18332e"/>
+    <text x="1155" y="666" fill="#526863">可执行产物</text>
+  </g>
+</svg>

@@ -72,6 +72,31 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("net_lmd_floor", failed)
         self.assertIn("optimality_claim_library_complete", failed)
 
+    def test_audit_warns_when_soft_resource_target_is_short(self):
+        value = {
+            "search_type": "outer_layout_configuration_plus_inner_hybrid_schedule_solver",
+            "objective": {"constraints": {
+                "minimum_net_lmd_per_day": -20000,
+                "minimum_orundum_shard_balance": 0,
+                "minimum_pure_gold_balance": 0,
+                "balance_policy": {
+                    "originium_shard": {"mode": "soft"},
+                    "pure_gold": {"mode": "soft"},
+                },
+            }},
+            "selected": {
+                "orundum_per_day": 500,
+                "net_lmd_per_day": -10000,
+                "orundum_shard_balance": -10,
+                "pure_gold_balance": 0,
+                "solver_result": {"solver": {"actual_simulation_global_optimality_proven": False}},
+            },
+        }
+        audit = audit_result(value)
+        self.assertEqual(audit["status"], "passed_with_warnings")
+        warning_codes = {item["code"] for item in audit["checks"] if not item["ok"] and item["severity"] == "warning"}
+        self.assertIn("shard_balance_soft_target", warning_codes)
+
     def test_audit_rejects_multiple_drone_targets_at_one_operation_node(self):
         value = {
             "result_type": "hybrid_schedule_solution",

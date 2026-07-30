@@ -58,6 +58,7 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
     search = config.get("search") or {}
     profile = config.get("profiles") or {}
     online_times = list(objective["online_times"])
+    balance_policy = objective.get("balance_policy") or {}
     kwargs = _solver_options(config)
     kwargs.update({
         "roster_path": roster,
@@ -75,12 +76,20 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "right_side_levels": base_state["right_side_levels"],
         "drone_capacity": float(base_state["drone_capacity"]),
         "initial_drone_stock": float(base_state["initial_drone_stock"]),
+        "inventory": dict(base_state.get("inventory") or {}),
+        "horizon": dict(config.get("horizon") or {}),
         "max_orundum_trading_posts": objective.get("max_orundum_trading_posts"),
         "max_shard_factories": objective.get("max_shard_factories"),
         "minimum_battle_record_factories": int(objective.get("minimum_battle_record_factories", 0)),
         "lmd_proxy_floor_slack": float(search.get("lmd_proxy_floor_slack", 0.0)),
+        "proxy_shard_consumption_factor": float(search.get("proxy_shard_consumption_factor", 1.0)),
+        "proxy_gold_consumption_factor": float(search.get("proxy_gold_consumption_factor", 1.0)),
+        "proxy_lmd_cost_factor": float(search.get("proxy_lmd_cost_factor", 1.0)),
+        "opportunity_postprocess_max_iterations": int(search.get("opportunity_postprocess_max_iterations", 4)),
         "operator_overrides": config.get("operator_overrides"),
         "right_side_schedule": config["right_side_schedule"],
+        "shard_balance_policy": dict(balance_policy.get("originium_shard") or {"mode": "hard"}),
+        "gold_balance_policy": dict(balance_policy.get("pure_gold") or {"mode": "hard"}),
     })
     return kwargs
 
@@ -100,6 +109,15 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
     if power["spare_power"] < -1e-9:
         raise ValueError(f"固定排班缺电 {-power['spare_power']:.0f}，不能进入求解器")
     solver["max_daily_work_hours"] = float(objective["max_daily_work_hours"])
+    balance_policy = objective.get("balance_policy") or {}
+    shard_policy = dict(balance_policy.get("originium_shard") or {"mode": "hard"})
+    gold_policy = dict(balance_policy.get("pure_gold") or {"mode": "hard"})
+    solver["orundum_shard_balance_mode"] = str(shard_policy.get("mode", "hard"))
+    solver["orundum_shard_shortfall_penalty"] = float(shard_policy.get("shortfall_penalty", 0.0))
+    solver["hard_minimum_orundum_shard_balance"] = shard_policy.get("hard_minimum")
+    solver["pure_gold_balance_mode"] = str(gold_policy.get("mode", "hard"))
+    solver["pure_gold_shortfall_penalty"] = float(gold_policy.get("shortfall_penalty", 0.0))
+    solver["hard_minimum_pure_gold_balance"] = gold_policy.get("hard_minimum")
     solver["drone_capacity"] = float(base_state["drone_capacity"])
     solver["initial_drone_stock"] = float(base_state["initial_drone_stock"])
     solver.setdefault("allocate_drones", True)
@@ -248,6 +266,10 @@ def run_project(
             initial_drone_stock=kwargs["initial_drone_stock"],
             minimum_shard_balance=kwargs["minimum_shard_balance"],
             minimum_gold_balance=kwargs["minimum_gold_balance"],
+            proxy_shard_consumption_factor=kwargs["proxy_shard_consumption_factor"],
+            proxy_gold_consumption_factor=kwargs["proxy_gold_consumption_factor"],
+            proxy_lmd_cost_factor=kwargs["proxy_lmd_cost_factor"],
+            opportunity_postprocess_max_iterations=kwargs["opportunity_postprocess_max_iterations"],
             right_side_schedule=kwargs["right_side_schedule"],
             marginal_limit=int((config.get("upgrades") or {}).get("marginal_limit", 0)),
         )
@@ -266,6 +288,7 @@ def run_project(
         "mode": mode,
         "configuration_file": path.name,
         "horizon": config["horizon"],
+        "inventory": dict((config.get("base_state") or {}).get("inventory") or {}),
         "right_side_levels": dict(config["base_state"]["right_side_levels"]),
         "right_side_levels_confirmed": bool(config["base_state"]["right_side_levels_confirmed"]),
         "right_side_levels_immutable": True,
