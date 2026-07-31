@@ -233,6 +233,30 @@ class OwnedSkillTableImportTests(unittest.TestCase):
         self.assertEqual(skill["model_status"], "structured")
         self.assertIn("qingliu_per_trading_post", skill["tags"])
 
+    def test_existing_fixed_bonus_does_not_override_current_conditional_text(self):
+        from import_owned_skill_table import merge_existing, parse_table
+
+        source = "耶拉|精2|会客室|耶拉冈德|进驻会客室后，每当新搜集到的线索不是喀兰贸易时，则额外增加喀兰贸易线索的出现概率（工作时长影响概率）\n"
+        existing = {"operators": [{
+            "name": "耶拉", "groups": ["karlan_trade"],
+            "skills": [{
+                "facility": "reception_room", "elite": 2, "skill_name": "耶拉冈德",
+                "description": "旧占位", "base_bonus_pct": 10,
+                "model_status": "structured", "tags": ["time_dependent_probability"],
+            }],
+        }]}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_path = root / "skills.txt"
+            existing_path = root / "existing.json"
+            source_path.write_text(source, encoding="utf-8")
+            existing_path.write_text(json.dumps(existing, ensure_ascii=False), encoding="utf-8")
+            parsed, warnings = parse_table(source_path)
+            merged = merge_existing(parsed, existing_path, retain_existing_only=False)
+
+        self.assertEqual(warnings, [])
+        self.assertEqual(merged[0]["skills"][0]["base_bonus_pct"], 0)
+
     def test_roster_scoped_block_format(self):
         from import_owned_skill_table import parse_table
 

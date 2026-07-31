@@ -19,6 +19,7 @@ from solve_schedule import (
     _apply_free_secondary_improvements,
     _apply_opportunity_cost_improvements,
     _simulation_constraint_violations,
+    diagnose_infeasible_model,
     solve_hybrid,
 )
 
@@ -67,7 +68,7 @@ class HybridSolverTests(unittest.TestCase):
                 "products": [room["product_id"] for room in rooms.values()],
                 "preferences": {
                     "priority": "balanced",
-                    "solver": solver or {"max_daily_work_hours": 24},
+                    "solver": solver or {},
                 },
             },
             "facility_configuration": {"rooms": rooms, "dormitories": []},
@@ -219,7 +220,10 @@ class HybridSolverTests(unittest.TestCase):
         })
 
     def test_simulator_applies_warehouse_cap(self):
-        rooms = {"factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"}}
+        rooms = {
+            "factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+            "factory_2": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+        }
         context = self._context(rooms, roster=[{"name": "砾", "elite": 2, "recruited": True, "morale": 24}])
         overflow_combo = dict(self._manual_library()["rooms"]["factory_1"]["combinations"][0])
         overflow_combo["warehouse_capacity"] = 24
@@ -259,7 +263,7 @@ class HybridSolverTests(unittest.TestCase):
         context = self._context(
             rooms, segments=segments,
             roster=[{"name": "芬", "elite": 1, "level": 55, "recruited": True, "morale": 24}],
-            solver={"max_daily_work_hours": 24, "allocate_drones": False},
+            solver={"allocate_drones": False},
         )
         library = build_library(context, top_k=10, operator_pool_size=2, allow_partial=True)
         products = {combo["product_id"] for combo in library["rooms"]["factory_1"]["combinations"]}
@@ -289,7 +293,6 @@ class HybridSolverTests(unittest.TestCase):
             segments=segments,
             roster=[{"name": "孑", "elite": 0, "level": 1, "recruited": True, "morale": 24}],
             solver={
-                "max_daily_work_hours": 24,
                 "allocate_drones": False,
                 "random_order_trials": 3,
                 "random_order_seed": 17,
@@ -364,7 +367,7 @@ class HybridSolverTests(unittest.TestCase):
                 {"name": "断罪者", "elite": 1, "level": 1, "recruited": True, "morale": 24},
                 {"name": "红豆", "elite": 0, "level": 1, "recruited": True, "morale": 24},
             ],
-            solver={"max_daily_work_hours": 18, "allocate_drones": False},
+            solver={"allocate_drones": False},
         )
         context["objective"]["preferences"]["priority"] = "orundum_lmd_balance"
         library = build_library(context, top_k=60, operator_pool_size=4, allow_partial=True)
@@ -404,7 +407,6 @@ class HybridSolverTests(unittest.TestCase):
                 for name, elite in (("慕斯", 0), ("玫兰莎", 1), ("月见夜", 1))
             ],
             solver={
-                "max_daily_work_hours": 24,
                 "allocate_drones": False,
                 "require_resource_balance": False,
                 "require_lmd_balance": False,
@@ -439,7 +441,6 @@ class HybridSolverTests(unittest.TestCase):
                 for name, elite in (("巫恋", 2), ("可露希尔", 2), ("但书", 2), ("慕斯", 0))
             ],
             solver={
-                "max_daily_work_hours": 24,
                 "allocate_drones": False,
                 "require_resource_balance": False,
                 "require_lmd_balance": False,
@@ -499,10 +500,11 @@ class HybridSolverTests(unittest.TestCase):
         context = self._context(
             rooms,
             solver={
-                "max_daily_work_hours": 24,
                 "allocate_drones": True,
                 "drone_repeating_day_balance": True,
                 "drone_capacity": 235,
+                "initial_drone_stock": None,
+                "initial_state_policy": "cyclic_phase_free",
                 "empty_drone_inventory_at_each_node": True,
                 "require_resource_balance": False,
             },
@@ -530,7 +532,6 @@ class HybridSolverTests(unittest.TestCase):
         context = self._context(
             rooms,
             solver={
-                "max_daily_work_hours": 24,
                 "allocate_drones": True,
                 "drone_repeating_day_balance": True,
                 "drone_capacity": 235,
@@ -566,7 +567,6 @@ class HybridSolverTests(unittest.TestCase):
         context = self._context(
             {},
             solver={
-                "max_daily_work_hours": 24,
                 "require_resource_balance": True,
                 "minimum_orundum_shard_balance": -4,
                 "resource_balance_safety_factor": 1.07,
@@ -583,6 +583,67 @@ class HybridSolverTests(unittest.TestCase):
             ),
             [],
         )
+
+    def test_infeasible_diagnostic_identifies_empty_candidate_room(self):
+        rooms = {
+            "factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+            "factory_2": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+        }
+        context = self._context(
+            rooms,
+            solver={
+                "allocate_drones": False,
+                "require_resource_balance": False,
+                "require_lmd_balance": False,
+                "require_pure_gold_balance": False,
+            },
+        )
+        library = self._manual_library_with_one_room()
+        library["rooms"]["factory_2"] = {
+            "room": {"room_id": "factory_2", **rooms["factory_2"]},
+            "combinations": [],
+        }
+        library["search_completeness"] = {"all_rooms_untruncated": False}
+        bundle = build_milp(context, library)
+        result = milp(
+            bundle.c,
+            integrality=bundle.integrality,
+            bounds=bundle.bounds,
+            constraints=bundle.constraints,
+        )
+        self.assertIsNone(result.x)
+        diagnostic = diagnose_infeasible_model(bundle, time_limit=5)
+        coverage = diagnostic["constraint_families_individually_recovering_feasibility"]["candidate_coverage"]
+        self.assertTrue(coverage["feasible"])
+        self.assertEqual(coverage["relaxations"][0]["constraint_type"], "one_combination")
+
+    def test_cross_facility_order_capacity_state_enters_milp(self):
+        rooms = {
+            "control_center": {"facility_id": "control_center", "level": 5, "product_id": "base_management"},
+            "trading_post_1": {"facility_id": "trading_post", "level": 3, "product_id": "lmd_order"},
+        }
+        context = self._context(
+            rooms,
+            roster=[
+                {"name": "维什戴尔", "elite": 2, "level": 90, "recruited": True, "morale": 24},
+                {"name": "赫德雷", "elite": 2, "level": 90, "recruited": True, "morale": 24},
+            ],
+            solver={
+                "allocate_drones": False,
+                "require_resource_balance": False,
+                "require_lmd_balance": False,
+                "require_pure_gold_balance": False,
+            },
+        )
+        library = build_library(context, top_k=20, operator_pool_size=4, allow_partial=True)
+        bundle = build_milp(context, library)
+        interactions = [
+            item for item in bundle.variable_records
+            if item.get("kind") == "cross_facility_interaction"
+            and int(item.get("order_capacity_delta", 0)) == 2
+        ]
+        self.assertTrue(interactions)
+        self.assertGreater(bundle.metadata["cross_facility_interaction_variable_count"], 0)
 
 
 if __name__ == "__main__":

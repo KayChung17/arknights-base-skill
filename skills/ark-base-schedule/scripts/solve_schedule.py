@@ -9,7 +9,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from scipy.optimize import milp
+import numpy as np
+from scipy.optimize import Bounds, LinearConstraint, milp
+from scipy.sparse import csc_matrix, hstack
 
 from build_combinations import build_library
 from build_model import _solver_settings, build_milp
@@ -25,7 +27,127 @@ from optimizer_common import (
 )
 from simulate_schedule import simulate_assignment
 from timeline_utils import rotation_analysis
-from right_side_schedule import fixed_hours_by_operator, fixed_work_by_segment
+from right_side_schedule import fixed_work_by_segment
+
+
+class ScheduleSolveError(RuntimeError):
+    """Solver failure with a structured, user-facing diagnostic payload."""
+
+    def __init__(self, message: str, diagnostics: dict[str, Any]):
+        super().__init__(message)
+        self.diagnostics = diagnostics
+
+
+DIAGNOSTIC_CONSTRAINT_FAMILIES: dict[str, set[str]] = {
+    "candidate_coverage": {"one_combination"},
+    "product_requirements": {"product_room_count"},
+    "operator_availability": {"operator_exclusivity"},
+    "resource_floors": {
+        "orundum_shard_balance_including_drones",
+        "orundum_shard_hard_safety_floor",
+        "net_lmd_balance_including_drones",
+        "pure_gold_balance_including_drones",
+        "pure_gold_hard_safety_floor",
+    },
+    "drone_policy": {
+        "drone_allocation_link", "drone_target_link", "one_drone_target_per_node",
+        "initial_drone_inventory", "drone_use_available_at_node",
+        "empty_drone_inventory_at_node", "drone_inventory_flow",
+    },
+}
+
+
+def _elastic_relaxation(
+    bundle: Any,
+    allowed_types: set[str],
+    *,
+    time_limit: float,
+) -> dict[str, Any]:
+    """Find the minimum relaxation of selected rows while all other rows stay hard."""
+    records = list(bundle.constraint_records or [])
+    matrix = bundle.constraints.A.tocsc()
+    lower = np.asarray(bundle.constraints.lb, dtype=float)
+    upper = np.asarray(bundle.constraints.ub, dtype=float)
+    slack_columns: list[csc_matrix] = []
+    slack_meta: list[dict[str, Any]] = []
+    objective = list(np.zeros(len(bundle.c), dtype=float))
+    for row, record in enumerate(records):
+        if str(record.get("type") or "") not in allowed_types:
+            continue
+        scale = max(
+            1.0,
+            abs(float(lower[row])) if np.isfinite(lower[row]) else 0.0,
+            abs(float(upper[row])) if np.isfinite(upper[row]) else 0.0,
+        )
+        if np.isfinite(lower[row]):
+            column = csc_matrix(([1.0], ([row], [0])), shape=(matrix.shape[0], 1))
+            slack_columns.append(column)
+            objective.append(1.0 / scale)
+            slack_meta.append({"row": row, "direction": "lower", "record": record})
+        if np.isfinite(upper[row]):
+            column = csc_matrix(([-1.0], ([row], [0])), shape=(matrix.shape[0], 1))
+            slack_columns.append(column)
+            objective.append(1.0 / scale)
+            slack_meta.append({"row": row, "direction": "upper", "record": record})
+    if not slack_columns:
+        return {"feasible": False, "reason": "family_has_no_constraints", "relaxations": []}
+
+    augmented = hstack([matrix, *slack_columns], format="csc")
+    slack_count = len(slack_columns)
+    bounds = Bounds(
+        np.concatenate([np.asarray(bundle.bounds.lb, dtype=float), np.zeros(slack_count)]),
+        np.concatenate([np.asarray(bundle.bounds.ub, dtype=float), np.full(slack_count, np.inf)]),
+    )
+    result = milp(
+        np.asarray(objective, dtype=float),
+        integrality=np.concatenate([np.asarray(bundle.integrality, dtype=int), np.zeros(slack_count, dtype=int)]),
+        bounds=bounds,
+        constraints=LinearConstraint(augmented, lower, upper),
+        options={"time_limit": max(1.0, min(float(time_limit), 15.0)), "presolve": True},
+    )
+    if result.x is None:
+        return {"feasible": False, "reason": str(result.message), "relaxations": []}
+    slack_values = result.x[len(bundle.c):]
+    relaxations = []
+    for meta, value in zip(slack_meta, slack_values):
+        if float(value) <= 1e-7:
+            continue
+        relaxations.append({
+            "constraint_type": meta["record"].get("type"),
+            "direction": meta["direction"],
+            "minimum_relaxation": float(value),
+            "constraint": meta["record"],
+        })
+    return {
+        "feasible": True,
+        "objective": float(result.fun),
+        "relaxations": sorted(
+            relaxations,
+            key=lambda item: (-float(item["minimum_relaxation"]), str(item["constraint_type"])),
+        ),
+    }
+
+
+def diagnose_infeasible_model(bundle: Any, *, time_limit: float) -> dict[str, Any]:
+    """Identify constraint families whose smallest relaxation restores feasibility."""
+    families: dict[str, Any] = {}
+    for name, constraint_types in DIAGNOSTIC_CONSTRAINT_FAMILIES.items():
+        result = _elastic_relaxation(bundle, constraint_types, time_limit=time_limit)
+        if result.get("feasible"):
+            families[name] = result
+    combined = _elastic_relaxation(
+        bundle,
+        set().union(*DIAGNOSTIC_CONSTRAINT_FAMILIES.values()),
+        time_limit=time_limit,
+    )
+    return {
+        "failure_type": "milp_infeasible",
+        "candidate_library_complete": bool(
+            ((bundle.metadata or {}).get("search_completeness") or {}).get("all_rooms_untruncated")
+        ),
+        "constraint_families_individually_recovering_feasibility": families,
+        "combined_minimum_relaxation": combined,
+    }
 
 
 def _selected_variables(bundle, vector) -> tuple[list[dict[str, Any]], list[int], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -145,8 +267,6 @@ def _apply_free_secondary_improvements(
     """Lexicographically improve battle-record output without reducing primary metrics."""
     current_assignments = [dict(item) for item in assignments]
     current_simulation = simulation
-    segments = {item.segment_id: item for item in context_segments(context)}
-    max_hours = float(_solver_settings(context).get("max_daily_work_hours", 24.0))
     drone_rooms = {(str(item.get("segment_id")), str(item.get("room_id"))) for item in drone_allocations}
     improvements: list[dict[str, Any]] = []
 
@@ -159,10 +279,6 @@ def _apply_free_secondary_improvements(
             selected_ops[key[0]] = selected_ops.get(key[0], set()) | {
                 str(op.get("name")) for op in (combo or {}).get("operators") or []
             }
-        work_hours = {
-            str(name): float((state or {}).get("daily_work_hours", 0.0) or 0.0)
-            for name, state in (current_simulation.get("morale") or {}).items()
-        }
         best: dict[str, Any] | None = None
 
         for key, item in assignment_map.items():
@@ -179,7 +295,6 @@ def _apply_free_secondary_improvements(
                 continue
             current_names = {str(op.get("name")) for op in current_combo.get("operators") or []}
             busy_elsewhere = selected_ops.get(segment_id, set()) - current_names
-            hours = float(segments[segment_id].hours)
             alternatives = sorted(
                 combos,
                 key=lambda combo: -float((combo.get("metrics_per_hour") or {}).get("battle_record_exp", 0.0) or 0.0),
@@ -191,13 +306,6 @@ def _apply_free_secondary_improvements(
                     break
                 alternative_names = {str(op.get("name")) for op in alternative.get("operators") or []}
                 if alternative_names & busy_elsewhere:
-                    continue
-                adjusted_hours = dict(work_hours)
-                for name in current_names - alternative_names:
-                    adjusted_hours[name] = adjusted_hours.get(name, 0.0) - hours
-                for name in alternative_names - current_names:
-                    adjusted_hours[name] = adjusted_hours.get(name, 0.0) + hours
-                if any(value > max_hours + 1e-6 for value in adjusted_hours.values()):
                     continue
                 mutated = [dict(record) for record in current_assignments]
                 for record in mutated:
@@ -279,16 +387,12 @@ def _assignment_opportunity_risks(
     return risks
 
 
-def _assignments_respect_global_limits(
+def _assignments_respect_exclusivity(
     context: dict[str, Any], library: dict[str, Any], assignments: list[dict[str, Any]],
 ) -> bool:
     lookup = _combo_lookup(library)
     segments = {item.segment_id: item for item in context_segments(context)}
     fixed_by_segment = fixed_work_by_segment(context)
-    hours_by_operator = dict(fixed_hours_by_operator(context))
-    settings = _solver_settings(context)
-    default_max = float(settings.get("max_daily_work_hours", 24.0))
-    overrides = settings.get("operator_max_daily_hours") or {}
     used_by_segment = {segment_id: set(names) for segment_id, names in fixed_by_segment.items()}
     for assignment in assignments:
         segment_id = str(assignment.get("segment_id") or "")
@@ -301,12 +405,7 @@ def _assignments_respect_global_limits(
         if names & used_by_segment.setdefault(segment_id, set()):
             return False
         used_by_segment[segment_id].update(names)
-        for name in names:
-            hours_by_operator[name] = float(hours_by_operator.get(name, 0.0)) + float(segment.hours)
-    return all(
-        hours <= float(overrides.get(name, default_max)) + 1e-6
-        for name, hours in hours_by_operator.items()
-    )
+    return True
 
 
 def _active_order_signature(combo: dict[str, Any]) -> tuple[str, ...]:
@@ -424,7 +523,7 @@ def _apply_opportunity_cost_improvements(
                 mutated = _replace_assignment(
                     current_assignments, risk["segment_id"], risk["room_id"], str(alternative["combination_id"]),
                 )
-                if not _assignments_respect_global_limits(context, library, mutated):
+                if not _assignments_respect_exclusivity(context, library, mutated):
                     continue
                 candidate_simulation = simulate_assignment(
                     context, library, mutated, drone_allocations, drone_inventory, drone_waste,
@@ -480,7 +579,7 @@ def _apply_opportunity_cost_improvements(
                 )[:16]
                 for alternative in alternatives:
                     mutated = _replace_assignment(current_assignments, segment_id, room_id, str(alternative["combination_id"]))
-                    if not _assignments_respect_global_limits(context, library, mutated):
+                    if not _assignments_respect_exclusivity(context, library, mutated):
                         continue
                     candidate_simulation = simulate_assignment(
                         context, library, mutated, drone_allocations, drone_inventory, drone_waste,
@@ -635,6 +734,7 @@ def solve_hybrid(
     time_limit: float = 30.0,
     mip_rel_gap: float = 0.001,
     max_proxy_attempts: int | None = None,
+    _rejection_retry_depth: int = 0,
 ) -> dict[str, Any]:
     settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
     expansion_rounds = max(0, int(settings.get("adaptive_candidate_expansion_rounds", 2)))
@@ -695,11 +795,24 @@ def solve_hybrid(
     # Proxy coefficients and global recalculation are intentionally separated.
     # Try additional proxy optima when a candidate fails a hard constraint only
     # after simultaneous effects are recalculated.
-    max_attempts = max(requested, int(max_proxy_attempts)) if max_proxy_attempts is not None else max(requested, requested * 8)
+    configured_attempts = int(max_proxy_attempts) if max_proxy_attempts is not None else 0
+    max_attempts = max(requested * 8, requested, configured_attempts)
     for attempt in range(max_attempts):
         if len(solutions) >= requested:
             break
-        bundle = build_milp(context, library, no_good_solutions=no_good)
+        try:
+            bundle = build_milp(context, library, no_good_solutions=no_good)
+        except ValueError as exc:
+            raise ScheduleSolveError(
+                f"求解输入约束冲突: {exc}",
+                {
+                    "failure_type": "input_constraint_conflict",
+                    "message": str(exc),
+                    "candidate_library_complete": bool(
+                        ((library.get("search_completeness") or {}).get("all_rooms_untruncated"))
+                    ),
+                },
+            ) from exc
         model_metadata = bundle.metadata
         result = milp(
             bundle.c,
@@ -717,7 +830,13 @@ def solve_hybrid(
         # primal vector is available. Optimality metadata remains explicit.
         if result.x is None:
             if attempt == 0:
-                raise RuntimeError(f"MILP无可行解: {result.message}")
+                diagnostics = diagnose_infeasible_model(bundle, time_limit=time_limit)
+                diagnostics["solver_message"] = str(result.message)
+                diagnostics["candidate_expansion"] = expansion_trace
+                raise ScheduleSolveError(
+                    f"MILP无可行解: {result.message}",
+                    diagnostics,
+                )
             break
         assignments, selected_indices, drone_allocations, drone_inventory, drone_waste = _selected_variables(bundle, result.x)
         resource_shortfalls = _selected_resource_shortfalls(bundle, result.x)
@@ -775,10 +894,73 @@ def solve_hybrid(
         solutions.append(record)
 
     if not solutions:
-        detail = rejected_after_simulation[:5]
-        raise RuntimeError(
+        rejection_expansion_rounds = max(0, int(settings.get("adaptive_rejection_expansion_rounds", 1)))
+        library_complete = bool((library.get("search_completeness") or {}).get("all_rooms_untruncated"))
+        if not library_complete and _rejection_retry_depth < rejection_expansion_rounds:
+            rejection_max_top_k = max(
+                current_top_k,
+                int(settings.get("adaptive_rejection_max_top_k", maximum_top_k * 2)),
+            )
+            rejection_max_pool = max(
+                current_pool,
+                int(settings.get("adaptive_rejection_max_operator_pool_size", maximum_pool + 8)),
+            )
+            next_top_k = min(rejection_max_top_k, max(current_top_k + 1, int(current_top_k * expansion_factor)))
+            next_pool = min(rejection_max_pool, max(current_pool + 2, int(current_pool * 1.25)))
+            if (next_top_k, next_pool) != (current_top_k, current_pool):
+                expanded_library = build_library(
+                    context,
+                    top_k=next_top_k,
+                    operator_pool_size=next_pool,
+                    allow_partial=False,
+                )
+                try:
+                    return solve_hybrid(
+                        context,
+                        library=expanded_library,
+                        top_k=next_top_k,
+                        operator_pool_size=next_pool,
+                        top_solutions=top_solutions,
+                        time_limit=time_limit,
+                        mip_rel_gap=mip_rel_gap,
+                        max_proxy_attempts=max_proxy_attempts,
+                        _rejection_retry_depth=_rejection_retry_depth + 1,
+                    )
+                except ScheduleSolveError as exc:
+                    exc.diagnostics.setdefault("post_rejection_candidate_expansion", []).insert(0, {
+                        "retry_depth": _rejection_retry_depth + 1,
+                        "previous_top_k": current_top_k,
+                        "previous_operator_pool_size": current_pool,
+                        "expanded_top_k": next_top_k,
+                        "expanded_operator_pool_size": next_pool,
+                        "trigger": "all_proxy_candidates_rejected_after_simulation",
+                    })
+                    raise
+        violation_counts: dict[str, int] = {}
+        for rejected in rejected_after_simulation:
+            for violation in rejected.get("violations") or []:
+                key = str(violation).split(":", 1)[0]
+                violation_counts[key] = violation_counts.get(key, 0) + 1
+        detail = rejected_after_simulation[:20]
+        diagnostics = {
+            "failure_type": "post_simulation_rejection_exhausted",
+            "model": model_metadata or {},
+            "proxy_attempt_limit": max_attempts,
+            "proxy_attempts_completed": len(no_good),
+            "rejected_after_simulation": detail,
+            "violation_counts": violation_counts,
+            "candidate_library_complete": library_complete,
+            "candidate_expansion": expansion_trace,
+            "recommended_action": (
+                "expand_candidate_library"
+                if not (library.get("search_completeness") or {}).get("all_rooms_untruncated")
+                else "align_cross_facility_proxy_or_soften_user_authorized_resource_floor"
+            ),
+        }
+        raise ScheduleSolveError(
             "求解器没有返回通过全局复算硬约束的候选方案"
             + (f": {detail}" if detail else "")
+            , diagnostics
         )
     solutions.sort(
         key=lambda item: (
@@ -806,6 +988,8 @@ def solve_hybrid(
         "top_solutions_requested": top_solutions,
         "top_solutions_returned": len(solutions),
         "proxy_attempts": len(no_good),
+        "proxy_attempt_minimum_policy": max(requested * 8, requested),
+        "post_rejection_candidate_expansion_depth": _rejection_retry_depth,
         "synergy_bundle_ids_considered": [
             str(bundle.get("id") or "")
             for bundle in (library.get("synergy_bundles") or [])

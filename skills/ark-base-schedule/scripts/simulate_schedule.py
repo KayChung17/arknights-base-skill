@@ -189,6 +189,7 @@ def simulate_assignment(
     drone_inventory: list[dict[str, Any]] | None = None,
     drone_waste: list[dict[str, Any]] | None = None,
     _dormitory_assignments: list[dict[str, Any]] | None = None,
+    _cyclic_morale: dict[str, float] | None = None,
     _dormitory_iteration: int = 0,
     _random_seed: int | None = None,
 ) -> dict[str, Any]:
@@ -224,10 +225,16 @@ def simulate_assignment(
     trade_queue_products: dict[str, str] = {}
     queue_drone_metrics: dict[tuple[str, str], dict[str, float]] = {}
     queue_drone_details: dict[tuple[str, str], dict[str, Any]] = {}
-    current_morale = {
-        name: float(item.get("morale") if item.get("morale") is not None else 24.0)
-        for name, item in roster.items()
-    }
+    steady_state = str((context.get("horizon") or {}).get("mode", "steady_state")) == "steady_state"
+    current_morale = {}
+    for name, item in roster.items():
+        if _cyclic_morale is not None and name in _cyclic_morale:
+            current_morale[name] = float(_cyclic_morale[name])
+        elif steady_state:
+            current_morale[name] = 24.0
+        else:
+            current_morale[name] = float(item.get("morale") if item.get("morale") is not None else 24.0)
+    cycle_start_morale = dict(current_morale)
 
     trading_post_count = sum(1 for value in rooms.values() if value["facility_id"] == "trading_post")
     power_plant_count = sum(1 for value in rooms.values() if value["facility_id"] == "power_plant")
@@ -590,7 +597,7 @@ def simulate_assignment(
     morale_results: dict[str, Any] = {}
     for name, roster_item in roster.items():
         states = operator_work[name]
-        initial = float(roster_item.get("morale") if roster_item.get("morale") is not None else max_morale)
+        initial = float(cycle_start_morale.get(name, max_morale))
         morale = initial
         minimum = morale
         for state, cost_rate, segment in zip(states, operator_morale_costs[name], segments):
@@ -868,9 +875,14 @@ def simulate_assignment(
     )
     if require_dormitory_cycle and dormitory_plan.get("feasible") and dormitory_changed:
         if _dormitory_iteration < 3:
+            cyclic_morale = {
+                name: float(flow.get("cyclic_start", max_morale))
+                for name, flow in (dormitory_plan.get("operator_flows") or {}).items()
+            }
             refined = simulate_assignment(
                 context, library, assignment, drone_allocations, drone_inventory, drone_waste,
                 _dormitory_assignments=dormitory_plan.get("assignments") or [],
+                _cyclic_morale=cyclic_morale,
                 _dormitory_iteration=_dormitory_iteration + 1,
                 _random_seed=_random_seed,
             )
@@ -885,6 +897,10 @@ def simulate_assignment(
             sampled = simulate_assignment(
                 context, library, assignment, drone_allocations, drone_inventory, drone_waste,
                 _dormitory_assignments=dormitory_plan.get("assignments") or [],
+                _cyclic_morale={
+                    name: float(flow.get("cyclic_start", max_morale))
+                    for name, flow in (dormitory_plan.get("operator_flows") or {}).items()
+                },
                 _dormitory_iteration=3,
                 _random_seed=base_seed + trial_index,
             )

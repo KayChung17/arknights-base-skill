@@ -25,7 +25,6 @@
     "preferences": {
       "priority": "balanced",
       "solver": {
-        "max_daily_work_hours": 24,
         "require_resource_balance": true,
         "resource_balance_safety_factor": 1.07,
         "rest_recovery_per_hour": 0

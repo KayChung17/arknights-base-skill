@@ -26,7 +26,8 @@ _EFFICIENCY_TAGS = {
     "ave_trade_per_8_heat_1", "babel_other_facility_morale_recovery", "bubble_capacity_conversion",
     "cancel_ave_morale_cost_with_sakiko", "cangtai_per_other_metalcraft", "catnip_fixed_8",
     "catnip_per_control_monster_hunter_2", "chongyue_other_facility_morale_recovery",
-    "control_alternate_per_member_morale_recovery_0.05", "control_lee_per_member_morale_recovery",
+    "control_alternate_per_member_morale_recovery_0.05", "control_hoederer_order_capacity_1",
+    "control_hoederer_order_capacity_2", "control_lee_per_member_morale_recovery",
     "control_lgd_per_member_morale_recovery_0.05", "control_room_all_morale_recovery_0.05",
     "control_sui_self_morale_modifier_immunity", "demon_king_amiya_pair_morale_recovery_0.05",
     "demon_king_amiya_pair_morale_recovery_0.10", "dongshi_reset", "dorm_level_sum_gold_1",
@@ -105,4 +106,3 @@ def registration_for(tag: str) -> TagRegistration | None:
 
 def unregistered_tags(tags: set[str]) -> list[str]:
     return sorted(tag for tag in tags if registration_for(tag) is None)
-

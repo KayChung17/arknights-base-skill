@@ -201,7 +201,6 @@ def run_upgrade_search(
     online_times: list[str],
     lmd_floor: float,
     profiles: list[str] | None,
-    max_daily_work_hours: float,
     top_k: int,
     operator_pool_size: int,
     time_limit: float,
@@ -242,7 +241,6 @@ def run_upgrade_search(
     kwargs = dict(
         online_times=online_times,
         lmd_floor=lmd_floor,
-        max_daily_work_hours=max_daily_work_hours,
         top_k=top_k,
         operator_pool_size=operator_pool_size,
         time_limit=time_limit,
@@ -321,7 +319,6 @@ def run_upgrade_search(
             "minimum_pure_gold_balance": minimum_gold_balance,
             "battle_record_factories": 0,
             "online_times": online_times,
-            "max_daily_work_hours": max_daily_work_hours,
         },
         "scenarios": {
             "current": compact_scenario(current_search),
@@ -381,7 +378,6 @@ def main() -> int:
     parser.add_argument("--lmd-floor", type=float, default=-10000.0)
     parser.add_argument("--minimum-shard-balance", type=float, default=0.0)
     parser.add_argument("--minimum-gold-balance", type=float, default=0.0)
-    parser.add_argument("--max-daily-work-hours", type=float, default=18.0)
     parser.add_argument("--profiles", default="252-output,342-output,333-max,243-max,432-output,423-max,522-output")
     parser.add_argument("--profile-mode", choices=["representative", "level_grid"], default="representative")
     parser.add_argument("--profiles-file")
@@ -414,7 +410,6 @@ def main() -> int:
         initial_drone_stock=args.initial_drone_stock,
         minimum_shard_balance=args.minimum_shard_balance,
         minimum_gold_balance=args.minimum_gold_balance,
-        max_daily_work_hours=args.max_daily_work_hours,
         top_k=args.top_k,
         operator_pool_size=args.operator_pool_size,
         time_limit=args.time_limit,

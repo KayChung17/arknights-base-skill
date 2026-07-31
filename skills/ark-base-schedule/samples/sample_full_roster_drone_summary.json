@@ -43,7 +43,6 @@
       "continuity": 0.5
     },
     "solver_settings": {
-      "max_daily_work_hours": 18,
       "require_resource_balance": true,
       "rest_recovery_per_hour": 0,
       "minimum_orundum_shard_balance": -4,

@@ -146,7 +146,7 @@ def _layout_report(value: dict[str, Any]) -> str:
         f"- 龙门币每日下限：{_n(constraints.get('minimum_net_lmd_per_day'))}",
         f"- 源石碎片净变化目标：{_n(constraints.get('minimum_orundum_shard_balance'))}（{shard_policy.get('mode', 'hard')}）",
         f"- 赤金净变化目标：{_n(constraints.get('minimum_pure_gold_balance'))}（{gold_policy.get('mode', 'hard')}）",
-        f"- 单名干员每日工时上限：{_n(constraints.get('max_daily_work_hours'))}小时",
+        "- 干员工时：由上线区间、心情消耗、宿舍恢复和重复日闭环决定",
         "",
     ]
     if not selected:

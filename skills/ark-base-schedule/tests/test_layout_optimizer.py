@@ -65,7 +65,6 @@ class LayoutOptimizerTests(unittest.TestCase):
                 "preferences": {
                     "priority": "orundum_lmd_balance",
                     "solver": {
-                        "max_daily_work_hours": 24,
                         "allocate_drones": True,
                         "drone_repeating_day_balance": False,
                         "drone_capacity": 999,

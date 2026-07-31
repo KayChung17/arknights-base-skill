@@ -10,7 +10,7 @@ python scripts/normalize_input.py \
   --goal 赚钱+搓玉 \
   --online-count 3 \
   --online-times 08:00,14:00,20:00 \
-  --preferences '{"priority":"balanced","solver":{"max_daily_work_hours":18}}' \
+  --preferences '{"priority":"balanced","solver":{"require_dormitory_cycle":true}}' \
   --output decision-context.json
 ```
 

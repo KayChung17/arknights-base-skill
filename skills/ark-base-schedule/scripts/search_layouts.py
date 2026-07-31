@@ -173,7 +173,6 @@ def build_context(
     battle_record_factories: int,
     online_times: list[str],
     lmd_floor: float,
-    max_daily_work_hours: float,
     lmd_proxy_floor_slack: float = 0.0,
     proxy_shard_consumption_factor: float = 1.0,
     proxy_gold_consumption_factor: float = 1.0,
@@ -196,13 +195,14 @@ def build_context(
     profile = normalize_profile(profile)
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
     right.update(right_side_levels or {})
-    initial_stock = float(drone_capacity if initial_drone_stock is None else initial_drone_stock)
+    horizon_value = dict(horizon or {"mode": "steady_state"})
+    cyclic_phase_free = horizon_value.get("mode") == "steady_state" and initial_drone_stock is None
+    initial_stock = None if cyclic_phase_free else float(initial_drone_stock if initial_drone_stock is not None else drone_capacity)
     shard_policy = dict(shard_balance_policy or {})
     gold_policy = dict(gold_balance_policy or {})
     preferences = {
         "priority": "lmd_equivalent",
         "solver": {
-            "max_daily_work_hours": max_daily_work_hours,
             "require_resource_balance": True,
             "minimum_orundum_shard_balance": float(minimum_shard_balance),
             "orundum_shard_balance_mode": str(shard_policy.get("mode", "hard")),
@@ -223,6 +223,7 @@ def build_context(
             "drone_repeating_day_balance": True,
             "drone_capacity": float(drone_capacity),
             "initial_drone_stock": initial_stock,
+            "initial_state_policy": "cyclic_phase_free" if cyclic_phase_free else "account_snapshot",
             "max_drone_use_per_node": float(drone_capacity),
             "drone_target_products": ["lmd_order", "orundum_order", "pure_gold", "orundum_shard"],
             "forbid_drone_waste": True,
@@ -266,7 +267,7 @@ def build_context(
         "power_plant_levels": profile["power_plant_levels"],
         "inventory": dict(inventory or {}),
     }
-    context["horizon"] = dict(horizon or {"mode": "steady_state"})
+    context["horizon"] = horizon_value
     context["right_side_schedule"] = list(right_side_schedule or [])
     return context
 
@@ -387,7 +388,6 @@ def search_layouts(
     *,
     online_times: list[str],
     lmd_floor: float,
-    max_daily_work_hours: float = 18.0,
     top_k: int = 30,
     operator_pool_size: int = 12,
     time_limit: float = 12.0,
@@ -424,6 +424,9 @@ def search_layouts(
     adaptive_candidate_expansion_factor: float = 2.0,
     adaptive_candidate_max_top_k: int | None = None,
     adaptive_candidate_max_operator_pool_size: int | None = None,
+    adaptive_rejection_expansion_rounds: int = 1,
+    adaptive_rejection_max_top_k: int | None = None,
+    adaptive_rejection_max_operator_pool_size: int | None = None,
     random_order_trials: int = 0,
     random_order_seed: int = 20260730,
 ) -> dict[str, Any]:
@@ -483,7 +486,6 @@ def search_layouts(
                 split[2],
                 online_times,
                 lmd_floor,
-                max_daily_work_hours,
                 lmd_proxy_floor_slack,
                 proxy_shard_consumption_factor,
                 proxy_gold_consumption_factor,
@@ -509,6 +511,13 @@ def search_layouts(
                 solver_settings["adaptive_candidate_max_top_k"] = int(adaptive_candidate_max_top_k)
             if adaptive_candidate_max_operator_pool_size is not None:
                 solver_settings["adaptive_candidate_max_operator_pool_size"] = int(adaptive_candidate_max_operator_pool_size)
+            solver_settings["adaptive_rejection_expansion_rounds"] = max(0, int(adaptive_rejection_expansion_rounds))
+            if adaptive_rejection_max_top_k is not None:
+                solver_settings["adaptive_rejection_max_top_k"] = int(adaptive_rejection_max_top_k)
+            if adaptive_rejection_max_operator_pool_size is not None:
+                solver_settings["adaptive_rejection_max_operator_pool_size"] = int(
+                    adaptive_rejection_max_operator_pool_size
+                )
             solver_settings["random_order_trials"] = max(0, int(random_order_trials))
             solver_settings["random_order_seed"] = int(random_order_seed)
             if allow_product_switching:
@@ -547,7 +556,7 @@ def search_layouts(
                     economic_values=economic_values,
                 ))
             except Exception as exc:
-                failures.append({
+                failure = {
                     "profile_id": profile_id,
                     "layout": profile["layout"],
                     "split": {
@@ -556,7 +565,11 @@ def search_layouts(
                         "battle_record_factories": split[2],
                     },
                     "reason": str(exc),
-                })
+                }
+                diagnostics = getattr(exc, "diagnostics", None)
+                if isinstance(diagnostics, dict):
+                    failure["diagnostics"] = diagnostics
+                failures.append(failure)
     rows.sort(key=economic_result_sort_key)
     resolved_economic_values = dict(DEFAULT_ECONOMIC_VALUES)
     resolved_economic_values.update(economic_values or {})
@@ -573,7 +586,6 @@ def search_layouts(
                 "minimum_orundum_shard_balance": minimum_shard_balance,
                 "minimum_pure_gold_balance": minimum_gold_balance,
                 "minimum_battle_record_factories": minimum_battle_record_factories,
-                "max_daily_work_hours": max_daily_work_hours,
                 "balance_policy": {
                     "originium_shard": dict(shard_balance_policy or {"mode": "hard"}),
                     "pure_gold": dict(gold_balance_policy or {"mode": "hard"}),
@@ -582,7 +594,12 @@ def search_layouts(
         },
         "base_state": {
             "drone_capacity": float(drone_capacity),
-            "initial_drone_stock": float(drone_capacity if initial_drone_stock is None else initial_drone_stock),
+            "initial_drone_stock": None if initial_drone_stock is None else float(initial_drone_stock),
+            "initial_state_policy": (
+                "cyclic_phase_free"
+                if (horizon or {"mode": "steady_state"}).get("mode") == "steady_state" and initial_drone_stock is None
+                else "account_snapshot"
+            ),
             "right_side_levels": right,
             "inventory": dict(inventory or {}),
             "drone_capacity_depends_on_power_plant_count_or_level": False,
@@ -656,7 +673,6 @@ def main() -> int:
     parser.add_argument("--lmd-floor", type=float, default=0.0)
     parser.add_argument("--minimum-shard-balance", type=float, default=0.0)
     parser.add_argument("--minimum-gold-balance", type=float, default=0.0)
-    parser.add_argument("--max-daily-work-hours", type=float, default=18.0)
     parser.add_argument("--top-k", type=int, default=30)
     parser.add_argument("--operator-pool-size", type=int, default=12)
     parser.add_argument("--time-limit", type=float, default=12.0)
@@ -683,7 +699,6 @@ def main() -> int:
         lmd_floor=args.lmd_floor,
         minimum_shard_balance=args.minimum_shard_balance,
         minimum_gold_balance=args.minimum_gold_balance,
-        max_daily_work_hours=args.max_daily_work_hours,
         top_k=args.top_k,
         operator_pool_size=args.operator_pool_size,
         time_limit=args.time_limit,

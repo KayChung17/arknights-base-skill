@@ -13,6 +13,50 @@ from coverage_report import skill_structure_issues
 from tag_registry import registration_for, unregistered_tags
 
 
+DIRECT_BONUS_PATTERNS = {
+    "trading_post": [r"进驻贸易站时，订单获取效率\+([0-9.]+)%", r"订单获取效率\+([0-9.]+)%"],
+    "factory": [
+        r"进驻制造站时，(?:生产[^，；]*?时，)?(?:贵金属类配方的|作战记录类配方的|源石类配方的)?生产力\+([0-9.]+)%",
+        r"(?:贵金属类配方的|作战记录类配方的|源石类配方的)生产力\+([0-9.]+)%",
+        r"生产力\+([0-9.]+)%",
+    ],
+    "power_plant": [r"无人机充能速度\+([0-9.]+)%"],
+    "office": [r"人脉资源的联络速度\+([0-9.]+)%", r"联络速度\+([0-9.]+)%"],
+    "reception_room": [r"线索搜集速度提升([0-9.]+)%"],
+}
+CONDITIONAL_BONUS_WORDS = (
+    "如果", "当与", "当自身", "每有", "每个", "每名", "每间", "每台",
+    "每差", "每10", "每3", "根据", "此后", "最终", "首小时", "基建内",
+)
+DIRECT_BONUS_OVERRIDES = {
+    ("巫恋", "低语"): 0.0,
+    ("龙舌兰", "投资·α"): 0.0,
+    ("龙舌兰", "投资·β"): 0.0,
+    ("深律", "心声图绘"): 0.0,
+    ("鸿雪", "际崖居民"): 0.0,
+    ("耶拉", "耶拉冈德"): 0.0,
+}
+
+
+def parsed_direct_bonus(description: str, facility: str) -> float:
+    """Extract only an unconditional percentage from the current description."""
+    for pattern in DIRECT_BONUS_PATTERNS.get(facility, []):
+        match = re.search(pattern, description)
+        if not match:
+            continue
+        clause = description[:match.start()].rsplit("；", 1)[-1]
+        if any(word in clause for word in CONDITIONAL_BONUS_WORDS):
+            continue
+        return float(match.group(1))
+    if facility == "factory":
+        match = re.search(r"生产力-([0-9.]+)%", description)
+        if match:
+            clause = description[:match.start()].rsplit("；", 1)[-1]
+            if not any(word in clause for word in ("如果", "当", "每有", "每个", "每名", "每间", "每台", "根据")):
+                return -float(match.group(1))
+    return 0.0
+
+
 def granted_effect_conflicts(operator_data: dict) -> list[str]:
     """Reject effect aliases that were flattened into standalone operator skills."""
     granted_aliases: dict[tuple[str, str], list[str]] = {}
@@ -158,6 +202,15 @@ def validate() -> list[str]:
             status = skill.get("model_status")
             mechanism = skill.get("mechanism")
             bonus = float(skill.get("base_bonus_pct", 0.0) or 0.0)
+            expected_bonus = DIRECT_BONUS_OVERRIDES.get(
+                (str(name or ""), str(skill.get("skill_name") or "")),
+                parsed_direct_bonus(str(skill.get("description") or ""), str(facility or "")),
+            )
+            if abs(bonus - expected_bonus) > 1e-9:
+                errors.append(
+                    f"{name}/{skill.get('skill_name')}: base_bonus_pct={bonus:g} "
+                    f"缺少无条件文字证据，解析值为 {expected_bonus:g}"
+                )
             tags = list(skill.get("tags") or [])
             for tag in tags:
                 registration = registration_for(str(tag))

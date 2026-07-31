@@ -277,6 +277,21 @@ class StructuredMechanismTests(unittest.TestCase):
                 ).compute()
                 self.assertEqual(result["paper_bonus_pct"], expected)
 
+    def test_wisadel_control_skill_adds_capacity_only_to_hoederer_room(self) -> None:
+        wisadel = self.assigned("维什戴尔", 2, "control_center")
+        hoederer = self.assigned("赫德雷", 2, "trading_post")
+        other = self.assigned("但书", 2, "trading_post")
+        hoederer_result = EfficiencyCalculator(
+            "trading_post", [hoederer], "lmd_order",
+            global_operators=[wisadel, hoederer],
+        ).compute()
+        other_result = EfficiencyCalculator(
+            "trading_post", [other], "lmd_order",
+            global_operators=[wisadel, other],
+        ).compute()
+        self.assertEqual(hoederer_result["order_capacity"], 12)
+        self.assertEqual(other_result["order_capacity"], 10)
+
     def test_black_key_reuses_perception_and_counts_direct_silent_resonance(self) -> None:
         black_key = self.assigned("黑键", 2, "trading_post")
         black_only = EfficiencyCalculator(
@@ -953,7 +968,6 @@ class StructuredMechanismTests(unittest.TestCase):
                     "minimum_net_lmd_per_day": 0,
                     "minimum_originium_shard_balance": 0,
                     "minimum_pure_gold_balance": 0,
-                    "max_daily_work_hours": 18,
                 },
                 "base_state": {
                     "drone_capacity": 235,

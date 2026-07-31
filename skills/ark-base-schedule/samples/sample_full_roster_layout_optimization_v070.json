@@ -19,7 +19,6 @@
       "pure_gold_balance_min": 0,
       "preferred_net_lmd_min": 0,
       "accepted_slight_loss_net_lmd_min": -1000,
-      "max_daily_work_hours": 18,
       "operation_nodes": [
         "08:00",
         "14:00",

@@ -26,7 +26,7 @@
     "layout": {"type": "string", "pattern": "^[1-5][1-5][1-3]$"},
     "objective": {
       "type": "object",
-      "required": ["goal", "online_schedule", "minimum_net_lmd_per_day", "max_daily_work_hours"],
+      "required": ["goal", "online_schedule", "minimum_net_lmd_per_day"],
       "properties": {
         "goal": {"type": "string", "minLength": 1},
         "online_times": {
@@ -53,7 +53,6 @@
         "minimum_orundum_shard_balance": {"type": "number", "deprecated": true},
         "minimum_pure_gold_balance": {"type": "number", "default": 0},
         "economic_values": {"$ref": "#/$defs/economicValues"},
-        "max_daily_work_hours": {"type": "number", "minimum": 0, "maximum": 24},
         "max_orundum_trading_posts": {"type": "integer", "minimum": 1},
         "max_shard_factories": {"type": "integer", "minimum": 1},
         "minimum_battle_record_factories": {"type": "integer", "minimum": 0}
@@ -70,7 +69,7 @@
     },
     "base_state": {
       "type": "object",
-      "required": ["drone_capacity", "initial_drone_stock", "dormitory_levels", "right_side_levels", "right_side_levels_confirmed"],
+      "required": ["drone_capacity", "dormitory_levels", "right_side_levels", "right_side_levels_confirmed"],
       "properties": {
         "drone_capacity": {"type": "number", "minimum": 0},
         "initial_drone_stock": {"type": "number", "minimum": 0},
@@ -79,6 +78,17 @@
           "properties": {
             "originium_shard": {"type": ["number", "null"], "minimum": 0},
             "pure_gold": {"type": ["number", "null"], "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        "initial_resources": {
+          "type": "object",
+          "required": ["lmd", "pure_gold", "originium_shard", "orirock_cube"],
+          "properties": {
+            "lmd": {"type": "number", "minimum": 0},
+            "pure_gold": {"type": "number", "minimum": 0},
+            "originium_shard": {"type": "number", "minimum": 0},
+            "orirock_cube": {"type": "number", "minimum": 0}
           },
           "additionalProperties": false
         },
@@ -105,7 +115,8 @@
       "required": ["mode"],
       "properties": {
         "mode": {"enum": ["steady_state", "finite_days"]},
-        "days": {"type": "integer", "minimum": 1}
+        "days": {"type": "integer", "minimum": 1},
+        "initial_state_policy": {"enum": ["cyclic_phase_free", "account_snapshot_required"]}
       },
       "additionalProperties": false
     },
@@ -138,6 +149,9 @@
         ,"adaptive_candidate_expansion_factor": {"type": "number", "minimum": 1.1, "maximum": 4}
         ,"adaptive_candidate_max_top_k": {"type": "integer", "minimum": 1}
         ,"adaptive_candidate_max_operator_pool_size": {"type": "integer", "minimum": 1}
+        ,"adaptive_rejection_expansion_rounds": {"type": "integer", "minimum": 0, "maximum": 4}
+        ,"adaptive_rejection_max_top_k": {"type": "integer", "minimum": 1}
+        ,"adaptive_rejection_max_operator_pool_size": {"type": "integer", "minimum": 1}
         ,"random_order_trials": {"type": "integer", "minimum": 0, "maximum": 10000}
         ,"random_order_seed": {"type": "integer"}
       }
@@ -199,6 +213,21 @@
     {
       "if": {"properties": {"mode": {"const": "fixed_schedule"}}},
       "then": {"required": ["layout", "facility_configuration"]}
+    },
+    {
+      "if": {
+        "properties": {
+          "horizon": {
+            "properties": {"mode": {"const": "finite_days"}},
+            "required": ["mode"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "base_state": {"required": ["initial_drone_stock", "initial_resources"]}
+        }
+      }
     }
   ],
   "additionalProperties": true

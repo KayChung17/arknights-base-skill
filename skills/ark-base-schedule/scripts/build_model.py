@@ -3,8 +3,8 @@
 """Build the global mixed-integer scheduling and drone-allocation model.
 
 The model selects one precomputed room combination for every room and segment.
-It enforces same-time operator exclusivity, daily work-hour limits, resource
-balance, and optional crew continuity. Drone recovery and use form a closed
+It enforces same-time operator exclusivity, resource balance, and optional
+crew continuity. Drone recovery and use form a closed
 inventory flow across operation nodes:
 
 * base recovery: one drone per six minutes;
@@ -27,9 +27,9 @@ from scipy.optimize import Bounds, LinearConstraint
 from scipy.sparse import coo_matrix
 
 from data_loader import load_mechanics
+from build_combinations import recompute_combo_with_global_operators
 from efficiency_calculator import production_bonus_for_duration
 from drone_model import drone_metrics_per_drone, drone_rules, recovery_rate_per_hour
-from dormitory_planner import dormitory_base_recovery
 from optimizer_common import (
     context_roster,
     context_segments,
@@ -39,7 +39,7 @@ from optimizer_common import (
     utc_now,
     write_json,
 )
-from right_side_schedule import fixed_hours_by_operator, fixed_work_by_segment
+from right_side_schedule import fixed_work_by_segment
 
 
 @dataclass
@@ -49,6 +49,7 @@ class ModelBundle:
     bounds: Bounds
     constraints: LinearConstraint
     variable_records: list[dict[str, Any]]
+    constraint_records: list[dict[str, Any]]
     metadata: dict[str, Any]
 
 
@@ -91,7 +92,6 @@ def _solver_settings(context: dict[str, Any]) -> dict[str, Any]:
     settings = dict(preferences.get("solver") or {})
     goal = str((context.get("objective") or {}).get("goal_id") or "")
     priority = str(preferences.get("priority") or "")
-    settings.setdefault("max_daily_work_hours", 24.0)
     settings.setdefault("require_resource_balance", goal in {"gold_origin", "all_origin", "max_origin"})
     baseline_delta = 0.0
     baseline = context.get("baseline") or {}
@@ -191,6 +191,92 @@ def build_milp(
                         * float(weights.get("fixed_lmd", 0)),
                     }
                 )
+
+    # Structured simultaneous effects are represented by compressed pairwise
+    # state variables. Each state links one downstream room combination to the
+    # set of control-center combinations that produce the same exact delta.
+    cross_interaction_records: list[tuple[int, int, list[int]]] = []
+    control_rooms = [
+        (room_id, room_result)
+        for room_id, room_result in rooms.items()
+        if (room_result.get("room") or {}).get("facility_id") == "control_center"
+    ]
+    if control_rooms:
+        control_room_id, control_room_result = control_rooms[0]
+        control_room = dict(control_room_result.get("room") or {})
+        control_room.setdefault("room_id", control_room_id)
+        for segment in segments:
+            for room_id, room_result in rooms.items():
+                room = dict(room_result.get("room") or {})
+                facility = str(room.get("facility_id") or "")
+                if facility not in {"trading_post", "factory", "power_plant"}:
+                    continue
+                room.setdefault("room_id", room_id)
+                for combo in room_result.get("combinations") or []:
+                    baseline_metrics = _segment_metrics(combo, segment.hours)
+                    baseline_capacity = int((combo.get("efficiency_result") or {}).get("order_capacity", 10) or 10)
+                    baseline_power_bonus = _combo_power_bonus_pct(combo) if facility == "power_plant" else 0.0
+                    profiles: dict[tuple[Any, ...], dict[str, Any]] = {}
+                    for control_combo in control_room_result.get("combinations") or []:
+                        global_operators = [
+                            dict(item, assigned_facility=facility, assigned_room_id=room_id)
+                            for item in (combo.get("operators") or [])
+                        ] + [
+                            dict(item, assigned_facility="control_center", assigned_room_id=control_room_id)
+                            for item in (control_combo.get("operators") or [])
+                        ]
+                        enhanced = recompute_combo_with_global_operators(
+                            context, room, combo, global_operators,
+                        )
+                        enhanced_metrics = _segment_metrics(enhanced, segment.hours)
+                        metric_keys = sorted(set(baseline_metrics) | set(enhanced_metrics))
+                        delta = {
+                            key: float(enhanced_metrics.get(key, 0.0)) - float(baseline_metrics.get(key, 0.0))
+                            for key in metric_keys
+                            if abs(float(enhanced_metrics.get(key, 0.0)) - float(baseline_metrics.get(key, 0.0))) > 1e-10
+                        }
+                        enhanced_capacity = int((enhanced.get("efficiency_result") or {}).get("order_capacity", 10) or 10)
+                        capacity_delta = enhanced_capacity - baseline_capacity
+                        power_bonus_delta = (
+                            _combo_power_bonus_pct(enhanced) - baseline_power_bonus
+                            if facility == "power_plant" else 0.0
+                        )
+                        if not delta and capacity_delta == 0 and abs(power_bonus_delta) <= 1e-10:
+                            continue
+                        signature = (
+                            tuple((key, round(value, 10)) for key, value in sorted(delta.items())),
+                            capacity_delta,
+                            round(power_bonus_delta, 10),
+                        )
+                        profile = profiles.setdefault(signature, {
+                            "metrics_delta": delta,
+                            "order_capacity_delta": capacity_delta,
+                            "power_bonus_pct_delta": power_bonus_delta,
+                            "control_indices": [],
+                            "control_combination_ids": [],
+                        })
+                        profile["control_indices"].append(
+                            x_lookup[(segment.segment_id, control_room_id, control_combo["combination_id"])]
+                        )
+                        profile["control_combination_ids"].append(control_combo["combination_id"])
+                    downstream_index = x_lookup[(segment.segment_id, room_id, combo["combination_id"])]
+                    for profile in profiles.values():
+                        index = len(variable_records)
+                        variable_records.append({
+                            "kind": "cross_facility_interaction",
+                            "segment_id": segment.segment_id,
+                            "source_room_id": control_room_id,
+                            "target_room_id": room_id,
+                            "target_combination_id": combo["combination_id"],
+                            "source_combination_ids": profile["control_combination_ids"],
+                            "metrics_delta": profile["metrics_delta"],
+                            "order_capacity_delta": profile["order_capacity_delta"],
+                            "power_bonus_pct_delta": profile["power_bonus_pct_delta"],
+                            "objective_coefficient": metric_score(profile["metrics_delta"], weights),
+                        })
+                        cross_interaction_records.append(
+                            (index, downstream_index, list(profile["control_indices"]))
+                        )
 
     # Reward exact crew continuity across adjacent segments in the same room.
     adjacent_pairs = list(zip(segments, segments[1:]))
@@ -403,7 +489,6 @@ def build_milp(
 
     roster_names = [item["name"] for item in roster]
     right_side_work = fixed_work_by_segment(context)
-    right_side_hours = fixed_hours_by_operator(context)
 
     # Same-time operator exclusivity.
     for segment in segments:
@@ -426,53 +511,32 @@ def build_milp(
                     },
                 )
 
-    # Daily work-hour limit.
-    default_max_hours = float(settings.get("max_daily_work_hours", 12.0))
-    dormitory_cycle_max_hours: float | None = None
-    if settings.get("require_dormitory_cycle"):
-        dormitories = (context.get("facility_configuration") or {}).get("dormitories") or []
-        levels = [int(item.get("level", 0) or 0) for item in dormitories]
-        if not levels:
-            levels = [int(value) for value in ((context.get("base_state") or {}).get("dormitory_levels") or [])]
-        if levels:
-            ambience = (context.get("base_state") or {}).get("dormitory_ambience")
-            recoveries = [
-                dormitory_base_recovery(
-                    level,
-                    None if ambience is None else float(ambience[index]),
-                )
-                for index, level in enumerate(levels)
-            ]
-            best_recovery = max(recoveries)
-            dormitory_cycle_max_hours = 24.0 * best_recovery / (1.0 + best_recovery)
-            default_max_hours = min(default_max_hours, dormitory_cycle_max_hours)
-    overrides = settings.get("operator_max_daily_hours") or {}
-    for operator in roster_names:
-        max_hours = float(overrides.get(operator, default_max_hours))
-        fixed_hours = float(right_side_hours.get(operator, 0.0))
-        if fixed_hours > max_hours + 1e-9:
-            raise ValueError(f"{operator} 的右侧固定工时 {fixed_hours:.2f} 超过每日上限 {max_hours:.2f}")
-        coeff: dict[int, float] = {}
-        for segment in segments:
-            for room_id, room_result in rooms.items():
-                for combo in room_result.get("combinations") or []:
-                    if operator in {item["name"] for item in combo.get("operators") or []}:
-                        coeff[x_lookup[(segment.segment_id, room_id, combo["combination_id"])]] = segment.hours
-        if coeff:
-            add_constraint(
-                coeff,
-                -np.inf,
-                max_hours - fixed_hours,
-                {
-                    "type": "daily_work_hours",
-                    "operator": operator,
-                    "max_hours": max_hours,
-                    "fixed_right_side_hours": fixed_hours,
-                    "dormitory_cycle_conservative_max_hours": dormitory_cycle_max_hours,
-                },
-            )
-
     # Link drone allocation to the selected combination.
+
+    # z = downstream_assignment AND any(control_assignment in this effect profile).
+    for interaction_index, downstream_index, control_indices in cross_interaction_records:
+        add_constraint(
+            {interaction_index: 1.0, downstream_index: -1.0},
+            -np.inf,
+            0.0,
+            {"type": "cross_facility_interaction_target", "variable": interaction_index},
+        )
+        add_constraint(
+            {interaction_index: 1.0, **{index: -1.0 for index in control_indices}},
+            -np.inf,
+            0.0,
+            {"type": "cross_facility_interaction_source", "variable": interaction_index},
+        )
+        lower_coeff = {interaction_index: 1.0, downstream_index: -1.0}
+        for control_index in control_indices:
+            lower_coeff[control_index] = lower_coeff.get(control_index, 0.0) - 1.0
+        add_constraint(
+            lower_coeff,
+            -1.0,
+            np.inf,
+            {"type": "cross_facility_interaction_lower", "variable": interaction_index},
+        )
+
     for drone_index, assignment_indices in drone_allocation_records:
         coefficients = {drone_index: 1.0}
         for assignment_index in assignment_indices:
@@ -566,6 +630,14 @@ def build_milp(
                     bonus_pct = (occupied_bonus if occupied else 0.0) + _combo_power_bonus_pct(combo)
                     bonus_recovery = base_rate * segment.hours * bonus_pct / 100.0
                     coeff[x_index] = coeff.get(x_index, 0.0) - bonus_recovery
+            for interaction_index, record in enumerate(variable_records):
+                if record.get("kind") != "cross_facility_interaction" or record.get("segment_id") != segment.segment_id:
+                    continue
+                power_bonus_delta = float(record.get("power_bonus_pct_delta", 0.0) or 0.0)
+                if power_bonus_delta:
+                    coeff[interaction_index] = coeff.get(interaction_index, 0.0) - (
+                        base_rate * segment.hours * power_bonus_delta / 100.0
+                    )
             base_recovery = base_rate * segment.hours
             add_constraint(
                 coeff,
@@ -588,9 +660,12 @@ def build_milp(
                     index = x_lookup[(segment.segment_id, room_id, combo["combination_id"])]
                     coeff[index] = balance
         for record_index, record in enumerate(variable_records):
-            if record.get("kind") != "drone_allocation":
+            if record.get("kind") == "drone_allocation":
+                metrics = record.get("metrics_per_drone") or {}
+            elif record.get("kind") == "cross_facility_interaction":
+                metrics = record.get("metrics_delta") or {}
+            else:
                 continue
-            metrics = record.get("metrics_per_drone") or {}
             balance = float(metrics.get("orundum_shard", 0.0)) - float(
                 settings.get("resource_balance_safety_factor", 1.0)
             ) * float(metrics.get("orundum_shard_consumption", 0.0))
@@ -625,9 +700,12 @@ def build_milp(
                     index = x_lookup[(segment.segment_id, room_id, combo["combination_id"])]
                     coeff[index] = balance
         for record_index, record in enumerate(variable_records):
-            if record.get("kind") != "drone_allocation":
+            if record.get("kind") == "drone_allocation":
+                metrics = record.get("metrics_per_drone") or {}
+            elif record.get("kind") == "cross_facility_interaction":
+                metrics = record.get("metrics_delta") or {}
+            else:
                 continue
-            metrics = record.get("metrics_per_drone") or {}
             coeff[record_index] = float(metrics.get(positive_key, 0.0)) - float(negative_factor) * float(
                 metrics.get(negative_key, 0.0)
             )
@@ -654,9 +732,12 @@ def build_milp(
                         - factor * float(metrics.get("pure_gold_consumption", 0.0))
                     )
         for record_index, record in enumerate(variable_records):
-            if record.get("kind") != "drone_allocation":
+            if record.get("kind") == "drone_allocation":
+                metrics = record.get("metrics_per_drone") or {}
+            elif record.get("kind") == "cross_facility_interaction":
+                metrics = record.get("metrics_delta") or {}
+            else:
                 continue
-            metrics = record.get("metrics_per_drone") or {}
             coeff[record_index] = float(metrics.get("pure_gold", 0.0)) - factor * float(metrics.get("pure_gold_consumption", 0.0))
         shortfall_index = resource_shortfall_indices.get("pure_gold")
         if shortfall_index is not None:
@@ -721,6 +802,9 @@ def build_milp(
         elif kind in {"drone_inventory", "drone_waste", "resource_shortfall"}:
             ub[index] = float(record.get("max_value", settings.get("drone_capacity", 235)))
             integrality[index] = 0
+        elif kind == "cross_facility_interaction":
+            ub[index] = 1.0
+            integrality[index] = 1
         else:
             integrality[index] = 0
     bounds = Bounds(lb, ub)
@@ -737,6 +821,9 @@ def build_milp(
         "drone_target_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_target"),
         "drone_inventory_variable_count": sum(1 for item in variable_records if item["kind"] == "drone_inventory"),
         "resource_shortfall_variable_count": sum(1 for item in variable_records if item["kind"] == "resource_shortfall"),
+        "cross_facility_interaction_variable_count": sum(
+            1 for item in variable_records if item["kind"] == "cross_facility_interaction"
+        ),
         "constraint_count": len(lower),
         "constraint_summary": {
             key: sum(1 for item in constraint_records if item["type"] == key)
@@ -752,7 +839,7 @@ def build_milp(
         },
         "search_completeness": library.get("search_completeness") or {},
     }
-    return ModelBundle(c, integrality, bounds, constraints, variable_records, metadata)
+    return ModelBundle(c, integrality, bounds, constraints, variable_records, constraint_records, metadata)
 
 
 def model_summary(context: dict[str, Any], library: dict[str, Any]) -> dict[str, Any]:

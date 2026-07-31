@@ -11,8 +11,7 @@
       "08:00",
       "14:00",
       "20:00"
-    ],
-    "max_daily_work_hours": 18.0
+    ]
   },
   "current_roster_best_found": {
     "profile_id": "252-output",

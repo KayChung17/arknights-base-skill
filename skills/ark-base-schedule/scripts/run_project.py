@@ -26,7 +26,7 @@ from preflight import PreflightError, canonical_config, config_sha256, preflight
 from reproducibility import build_manifest
 from search_layouts import search_layouts
 from search_upgrades import run_upgrade_search
-from solve_schedule import solve_hybrid
+from solve_schedule import ScheduleSolveError, solve_hybrid
 from verify_output import verify_output
 
 
@@ -68,7 +68,6 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "lmd_floor": float(objective["minimum_net_lmd_per_day"]),
         "minimum_shard_balance": float(objective["minimum_originium_shard_balance"]),
         "minimum_gold_balance": float(objective["minimum_pure_gold_balance"]),
-        "max_daily_work_hours": float(objective["max_daily_work_hours"]),
         "profiles": profile.get("ids"),
         "profile_mode": str(profile.get("mode", "representative")),
         "profiles_file": profile.get("file"),
@@ -77,7 +76,11 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "dorm_levels": base_state["dormitory_levels"],
         "right_side_levels": base_state["right_side_levels"],
         "drone_capacity": float(base_state["drone_capacity"]),
-        "initial_drone_stock": float(base_state["initial_drone_stock"]),
+        "initial_drone_stock": (
+            float(base_state["initial_drone_stock"])
+            if base_state.get("initial_drone_stock") is not None
+            else None
+        ),
         "inventory": dict(base_state.get("inventory") or {}),
         "horizon": dict(config.get("horizon") or {}),
         "economic_values": dict(objective.get("economic_values") or {}),
@@ -98,6 +101,9 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "adaptive_candidate_expansion_factor": float(search.get("adaptive_candidate_expansion_factor", 2.0)),
         "adaptive_candidate_max_top_k": search.get("adaptive_candidate_max_top_k"),
         "adaptive_candidate_max_operator_pool_size": search.get("adaptive_candidate_max_operator_pool_size"),
+        "adaptive_rejection_expansion_rounds": int(search.get("adaptive_rejection_expansion_rounds", 1)),
+        "adaptive_rejection_max_top_k": search.get("adaptive_rejection_max_top_k"),
+        "adaptive_rejection_max_operator_pool_size": search.get("adaptive_rejection_max_operator_pool_size"),
         "random_order_trials": int(search.get("random_order_trials", 0)),
         "random_order_seed": int(search.get("random_order_seed", 20260730)),
     })
@@ -118,7 +124,6 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
     )
     if power["spare_power"] < -1e-9:
         raise ValueError(f"固定排班缺电 {-power['spare_power']:.0f}，不能进入求解器")
-    solver["max_daily_work_hours"] = float(objective["max_daily_work_hours"])
     balance_policy = objective.get("balance_policy") or {}
     shard_policy = dict(balance_policy.get("originium_shard") or {"mode": "hard"})
     gold_policy = dict(balance_policy.get("pure_gold") or {"mode": "hard"})
@@ -129,12 +134,28 @@ def _fixed_solve(config: dict[str, Any], roster: Path) -> dict[str, Any]:
     solver["pure_gold_shortfall_penalty"] = float(gold_policy.get("shortfall_penalty", 0.0))
     solver["hard_minimum_pure_gold_balance"] = gold_policy.get("hard_minimum")
     solver["drone_capacity"] = float(base_state["drone_capacity"])
-    solver["initial_drone_stock"] = float(base_state["initial_drone_stock"])
+    if base_state.get("initial_drone_stock") is not None:
+        solver["initial_drone_stock"] = float(base_state["initial_drone_stock"])
+    else:
+        solver["initial_drone_stock"] = None
+    solver["initial_state_policy"] = str(
+        (config.get("horizon") or {}).get("initial_state_policy", "cyclic_phase_free")
+    )
     solver.setdefault("allocate_drones", True)
     solver.setdefault("drone_repeating_day_balance", True)
     solver.setdefault("require_dormitory_cycle", True)
     solver.setdefault("forbid_drone_waste", True)
     solver.setdefault("empty_drone_inventory_at_each_node", True)
+    search_config = config.get("search") or {}
+    solver["adaptive_rejection_expansion_rounds"] = int(
+        search_config.get("adaptive_rejection_expansion_rounds", 1)
+    )
+    if search_config.get("adaptive_rejection_max_top_k") is not None:
+        solver["adaptive_rejection_max_top_k"] = int(search_config["adaptive_rejection_max_top_k"])
+    if search_config.get("adaptive_rejection_max_operator_pool_size") is not None:
+        solver["adaptive_rejection_max_operator_pool_size"] = int(
+            search_config["adaptive_rejection_max_operator_pool_size"]
+        )
     preferences["solver"] = solver
     context = build_decision_packet(
         roster,
@@ -199,7 +220,18 @@ def _execute_mode(config: dict[str, Any], roster: Path, destination: Path, base:
         kwargs = _layout_kwargs(config, roster)
         if kwargs.get("profiles_file"):
             kwargs["profiles_file"] = _resolve(base, kwargs["profiles_file"])
-        return search_layouts(**kwargs)
+        result = search_layouts(**kwargs)
+        if result.get("selected") is None:
+            diagnostics = {
+                "failure_type": "no_feasible_layout_configuration",
+                "failures": result.get("failures") or [],
+                "attempted_configurations": int(
+                    (result.get("search_settings") or {}).get("attempted_configurations", 0) or 0
+                ),
+            }
+            write_json(destination / "solver-failure.json", diagnostics)
+            raise ScheduleSolveError("所有布局与产品配置均未找到可执行方案", diagnostics)
+        return result
     if mode == "upgrade_search":
         kwargs = _layout_kwargs(config, roster)
         return run_upgrade_search(
@@ -207,7 +239,6 @@ def _execute_mode(config: dict[str, Any], roster: Path, destination: Path, base:
             online_times=kwargs["online_times"],
             lmd_floor=kwargs["lmd_floor"],
             profiles=kwargs["profiles"],
-            max_daily_work_hours=kwargs["max_daily_work_hours"],
             top_k=kwargs["top_k"],
             operator_pool_size=kwargs["operator_pool_size"],
             time_limit=kwargs["time_limit"],
@@ -231,7 +262,11 @@ def _execute_mode(config: dict[str, Any], roster: Path, destination: Path, base:
             marginal_limit=int((config.get("upgrades") or {}).get("marginal_limit", 0)),
         )
     if mode == "fixed_schedule":
-        return _fixed_solve(config, roster)
+        try:
+            return _fixed_solve(config, roster)
+        except ScheduleSolveError as exc:
+            write_json(destination / "solver-failure.json", exc.diagnostics)
+            raise
     raise ValueError("mode 必须是 layout_search、upgrade_search 或 fixed_schedule")
 
 
@@ -334,12 +369,24 @@ def run_project(
                 if best is None or score > best[0]:
                     best = (score, candidate_result, list(times))
             except Exception as exc:
-                failures.append({"online_times": list(times), "reason": str(exc), "source": source})
+                failure = {"online_times": list(times), "reason": str(exc), "source": source}
+                diagnostics = getattr(exc, "diagnostics", None)
+                if isinstance(diagnostics, dict):
+                    failure["diagnostics"] = diagnostics
+                failures.append(failure)
 
         for times in candidates:
             evaluate_times(list(times), "global_grid")
         if best is None:
-            raise RuntimeError(f"所有上线时间候选均求解失败: {failures[:5]}")
+            diagnostics = {
+                "failure_type": "all_online_time_candidates_failed",
+                "failures": failures,
+            }
+            write_json(destination / "solver-failure.json", diagnostics)
+            raise ScheduleSolveError(
+                f"所有上线时间候选均求解失败: {failures[:5]}",
+                diagnostics,
+            )
         refinement_budget = max(0, int(schedule_policy.get("refinement_max_candidates", 36)))
         refinement_count = 0
         refinement_step = max(1, int(schedule_policy.get("candidate_step_minutes", 60)) // 2)

@@ -108,6 +108,53 @@ def _compute_efficiency(
         facility_level_sum=facility_level_sum,
     ).compute()
 
+
+def recompute_combo_with_global_operators(
+    context: dict[str, Any],
+    room: dict[str, Any],
+    combo: dict[str, Any],
+    global_operators: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Recalculate one room combination under an explicit simultaneous base state."""
+    facility = str(room.get("facility_id") or combo.get("facility_id") or "")
+    product = str(combo.get("product_id") or room.get("product_id") or "")
+    operators = [
+        dict(item, assigned_facility=facility, assigned_room_id=str(room.get("room_id") or combo.get("room_id") or ""))
+        for item in (combo.get("operators") or [])
+    ]
+    rooms = context_rooms(context)
+    base_state = context.get("base_state") or {}
+    right_levels = base_state.get("right_side_levels") or {}
+    dormitory_levels = list(base_state.get("dormitory_levels") or [1, 1, 1, 1])
+    facility_level_sum = (
+        sum(int(value.get("level", 0) or 0) for value in rooms.values())
+        + sum(int(value or 0) for value in dormitory_levels)
+        + sum(int(value or 0) for value in right_levels.values())
+    )
+    result = EfficiencyCalculator(
+        facility,
+        operators,
+        product,
+        trading_post_count=sum(1 for value in rooms.values() if value.get("facility_id") == "trading_post"),
+        power_plant_count=sum(1 for value in rooms.values() if value.get("facility_id") == "power_plant"),
+        drone_capacity=float(
+            (((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}).get("drone_capacity", 235.0)
+        ),
+        facility_level=int(room.get("level", combo.get("level", 1)) or 1),
+        training_room_level=int(right_levels.get("training_room", 3) or 3),
+        reception_room_level=int(right_levels.get("reception_room", 3) or 3),
+        dormitory_levels=dormitory_levels,
+        global_operators=global_operators,
+        facility_level_sum=facility_level_sum,
+    ).compute()
+    metrics, fixed = _metrics_per_hour(room, result, operators)
+    return {
+        **combo,
+        "metrics_per_hour": metrics,
+        "fixed_metrics": fixed,
+        "efficiency_result": result,
+    }
+
 def _effective_bonus(result: dict[str, Any]) -> float:
     for key in ("estimated_efficiency_bonus_pct", "effective_efficiency_bonus_pct", "paper_bonus_pct"):
         if result.get(key) is not None:

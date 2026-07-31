@@ -21,6 +21,7 @@ description: 导入、解析、规范化、合并并校验明日方舟基建技�
 - 带“与部分技能有特殊叠加规则”的技能必须写入 `special_rules`，记录排斥对象、优先级和结算类型。
 - 由其他干员或全局体系授予的效果必须建模在授予者上，并以 `granted_effect_skill_names` 记录效果别名；目标成员不得保留相同别名的独立固定收益。
 - 合并旧数据时，带显式零值 `model_status` 的记录必须允许清除历史数值；禁止把旧的非零占位值静默带回。
+- 全量技能表重新解析出的 `base_bonus_pct` 是直接百分比的权威值；旧资产只叠加标签、effects、mechanism、special_rules、产品和阵营。条件技能解析为零时不得恢复旧固定加成。
 - 同一干员的单例联动标签只能出现在一个独立技能槽；发现旧占位与正式技能并存时停止发布。
 - `model_status` 必须区分 `structured`、`verified_zero`、`description_only` 和 `unsupported`。
 - 全量 `skills_parsed.txt` 作为干员与技能主集合；现有 `operator-skills.json` 只作为复杂机制、阵营和特殊叠加规则的覆盖层。用户 roster 仅提供拥有状态与练度。
@@ -83,3 +84,4 @@ python -m unittest discover -s tests
 - 单例联动标签没有跨多个独立技能槽重复。
 - 数据版本发生变化。
 - warning 已处理或写入发布说明。
+- `base_bonus_pct` 与当前中文描述中的无条件直接百分比一致；条件概率、条件订单上限和跨设施收益不得作为固定加成通过校验。

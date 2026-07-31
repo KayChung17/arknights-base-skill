@@ -940,7 +940,6 @@
         "orirock_cube_consumption": 0.0
       },
       "solver_settings": {
-        "max_daily_work_hours": 18,
         "require_resource_balance": true,
         "minimum_orundum_shard_balance": 0.0,
         "resource_balance_safety_factor": 1.1,

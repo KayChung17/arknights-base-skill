@@ -38,8 +38,7 @@ class PreflightTests(unittest.TestCase):
                 "online_times": ["08:00", "14:00", "20:00"],
                 "minimum_net_lmd_per_day": -10000,
                 "minimum_originium_shard_balance": 0,
-                "minimum_pure_gold_balance": 0,
-                "max_daily_work_hours": 18
+                "minimum_pure_gold_balance": 0
             },
             "base_state": {
                 "drone_capacity": 235,
@@ -103,6 +102,35 @@ class PreflightTests(unittest.TestCase):
             self.assertEqual(report["source_map"]["/objective/minimum_originium_shard_balance"], "repository_default")
             self.assertEqual(report["source_map"]["/objective/minimum_pure_gold_balance"], "repository_default")
 
+    def test_steady_state_does_not_require_account_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["base_state"].pop("initial_drone_stock")
+            config["base_state"].pop("inventory", None)
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "ready")
+            self.assertNotIn("initial_drone_stock", report["resolved_config"]["base_state"])
+            self.assertEqual(report["resolved_config"]["horizon"]["initial_state_policy"], "cyclic_phase_free")
+
+    def test_finite_days_requires_account_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["horizon"] = {"mode": "finite_days", "days": 7}
+            config["base_state"].pop("initial_drone_stock")
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "needs_input")
+            missing = {item["path"] for item in report["missing"]}
+            self.assertIn("/base_state/initial_drone_stock", missing)
+            self.assertIn("/base_state/initial_resources", missing)
+            self.assertIn("/roster/current_morale", missing)
+            self.assertEqual(report["resolved_config"]["horizon"]["initial_state_policy"], "account_snapshot_required")
+
     def test_right_side_levels_require_explicit_irreversible_confirmation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -144,6 +172,20 @@ class PreflightTests(unittest.TestCase):
             path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
             report = preflight_project(path, strict=True)
             self.assertEqual(report["status"], "conflict")
+
+    def test_fixed_daily_work_hour_limit_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["objective"]["max_daily_work_hours"] = 18
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "conflict")
+            self.assertTrue(any(
+                item["code"] == "obsolete_work_hour_limit"
+                for item in report["conflicts"]
+            ))
 
     def test_fixed_schedule_requires_room_configuration(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

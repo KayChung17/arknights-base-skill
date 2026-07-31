@@ -312,7 +312,6 @@ class ReleaseWorkflowTests(unittest.TestCase):
                     "minimum_net_lmd_per_day": -10000,
                     "minimum_originium_shard_balance": 0,
                     "minimum_pure_gold_balance": 0,
-                    "max_daily_work_hours": 18,
                 },
                 "base_state": {
                     "drone_capacity": 235,

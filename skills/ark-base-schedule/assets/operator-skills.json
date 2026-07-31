@@ -11959,7 +11959,7 @@
           "base_bonus_pct": 0.0,
           "model_status": "structured",
           "tags": [
-            "order_capacity_2"
+            "control_hoederer_order_capacity_2"
           ],
           "products": [
             "base_management"
@@ -11976,7 +11976,7 @@
           "base_bonus_pct": 0.0,
           "model_status": "structured",
           "tags": [
-            "order_capacity_1"
+            "control_hoederer_order_capacity_1"
           ],
           "products": [
             "base_management"
@@ -12573,7 +12573,7 @@
           "skill_name": "耶拉冈德",
           "variant_group": "reception_room:skill:耶拉冈德",
           "description": "进驻会客室后，每当新搜集到的线索不是喀兰贸易时，则额外增加喀兰贸易线索的出现概率（工作时长影响概率）",
-          "base_bonus_pct": 10.0,
+          "base_bonus_pct": 0.0,
           "model_status": "structured",
           "tags": [
             "time_dependent_probability"

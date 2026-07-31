@@ -130,6 +130,8 @@ KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
     ("电弧", "点滴关照"): ["control_room_all_morale_recovery_0.05"],
     ("魔王", "魔王传承"): ["demon_king_amiya_pair_morale_recovery_0.05"],
     ("维什戴尔", "巴别塔之帜"): ["babel_other_facility_morale_recovery"],
+    ("维什戴尔", "同谋·α"): ["control_hoederer_order_capacity_1"],
+    ("维什戴尔", "同谋·β"): ["control_hoederer_order_capacity_2"],
     ("重岳", "孤光共照"): ["chongyue_other_facility_morale_recovery"],
     ("炎狱炎熔", "异格者"): ["control_alternate_per_member_morale_recovery_0.05"],
     ("濯尘芙蓉", "异格者"): ["control_alternate_per_member_morale_recovery_0.05"],
@@ -200,6 +202,7 @@ KNOWN_BASE_BONUS_OVERRIDES: dict[tuple[str, str], float] = {
     ("龙舌兰", "投资·β"): 0.0,
     ("深律", "心声图绘"): 0.0,
     ("鸿雪", "际崖居民"): 0.0,
+    ("耶拉", "耶拉冈德"): 0.0,
 }
 
 KNOWN_EFFECTS: dict[tuple[str, str], list[dict[str, Any]]] = {
@@ -243,6 +246,8 @@ OBSOLETE_TAGS_BY_SKILL: dict[tuple[str, str], set[str]] = {
     ("温蒂", "自动化·β"): {"wendy_per_power_plant"},
     ("鸿雪", "际崖居民"): {"hongxue_per_line"},
     ("孑", "市井之道"): {"order_capacity_minus_1"},
+    ("维什戴尔", "同谋·α"): {"order_capacity_1"},
+    ("维什戴尔", "同谋·β"): {"order_capacity_2"},
 }
 
 
@@ -382,7 +387,7 @@ def infer_tags(name: str, skill_name: str, description: str) -> list[str]:
         match = re.search(r"订单上限\+([0-9]+)", description)
         if match:
             clause = description[:match.start()].rsplit("；", 1)[-1]
-            if not any(word in clause for word in ("如果", "当与", "当自身", "每有", "每个", "每名", "根据")):
+            if not any(word in clause for word in ("如果", "当", "每有", "每个", "每名", "根据")):
                 tags.append(f"order_capacity_{match.group(1)}")
     if "订单上限-" in description:
         match = re.search(r"订单上限-([0-9]+)", description)
@@ -559,12 +564,6 @@ def merge_existing(
             if exact is not None:
                 obsolete = OBSOLETE_TAGS_BY_SKILL.get((target["name"], str(exact.get("skill_name") or "")), set())
                 exact["tags"] = sorted((set(exact.get("tags", [])) | set(tags)) - obsolete)
-                if (
-                    (target["name"], str(exact.get("skill_name") or "")) not in KNOWN_BASE_BONUS_OVERRIDES
-                    and float(exact.get("base_bonus_pct", 0) or 0) == 0
-                    and float(old_skill.get("base_bonus_pct", 0) or 0)
-                ):
-                    exact["base_bonus_pct"] = float(old_skill["base_bonus_pct"])
                 if old_skill.get("products"):
                     exact["products"] = list(old_skill["products"])
                 if mechanism:
@@ -594,8 +593,6 @@ def merge_existing(
             if same_facility:
                 chosen = max(same_facility, key=lambda skill: (int(skill.get("elite", 0)), int(skill.get("required_level", 1))))
                 chosen["tags"] = sorted(set(chosen.get("tags", [])) | set(tags))
-                if float(chosen.get("base_bonus_pct", 0) or 0) == 0 and float(old_skill.get("base_bonus_pct", 0) or 0):
-                    chosen["base_bonus_pct"] = float(old_skill["base_bonus_pct"])
                 if old_skill.get("products"):
                     chosen["products"] = list(old_skill["products"])
             else:

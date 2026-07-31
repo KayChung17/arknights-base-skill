@@ -744,6 +744,13 @@ class EfficiencyCalculator:
         room_names = {op["name"] for op in self.operators}
         room_order_capacity_increase = 0
         room_order_capacity_decrease = 0
+        if "赫德雷" in room_names:
+            for _control_op, control_skill in self._global_control_skills():
+                control_skill_tags = set(control_skill.get("tags", []))
+                if "control_hoederer_order_capacity_2" in control_skill_tags:
+                    room_order_capacity_increase += 2
+                elif "control_hoederer_order_capacity_1" in control_skill_tags:
+                    room_order_capacity_increase += 1
         for room_op in self.operators:
             for room_skill in self._skills(room_op):
                 for room_tag in room_skill.get("tags", []):

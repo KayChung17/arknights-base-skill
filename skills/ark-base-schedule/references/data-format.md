@@ -185,4 +185,6 @@ TSV 或 CSV，至少包含干员名称、是否已招募和精英化等级。Ros
 求解结果中的 `candidate_plan` 符合 v4 候选方案结构，并保留完整 solver 与 simulation 元数据。
 
 
-无人机参数位于 `objective.preferences.solver`：`allocate_drones`、`drone_repeating_day_balance`、`drone_capacity`、`initial_drone_stock`、`max_drone_use_per_node` 和 `drone_target_products`。
+无人机参数位于 `objective.preferences.solver`：`allocate_drones`、`drone_repeating_day_balance`、`drone_capacity`、`initial_drone_stock`、`initial_state_policy`、`max_drone_use_per_node` 和 `drone_target_products`。`steady_state` 使用 `initial_state_policy=cyclic_phase_free`，可省略 `initial_drone_stock`；有限周期使用 `account_snapshot_required` 并提供真实库存。
+
+求解失败时完整入口写出 `solver-failure.json`。`failure_type` 区分主模型不可行、输入约束冲突、复算拒绝耗尽、布局配置全部失败和上线时间候选全部失败；`constraint_families_individually_recovering_feasibility` 与 `combined_minimum_relaxation` 保存弹性诊断，`rejected_after_simulation` 保存代理候选的真实违规。

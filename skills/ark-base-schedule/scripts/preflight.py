@@ -25,9 +25,7 @@ REPOSITORY_DEFAULTS: dict[str, Any] = {
     "/objective/minimum_net_lmd_per_day": 0.0,
     "/objective/minimum_originium_shard_balance": 0.0,
     "/objective/minimum_pure_gold_balance": 0.0,
-    "/objective/max_daily_work_hours": 18.0,
     "/base_state/drone_capacity": 235.0,
-    "/base_state/initial_drone_stock": 235.0,
     "/base_state/dormitory_levels": [5, 5, 5, 5],
     "/base_state/right_side_levels": {
         "reception_room": 3,
@@ -49,9 +47,7 @@ CRITICAL_PATHS = (
     "/objective/goal",
     "/objective/online_schedule",
     "/objective/minimum_net_lmd_per_day",
-    "/objective/max_daily_work_hours",
     "/base_state/drone_capacity",
-    "/base_state/initial_drone_stock",
     "/base_state/dormitory_levels",
     "/base_state/right_side_levels",
     "/base_state/right_side_levels_confirmed",
@@ -191,8 +187,6 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
     for pointer, default in REPOSITORY_DEFAULTS.items():
         if _has(config, pointer):
             continue
-        if pointer == "/base_state/initial_drone_stock" and _has(config, "/base_state/drone_capacity"):
-            default = _get(config, "/base_state/drone_capacity")
         if pointer not in semantic_defaults:
             _set(config, pointer, default)
             source_map[pointer] = "repository_default"
@@ -210,6 +204,13 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
     for pointer in CRITICAL_PATHS:
         if not _has(config, pointer):
             missing.append({"path": pointer, "code": "required", "message": f"缺少关键输入 {pointer}。"})
+    for pointer in ("/objective/max_daily_work_hours", "/preferences/solver/operator_max_daily_hours"):
+        if _has(config, pointer):
+            conflicts.append({
+                "path": pointer,
+                "code": "obsolete_work_hour_limit",
+                "message": "固定工时上限已移除；可工作时长由上线区间、心情消耗、宿舍恢复和重复日闭环决定。",
+            })
     if not _has(config, "/objective/online_schedule") and not _has(config, "/objective/online_times"):
         # Keep the legacy diagnostic path so callers can migrate incrementally.
         missing.append({"path": "/objective/online_times", "code": "legacy_alias_required", "message": "请提供 online_schedule，或提供旧字段 online_times。"})
@@ -355,6 +356,12 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
     if horizon_mode not in {None, "steady_state", "finite_days"}:
         conflicts.append({"path": "/horizon/mode", "code": "invalid_horizon", "message": "horizon.mode 必须是 steady_state 或 finite_days。"})
     if horizon_mode == "finite_days":
+        if not _has(config, "/base_state/initial_drone_stock"):
+            missing.append({
+                "path": "/base_state/initial_drone_stock",
+                "code": "required_for_finite_days",
+                "message": "finite_days 必须提供首个操作节点的无人机库存。",
+            })
         days = horizon.get("days")
         if not isinstance(days, int) or days < 1:
             missing.append({"path": "/horizon/days", "code": "required_for_finite_days", "message": "finite_days 必须提供正整数 days。"})
@@ -365,10 +372,30 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
             for key in ("lmd", "pure_gold", "originium_shard", "orirock_cube"):
                 if key not in resources:
                     missing.append({"path": f"/base_state/initial_resources/{key}", "code": "required_for_finite_days", "message": f"缺少初始资源 {key}。"})
+        if roster_path is not None and roster_path.exists():
+            roster = apply_roster_overrides(read_roster(roster_path), config.get("operator_overrides"))
+            missing_morale = sorted(item.name for item in roster if item.morale is None)
+            if missing_morale:
+                missing.append({
+                    "path": "/roster/current_morale",
+                    "code": "required_for_finite_days",
+                    "message": f"finite_days 缺少当前心情: {missing_morale}",
+                })
         warnings.append({
             "path": "/horizon/mode",
             "code": "finite_days_solver_not_implemented",
             "message": "当前求解器只验证重复日稳态；finite_days 配置会在 run 阶段进入 execution_blocked，避免被当作稳态处理。",
+        })
+
+    if isinstance(horizon, dict) and horizon_mode in {"steady_state", "finite_days"}:
+        initial_state_policy = "cyclic_phase_free" if horizon_mode == "steady_state" else "account_snapshot_required"
+        horizon["initial_state_policy"] = initial_state_policy
+        config["horizon"] = horizon
+        source_map["/horizon/initial_state_policy"] = "derived_from_horizon_mode"
+        assumptions.append({
+            "path": "/horizon/initial_state_policy",
+            "value": initial_state_policy,
+            "source": "derived_from_horizon_mode",
         })
 
     if int(config.get("schema_version", 1) or 1) != 1:
