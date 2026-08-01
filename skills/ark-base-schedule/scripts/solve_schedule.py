@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,88 @@ class ScheduleSolveError(RuntimeError):
     def __init__(self, message: str, diagnostics: dict[str, Any]):
         super().__init__(message)
         self.diagnostics = diagnostics
+
+
+def _no_incumbent_failure_type(result: Any) -> str:
+    """Classify solver termination when HiGHS returned no primal vector."""
+    message = str(getattr(result, "message", "")).lower()
+    status = int(getattr(result, "status", -1))
+    if status == 1 or "time limit" in message:
+        return "time_limit_no_incumbent"
+    if status == 2 or "infeasible" in message:
+        return "milp_infeasible"
+    return "solver_stopped_without_incumbent"
+
+
+def _reduced_combination_library(
+    library: dict[str, Any], *, top_k_per_product: int,
+) -> dict[str, Any]:
+    """Prune an enumerated library without repeating expensive combination generation."""
+    limit = max(1, int(top_k_per_product))
+    reduced_rooms: dict[str, Any] = {}
+    for room_id, room_result in (library.get("rooms") or {}).items():
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for combo in room_result.get("combinations") or []:
+            groups.setdefault(str(combo.get("product_id") or ""), []).append(combo)
+        kept: list[dict[str, Any]] = []
+        for combos in groups.values():
+            combos = sorted(
+                combos,
+                key=lambda item: (-float(item.get("proxy_score_per_hour", 0.0)), str(item.get("combination_id"))),
+            )
+            target = min(len(combos), max(limit * 3, limit + 4))
+            selected: list[dict[str, Any]] = []
+            selected_ids: set[str] = set()
+
+            def add(combo: dict[str, Any] | None) -> None:
+                if combo is None:
+                    return
+                combo_id = str(combo.get("combination_id") or "")
+                if combo_id and combo_id not in selected_ids:
+                    selected.append(combo)
+                    selected_ids.add(combo_id)
+
+            for combo in combos[:limit]:
+                add(combo)
+            preserved_bundles: set[str] = set()
+            for combo in combos:
+                bundle_ids = {str(value) for value in combo.get("synergy_bundle_ids") or []}
+                if bundle_ids - preserved_bundles:
+                    add(combo)
+                    preserved_bundles.update(bundle_ids)
+            add(next((combo for combo in combos if int(combo.get("staffed_slots", 0) or 0) == 0), None))
+            remaining_slots = max(0, target - len(selected))
+            if remaining_slots:
+                stride = max(1, len(combos) // remaining_slots)
+                for index in range(0, len(combos), stride):
+                    add(combos[index])
+                    if len(selected) >= target:
+                        break
+            kept.extend(selected)
+
+        kept.sort(
+            key=lambda item: (-float(item.get("proxy_score_per_hour", 0.0)), str(item.get("combination_id"))),
+        )
+        reduced_room = dict(room_result)
+        reduced_room["combinations"] = kept
+        reduced_room["kept_count"] = len(kept)
+        reduced_room["truncated"] = True
+        reduced_rooms[str(room_id)] = reduced_room
+
+    parameters = dict(library.get("parameters") or {})
+    parameters["top_k_per_room"] = limit
+    parameters["reduction_mode"] = "pruned_from_enumerated_library_by_product"
+    parameters["source_top_k_per_room"] = (library.get("parameters") or {}).get("top_k_per_room")
+    return {
+        **library,
+        "parameters": parameters,
+        "rooms": reduced_rooms,
+        "search_completeness": {
+            "all_rooms_untruncated": False,
+            "truncated_rooms": sorted(reduced_rooms),
+            "reduction_mode": parameters["reduction_mode"],
+        },
+    }
 
 
 DIAGNOSTIC_CONSTRAINT_FAMILIES: dict[str, set[str]] = {
@@ -241,6 +324,56 @@ def _simulation_constraint_violations(context: dict[str, Any], simulation: dict[
     return violations
 
 
+def _rejection_diagnostic_snapshot(
+    assignments: list[dict[str, Any]],
+    simulation: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep enough post-simulation evidence to diagnose proxy drift."""
+
+    aggregate = simulation.get("aggregate_metrics") or {}
+    product_hours: dict[str, float] = {}
+    for item in simulation.get("room_results") or []:
+        product = str(item.get("product_id") or "")
+        if product:
+            product_hours[product] = product_hours.get(product, 0.0) + float(item.get("hours", 0.0) or 0.0)
+    dormitory = simulation.get("dormitory_plan") or {}
+    failing_morale = {
+        name: {
+            "daily_consumption": flow.get("daily_consumption"),
+            "daily_recovery_capacity": flow.get("daily_recovery_capacity"),
+            "cyclic_minimum": flow.get("cyclic_minimum"),
+        }
+        for name, flow in (dormitory.get("operator_flows") or {}).items()
+        if not bool(flow.get("repeating_day_feasible", True))
+    }
+    drone = simulation.get("drone_plan") or {}
+    return {
+        "aggregate_metrics": {
+            key: float(aggregate.get(key, 0.0) or 0.0)
+            for key in (
+                "orundum", "lmd", "lmd_cost", "pure_gold", "pure_gold_consumption",
+                "orundum_shard", "orundum_shard_consumption", "battle_record_exp",
+            )
+        },
+        "net_lmd_balance": float(simulation.get("net_lmd_balance", 0.0) or 0.0),
+        "product_hours": product_hours,
+        "assignments": assignments,
+        "drone": {
+            "feasible": bool(drone.get("feasible", False)),
+            "total_recovered": float(drone.get("total_recovered", 0.0) or 0.0),
+            "total_used": float(drone.get("total_used", 0.0) or 0.0),
+            "total_wasted": float(drone.get("total_wasted", 0.0) or 0.0),
+            "timeline": drone.get("timeline") or [],
+        },
+        "dormitory": {
+            "feasible": bool(dormitory.get("repeating_day_verified", False)),
+            "reason": dormitory.get("reason"),
+            "failing_operators": failing_morale,
+        },
+        "warnings": simulation.get("warnings") or [],
+    }
+
+
 def _battle_record_exp(simulation: dict[str, Any]) -> float:
     return float((simulation.get("aggregate_metrics") or {}).get("battle_record_exp", 0.0) or 0.0)
 
@@ -360,6 +493,72 @@ def _apply_free_secondary_improvements(
         "battle_record_exp_gain": sum(float(item["gain"]) for item in improvements),
         "improvements": improvements,
         "remaining_dominated_empty_slots": [],
+    }
+
+
+def _apply_empty_room_counterfactuals(
+    context: dict[str, Any],
+    library: dict[str, Any],
+    assignments: list[dict[str, Any]],
+    simulation: dict[str, Any],
+    drone_allocations: list[dict[str, Any]],
+    drone_inventory: list[dict[str, Any]],
+    drone_waste: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+    """Try to fill an empty main room when a non-empty counterfactual is no worse."""
+    lookup = _combo_lookup(library)
+    current_assignments = [dict(item) for item in assignments]
+    current_simulation = simulation
+    changes: list[dict[str, Any]] = []
+    unresolved: list[dict[str, Any]] = []
+    main = {"control_center", "factory", "trading_post"}
+    for item in list(current_assignments):
+        room_id = str(item.get("room_id") or "")
+        segment_id = str(item.get("segment_id") or "")
+        room_result = (library.get("rooms") or {}).get(room_id) or {}
+        room = room_result.get("room") or {}
+        if str(room.get("facility_id") or "") not in main:
+            continue
+        current_combo = lookup.get((room_id, str(item.get("combination_id")))) or {}
+        if current_combo.get("operators"):
+            continue
+        alternatives = [combo for combo in room_result.get("combinations") or [] if combo.get("operators")]
+        alternatives.sort(key=lambda combo: -float(combo.get("proxy_score_per_hour", 0.0) or 0.0))
+        found: tuple[dict[str, Any], dict[str, Any]] | None = None
+        for alternative in alternatives:
+            mutated = [dict(record) for record in current_assignments]
+            target = next(record for record in mutated if record.get("segment_id") == segment_id and record.get("room_id") == room_id)
+            target["combination_id"] = alternative["combination_id"]
+            if not _assignments_respect_exclusivity(context, library, mutated):
+                continue
+            candidate_simulation = simulate_assignment(
+                context, library, mutated, drone_allocations, drone_inventory, drone_waste,
+            )
+            if _simulation_constraint_violations(context, candidate_simulation):
+                continue
+            if not _primary_metrics_not_worse(current_simulation, candidate_simulation):
+                continue
+            found = (alternative, candidate_simulation)
+            break
+        if found is None:
+            unresolved.append({"segment_id": segment_id, "room_id": room_id, "reason": "no_non_empty_counterfactual_preserving_primary_metrics"})
+            continue
+        alternative, candidate_simulation = found
+        changes.append({
+            "segment_id": segment_id,
+            "room_id": room_id,
+            "from_combination_id": current_combo.get("combination_id"),
+            "to_combination_id": alternative.get("combination_id"),
+            "from_operators": [],
+            "to_operators": [str(op.get("name")) for op in alternative.get("operators") or []],
+        })
+        current_assignments = mutated
+        current_simulation = candidate_simulation
+    return current_assignments, current_simulation, {
+        "checked": True,
+        "policy": "fill_empty_main_room_when_non_empty_counterfactual_is_primary_metric_non_worse",
+        "changes": changes,
+        "unresolved_empty_rooms": unresolved,
     }
 
 
@@ -735,9 +934,15 @@ def solve_hybrid(
     mip_rel_gap: float = 0.001,
     max_proxy_attempts: int | None = None,
     _rejection_retry_depth: int = 0,
+    _timeout_fallback_depth: int = 0,
+    _proxy_attempt_limit: int | None = None,
 ) -> dict[str, Any]:
     settings = ((context.get("objective") or {}).get("preferences") or {}).get("solver") or {}
-    expansion_rounds = max(0, int(settings.get("adaptive_candidate_expansion_rounds", 2)))
+    expansion_rounds = (
+        0
+        if _timeout_fallback_depth > 0
+        else max(0, int(settings.get("adaptive_candidate_expansion_rounds", 2)))
+    )
     expansion_factor = max(1.1, float(settings.get("adaptive_candidate_expansion_factor", 2.0)))
     maximum_top_k = max(top_k, int(settings.get("adaptive_candidate_max_top_k", top_k * 4)))
     maximum_pool = max(operator_pool_size, int(settings.get("adaptive_candidate_max_operator_pool_size", operator_pool_size + 8)))
@@ -796,7 +1001,11 @@ def solve_hybrid(
     # Try additional proxy optima when a candidate fails a hard constraint only
     # after simultaneous effects are recalculated.
     configured_attempts = int(max_proxy_attempts) if max_proxy_attempts is not None else 0
-    max_attempts = max(requested * 8, requested, configured_attempts)
+    max_attempts = (
+        max(1, int(_proxy_attempt_limit))
+        if _proxy_attempt_limit is not None
+        else max(requested * 8, requested, configured_attempts)
+    )
     for attempt in range(max_attempts):
         if len(solutions) >= requested:
             break
@@ -830,11 +1039,167 @@ def solve_hybrid(
         # primal vector is available. Optimality metadata remains explicit.
         if result.x is None:
             if attempt == 0:
-                diagnostics = diagnose_infeasible_model(bundle, time_limit=time_limit)
-                diagnostics["solver_message"] = str(result.message)
-                diagnostics["candidate_expansion"] = expansion_trace
+                failure_type = _no_incumbent_failure_type(result)
+                diagnostics = {
+                    "failure_type": failure_type,
+                    "solver_status": int(result.status),
+                    "solver_message": str(result.message),
+                    "model": model_metadata or {},
+                    "candidate_library_complete": bool(
+                        ((library.get("search_completeness") or {}).get("all_rooms_untruncated"))
+                    ),
+                    "candidate_expansion": expansion_trace,
+                }
+                if failure_type == "milp_infeasible":
+                    diagnostics.update(diagnose_infeasible_model(bundle, time_limit=time_limit))
+                elif failure_type == "time_limit_no_incumbent" and _timeout_fallback_depth == 0:
+                    fallback_failures: list[dict[str, Any]] = []
+                    # Cross-facility state products are the largest source of
+                    # binary variables. First seek a base-feasible incumbent
+                    # without them; full simulation still recomputes every
+                    # control-center effect before accepting the schedule.
+                    if int((model_metadata or {}).get("cross_facility_interaction_variable_count", 0) or 0) > 0:
+                        simplified_context = copy.deepcopy(context)
+                        simplified_settings = (
+                            simplified_context.setdefault("objective", {})
+                            .setdefault("preferences", {})
+                            .setdefault("solver", {})
+                        )
+                        simplified_settings["disable_cross_facility_interactions"] = True
+                        simplified_time_limit = max(2.0, min(float(time_limit), 4.0))
+                        try:
+                            simplified = solve_hybrid(
+                                simplified_context,
+                                library=library,
+                                top_k=current_top_k,
+                                operator_pool_size=current_pool,
+                                top_solutions=1,
+                                time_limit=simplified_time_limit,
+                                mip_rel_gap=max(float(mip_rel_gap), 0.02),
+                                max_proxy_attempts=min(configured_attempts or 4, 4),
+                                _rejection_retry_depth=_rejection_retry_depth,
+                                _timeout_fallback_depth=1,
+                                _proxy_attempt_limit=1,
+                            )
+                        except ScheduleSolveError as simplified_error:
+                            fallback_failures.append({
+                                "status": "failed",
+                                "mode": "base_model_without_cross_facility_interaction_variables",
+                                "time_limit_seconds": simplified_time_limit,
+                                "diagnostics": simplified_error.diagnostics,
+                            })
+                        else:
+                            fallback_meta = simplified["solver"]
+                            fallback_meta["feasibility_fallback"] = {
+                                "status": "accepted",
+                                "trigger": "full_model_time_limit_without_incumbent",
+                                "mode": "base_model_without_cross_facility_interaction_variables",
+                                "full_model": {
+                                    "variable_count": int((model_metadata or {}).get("variable_count", 0) or 0),
+                                    "constraint_count": int((model_metadata or {}).get("constraint_count", 0) or 0),
+                                    "time_limit_seconds": float(time_limit),
+                                },
+                                "fallback_model": {
+                                    "top_k_per_room": current_top_k,
+                                    "operator_pool_size": current_pool,
+                                    "time_limit_seconds": simplified_time_limit,
+                                },
+                                "earlier_fallback_failures": fallback_failures,
+                            }
+                            fallback_meta["optimality_claim"] = (
+                                "verified_feasible_base_model_after_full_cross_facility_model_timeout"
+                            )
+                            fallback_meta["actual_simulation_global_optimality_proven"] = False
+                            fallback_meta.setdefault("limitations", []).append(
+                                "控制中枢跨设施交互在完整模型内超时；当前排班由基础模型生成，并已通过完整模拟复算验证。"
+                            )
+                            plan_solver = (simplified.get("candidate_plan") or {}).get("solver")
+                            if isinstance(plan_solver, dict):
+                                plan_solver.update(fallback_meta)
+                            manifest_extra = (simplified.get("reproducibility") or {}).get("extra")
+                            if isinstance(manifest_extra, dict):
+                                manifest_extra["optimality_claim"] = fallback_meta["optimality_claim"]
+                            return simplified
+                    attempted_sizes: set[int] = set()
+                    for requested_top_k in (3, 6):
+                        fallback_top_k = min(current_top_k, requested_top_k)
+                        if fallback_top_k == current_top_k or fallback_top_k in attempted_sizes:
+                            continue
+                        attempted_sizes.add(fallback_top_k)
+                        fallback_library = _reduced_combination_library(
+                            library,
+                            top_k_per_product=fallback_top_k,
+                        )
+                        fallback_time_limit = max(2.0, min(float(time_limit), 4.0))
+                        try:
+                            fallback = solve_hybrid(
+                                context,
+                                library=fallback_library,
+                                top_k=fallback_top_k,
+                                operator_pool_size=current_pool,
+                                top_solutions=1,
+                                time_limit=fallback_time_limit,
+                                mip_rel_gap=max(float(mip_rel_gap), 0.02),
+                                max_proxy_attempts=min(configured_attempts or 4, 4),
+                                _rejection_retry_depth=_rejection_retry_depth,
+                                _timeout_fallback_depth=1,
+                                _proxy_attempt_limit=1,
+                            )
+                        except ScheduleSolveError as fallback_error:
+                            fallback_failures.append({
+                                "status": "failed",
+                                "top_k_per_room": fallback_top_k,
+                                "operator_pool_size": current_pool,
+                                "reduction_mode": "pruned_from_enumerated_library_by_product",
+                                "time_limit_seconds": fallback_time_limit,
+                                "diagnostics": fallback_error.diagnostics,
+                            })
+                            continue
+                        else:
+                            fallback_meta = fallback["solver"]
+                            fallback_meta["feasibility_fallback"] = {
+                                "status": "accepted",
+                                "trigger": "full_model_time_limit_without_incumbent",
+                                "full_model": {
+                                    "top_k_per_room": current_top_k,
+                                    "operator_pool_size": current_pool,
+                                    "variable_count": int((model_metadata or {}).get("variable_count", 0) or 0),
+                                    "constraint_count": int((model_metadata or {}).get("constraint_count", 0) or 0),
+                                    "time_limit_seconds": float(time_limit),
+                                },
+                                "fallback_model": {
+                                    "top_k_per_room": fallback_top_k,
+                                    "operator_pool_size": current_pool,
+                                    "reduction_mode": "pruned_from_enumerated_library_by_product",
+                                    "time_limit_seconds": fallback_time_limit,
+                                },
+                                "earlier_fallback_failures": fallback_failures,
+                            }
+                            fallback_meta["optimality_claim"] = (
+                                "verified_feasible_reduced_candidate_library_after_full_model_timeout"
+                            )
+                            fallback_meta["actual_simulation_global_optimality_proven"] = False
+                            fallback_meta.setdefault("limitations", []).append(
+                                "完整候选模型在时限内未产生incumbent；当前排班来自自动缩小候选库并已通过完整模拟验证。"
+                            )
+                            plan_solver = (fallback.get("candidate_plan") or {}).get("solver")
+                            if isinstance(plan_solver, dict):
+                                plan_solver.update(fallback_meta)
+                            manifest_extra = (fallback.get("reproducibility") or {}).get("extra")
+                            if isinstance(manifest_extra, dict):
+                                manifest_extra["optimality_claim"] = fallback_meta["optimality_claim"]
+                            return fallback
+                    if attempted_sizes:
+                        diagnostics["feasibility_fallback"] = {
+                            "status": "failed",
+                            "attempts": fallback_failures,
+                        }
                 raise ScheduleSolveError(
-                    f"MILP无可行解: {result.message}",
+                    (
+                        f"MILP在时限内未找到可行incumbent: {result.message}"
+                        if failure_type == "time_limit_no_incumbent"
+                        else f"MILP未返回可行解: {result.message}"
+                    ),
                     diagnostics,
                 )
             break
@@ -850,8 +1215,15 @@ def solve_hybrid(
             drone_waste,
         )
         violations = _simulation_constraint_violations(context, simulation)
+        empty_room_counterfactual: dict[str, Any] | None = None
         secondary_postprocess: dict[str, Any] | None = None
         opportunity_postprocess: dict[str, Any] | None = None
+        if not violations:
+            assignments, simulation, empty_room_counterfactual = _apply_empty_room_counterfactuals(
+                context, library, assignments, simulation,
+                drone_allocations, drone_inventory, drone_waste,
+            )
+            violations = _simulation_constraint_violations(context, simulation)
         if not violations:
             assignments, simulation, secondary_postprocess = _apply_free_secondary_improvements(
                 context, library, assignments, simulation,
@@ -881,6 +1253,7 @@ def solve_hybrid(
             "resource_shortfalls": resource_shortfalls,
             "simulation": simulation,
             "actual_constraint_violations": violations,
+            "empty_room_counterfactual": empty_room_counterfactual,
             "secondary_output_postprocess": secondary_postprocess,
             "opportunity_cost_postprocess": opportunity_postprocess,
         }
@@ -889,12 +1262,17 @@ def solve_hybrid(
                 "proxy_rank": attempt + 1,
                 "proxy_objective": record["proxy_objective"],
                 "violations": violations,
+                "simulation_snapshot": _rejection_diagnostic_snapshot(assignments, simulation),
             })
             continue
         solutions.append(record)
 
     if not solutions:
-        rejection_expansion_rounds = max(0, int(settings.get("adaptive_rejection_expansion_rounds", 1)))
+        rejection_expansion_rounds = (
+            0
+            if _timeout_fallback_depth > 0
+            else max(0, int(settings.get("adaptive_rejection_expansion_rounds", 1)))
+        )
         library_complete = bool((library.get("search_completeness") or {}).get("all_rooms_untruncated"))
         if not library_complete and _rejection_retry_depth < rejection_expansion_rounds:
             rejection_max_top_k = max(
@@ -925,6 +1303,8 @@ def solve_hybrid(
                         mip_rel_gap=mip_rel_gap,
                         max_proxy_attempts=max_proxy_attempts,
                         _rejection_retry_depth=_rejection_retry_depth + 1,
+                        _timeout_fallback_depth=_timeout_fallback_depth,
+                        _proxy_attempt_limit=_proxy_attempt_limit,
                     )
                 except ScheduleSolveError as exc:
                     exc.diagnostics.setdefault("post_rejection_candidate_expansion", []).insert(0, {

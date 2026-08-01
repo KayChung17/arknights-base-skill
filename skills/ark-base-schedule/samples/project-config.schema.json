@@ -69,7 +69,7 @@
     },
     "base_state": {
       "type": "object",
-      "required": ["drone_capacity", "dormitory_levels", "right_side_levels", "right_side_levels_confirmed"],
+      "required": ["dormitory_levels"],
       "properties": {
         "drone_capacity": {"type": "number", "minimum": 0},
         "initial_drone_stock": {"type": "number", "minimum": 0},
@@ -95,6 +95,12 @@
         "dormitory_levels": {
           "type": "array", "minItems": 4, "maxItems": 4,
           "items": {"type": "integer", "minimum": 1, "maximum": 5}
+        },
+        "dormitory_ambience": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "number", "minimum": 0, "maximum": 5000}
         },
         "right_side_levels": {
           "type": "object",
@@ -192,7 +198,6 @@
     "economicValues": {
       "type": "object",
       "properties": {
-        "orundum_lmd": {"type": "number", "minimum": 0},
         "orundum_shard_shortfall_lmd": {"type": "number", "minimum": 0},
         "pure_gold_shortfall_lmd": {"type": "number", "minimum": 0}
       },

@@ -47,13 +47,18 @@ CRITICAL_PATHS = (
     "/objective/goal",
     "/objective/online_schedule",
     "/objective/minimum_net_lmd_per_day",
-    "/base_state/drone_capacity",
     "/base_state/dormitory_levels",
-    "/base_state/right_side_levels",
-    "/base_state/right_side_levels_confirmed",
     "/right_side_schedule",
     "/horizon/mode",
 )
+
+MECHANICS_DEFAULT_SOURCES = {
+    "/base_state/drone_capacity": (235.0, "mechanics_default_fully_cleared_base"),
+    "/base_state/right_side_levels": ({
+        "reception_room": 3, "office": 3, "training_room": 3, "workshop": 3,
+    }, "mechanics_default_full_irreversible_right_side"),
+    "/base_state/right_side_levels_confirmed": (True, "mechanics_default_full_irreversible_right_side"),
+}
 
 
 class PreflightError(RuntimeError):
@@ -183,9 +188,22 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
     allow_all_defaults = bool(policy.get("allow_repository_defaults", False)) and not strict
     authorized = set(str(item) for item in policy.get("authorized_defaults", []) or [])
 
+    # Endgame accounts use the cleared-base assumptions from mechanics.json.
+    # An explicit account_state can opt out and then must provide concrete values.
+    account_state = config.get("account_state") or {}
+    defaults_enabled = not (isinstance(account_state, dict) and account_state.get("fully_cleared") is False)
+    if defaults_enabled:
+        for pointer, (default, source) in MECHANICS_DEFAULT_SOURCES.items():
+            if not _has(config, pointer):
+                _set(config, pointer, default)
+                source_map[pointer] = source
+                assumptions.append({"path": pointer, "value": default, "source": source})
+
     semantic_defaults = set(CRITICAL_PATHS) | {"/profiles/mode"}
     for pointer, default in REPOSITORY_DEFAULTS.items():
         if _has(config, pointer):
+            continue
+        if not defaults_enabled and pointer in MECHANICS_DEFAULT_SOURCES:
             continue
         if pointer not in semantic_defaults:
             _set(config, pointer, default)
@@ -204,6 +222,14 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
     for pointer in CRITICAL_PATHS:
         if not _has(config, pointer):
             missing.append({"path": pointer, "code": "required", "message": f"缺少关键输入 {pointer}。"})
+    if not defaults_enabled:
+        for pointer, (default, _source) in MECHANICS_DEFAULT_SOURCES.items():
+            if not _has(config, pointer):
+                missing.append({
+                    "path": pointer,
+                    "code": "required_for_non_cleared_base",
+                    "message": "已声明基建未完全清理，必须提供该字段的账号实际值。",
+                })
     for pointer in ("/objective/max_daily_work_hours", "/preferences/solver/operator_max_daily_hours"):
         if _has(config, pointer):
             conflicts.append({
@@ -211,6 +237,12 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
                 "code": "obsolete_work_hour_limit",
                 "message": "固定工时上限已移除；可工作时长由上线区间、心情消耗、宿舍恢复和重复日闭环决定。",
             })
+    if _has(config, "/objective/economic_values/orundum_lmd"):
+        conflicts.append({
+            "path": "/objective/economic_values/orundum_lmd",
+            "code": "fixed_orundum_lmd_rate",
+            "message": "合成玉固定按160龙门币/个折算，即20合成玉=3200龙门币；请删除该配置字段。",
+        })
     if not _has(config, "/objective/online_schedule") and not _has(config, "/objective/online_times"):
         # Keep the legacy diagnostic path so callers can migrate incrementally.
         missing.append({"path": "/objective/online_times", "code": "legacy_alias_required", "message": "请提供 online_schedule，或提供旧字段 online_times。"})
@@ -279,6 +311,21 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
         except (TypeError, ValueError) as exc:
             conflicts.append({"path": "/objective/online_schedule", "code": "invalid_candidate_grid", "message": str(exc)})
 
+    objective_goal_text = str((_get(config, "/objective/goal") or ""))
+    max_orundum_trading_posts = _get(config, "/objective/max_orundum_trading_posts")
+    max_shard_factories = _get(config, "/objective/max_shard_factories")
+    allow_zero_orundum = bool(_get(config, "/objective/allow_zero_orundum") or False)
+    explicitly_requests_orundum = (
+        (isinstance(max_orundum_trading_posts, int) and max_orundum_trading_posts > 0)
+        or any(token in objective_goal_text for token in ("搓玉", "合成玉", "源石碎片"))
+    )
+    if explicitly_requests_orundum and not allow_zero_orundum and max_shard_factories == 0:
+        conflicts.append({
+            "path": "/objective/max_shard_factories",
+            "code": "orundum_requires_shard_factory",
+            "message": "明确要求搓玉时必须保留至少1座源石碎片制造站；max_shard_factories=0 与该目标冲突。",
+        })
+
     right_side_schedule = config.get("right_side_schedule")
     if right_side_schedule is not None and isinstance(count, int):
         known_names: set[str] | None = None
@@ -312,6 +359,33 @@ def preflight_project(config_path: str | Path, *, strict: bool = True) -> dict[s
     dorms = _get(config, "/base_state/dormitory_levels")
     if dorms is not None and (not isinstance(dorms, list) or len(dorms) != 4):
         conflicts.append({"path": "/base_state/dormitory_levels", "code": "invalid_dormitories", "message": "dormitory_levels 必须包含四座宿舍等级。"})
+    elif isinstance(dorms, list):
+        invalid_dorm_levels = [value for value in dorms if not isinstance(value, int) or value not in {1, 2, 3, 4, 5}]
+        if invalid_dorm_levels:
+            conflicts.append({"path": "/base_state/dormitory_levels", "code": "invalid_dormitory_level", "message": "宿舍等级必须是1至5级整数。"})
+        else:
+            ambience = _get(config, "/base_state/dormitory_ambience")
+            if ambience is None:
+                ambience = [1000.0 * int(level) for level in dorms]
+                _set(config, "/base_state/dormitory_ambience", ambience)
+                source = "mechanics_default_max_ambience_for_dormitory_level"
+                source_map["/base_state/dormitory_ambience"] = source
+                assumptions.append({"path": "/base_state/dormitory_ambience", "value": ambience, "source": source})
+            elif not isinstance(ambience, list) or len(ambience) != 4:
+                conflicts.append({"path": "/base_state/dormitory_ambience", "code": "invalid_dormitory_ambience", "message": "dormitory_ambience 必须包含四座宿舍的氛围值。"})
+            else:
+                for index, (value, level) in enumerate(zip(ambience, dorms)):
+                    try:
+                        numeric = float(value)
+                    except (TypeError, ValueError):
+                        numeric = -1.0
+                    cap = 1000.0 * int(level)
+                    if numeric < 0.0 or numeric > cap + 1e-6:
+                        conflicts.append({
+                            "path": f"/base_state/dormitory_ambience/{index}",
+                            "code": "ambience_exceeds_level_cap",
+                            "message": f"{level}级宿舍氛围必须在0至{cap:.0f}之间。",
+                        })
     right = _get(config, "/base_state/right_side_levels")
     if isinstance(right, dict):
         for key in ("reception_room", "office", "training_room", "workshop"):

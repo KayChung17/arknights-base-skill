@@ -71,7 +71,7 @@ class PreflightTests(unittest.TestCase):
             self.assertEqual(report["status"], "needs_input")
             missing_paths = {item["path"] for item in report["missing"]}
             self.assertIn("/objective/online_times", missing_paths)
-            self.assertIn("/base_state", missing_paths)
+            self.assertIn("/base_state/dormitory_levels", missing_paths)
 
     def test_deprecated_shard_field_is_migrated(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -115,6 +115,32 @@ class PreflightTests(unittest.TestCase):
             self.assertNotIn("initial_drone_stock", report["resolved_config"]["base_state"])
             self.assertEqual(report["resolved_config"]["horizon"]["initial_state_policy"], "cyclic_phase_free")
 
+    def test_dormitory_ambience_defaults_to_level_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["base_state"]["dormitory_levels"] = [1, 3, 4, 5]
+            config["base_state"].pop("dormitory_ambience", None)
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "ready")
+            self.assertEqual(report["resolved_config"]["base_state"]["dormitory_ambience"], [1000.0, 3000.0, 4000.0, 5000.0])
+            self.assertEqual(report["source_map"]["/base_state/dormitory_ambience"], "mechanics_default_max_ambience_for_dormitory_level")
+
+    def test_orundum_requires_shard_factory_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["objective"]["goal"] = "搓玉并平衡资源"
+            config["objective"]["max_orundum_trading_posts"] = 1
+            config["objective"]["max_shard_factories"] = 0
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "conflict")
+            self.assertTrue(any(item["code"] == "orundum_requires_shard_factory" for item in report["conflicts"]))
+
     def test_finite_days_requires_account_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -131,7 +157,7 @@ class PreflightTests(unittest.TestCase):
             self.assertIn("/roster/current_morale", missing)
             self.assertEqual(report["resolved_config"]["horizon"]["initial_state_policy"], "account_snapshot_required")
 
-    def test_right_side_levels_require_explicit_irreversible_confirmation(self) -> None:
+    def test_right_side_levels_use_endgame_mechanics_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = self._complete(root)
@@ -139,11 +165,22 @@ class PreflightTests(unittest.TestCase):
             path = root / "project.json"
             path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
             report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "ready")
+            self.assertEqual(report["resolved_config"]["base_state"]["right_side_levels_confirmed"], True)
+            self.assertEqual(report["source_map"]["/base_state/right_side_levels_confirmed"], "mechanics_default_full_irreversible_right_side")
+
+    def test_non_cleared_base_requires_explicit_mechanics_values(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["account_state"] = {"fully_cleared": False}
+            for key in ("drone_capacity", "right_side_levels", "right_side_levels_confirmed"):
+                config["base_state"].pop(key, None)
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
             self.assertEqual(report["status"], "needs_input")
-            self.assertIn(
-                "/base_state/right_side_levels_confirmed",
-                {item["path"] for item in report["missing"]},
-            )
+            self.assertIn("/base_state/drone_capacity", {item["path"] for item in report["missing"]})
 
     def test_right_side_schedule_is_required_and_roster_checked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -184,6 +221,20 @@ class PreflightTests(unittest.TestCase):
             self.assertEqual(report["status"], "conflict")
             self.assertTrue(any(
                 item["code"] == "obsolete_work_hour_limit"
+                for item in report["conflicts"]
+            ))
+
+    def test_fixed_orundum_lmd_rate_cannot_be_overridden(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._complete(root)
+            config["objective"]["economic_values"] = {"orundum_lmd": 200}
+            path = root / "project.json"
+            path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+            report = preflight_project(path, strict=True)
+            self.assertEqual(report["status"], "conflict")
+            self.assertTrue(any(
+                item["code"] == "fixed_orundum_lmd_rate"
                 for item in report["conflicts"]
             ))
 

@@ -187,4 +187,4 @@ TSV 或 CSV，至少包含干员名称、是否已招募和精英化等级。Ros
 
 无人机参数位于 `objective.preferences.solver`：`allocate_drones`、`drone_repeating_day_balance`、`drone_capacity`、`initial_drone_stock`、`initial_state_policy`、`max_drone_use_per_node` 和 `drone_target_products`。`steady_state` 使用 `initial_state_policy=cyclic_phase_free`，可省略 `initial_drone_stock`；有限周期使用 `account_snapshot_required` 并提供真实库存。
 
-求解失败时完整入口写出 `solver-failure.json`。`failure_type` 区分主模型不可行、输入约束冲突、复算拒绝耗尽、布局配置全部失败和上线时间候选全部失败；`constraint_families_individually_recovering_feasibility` 与 `combined_minimum_relaxation` 保存弹性诊断，`rejected_after_simulation` 保存代理候选的真实违规。
+求解失败时完整入口写出 `solver-failure.json`。`failure_type` 区分 `milp_infeasible`、`time_limit_no_incumbent`、输入约束冲突、复算拒绝耗尽、布局配置全部失败和上线时间候选全部失败。弹性诊断只用于明确的 `milp_infeasible`；超时无 incumbent 时先运行缩减候选库保底，成功结果在 `solver.feasibility_fallback` 记录完整模型与保底模型参数。`rejected_after_simulation` 保存代理候选的真实违规。

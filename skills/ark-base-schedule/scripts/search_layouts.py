@@ -32,8 +32,9 @@ from solve_schedule import solve_hybrid
 # Backward-compatible public name used by existing callers and tests.
 COMMON_PROFILES = REPRESENTATIVE_PROFILES
 
+FIXED_ORUNDUM_LMD = float(load_mechanics()["economy_constants"]["orundum_lmd_per_unit"])
 DEFAULT_ECONOMIC_VALUES = {
-    "orundum_lmd": 160.0,
+    "orundum_lmd": FIXED_ORUNDUM_LMD,
     "orundum_shard_shortfall_lmd": 1600.0,
     "pure_gold_shortfall_lmd": 500.0,
 }
@@ -47,6 +48,8 @@ def economic_utility_lmd(
     values: dict[str, float] | None = None,
 ) -> float:
     """Convert output and inventory drawdown into one LMD-equivalent value."""
+    if values and "orundum_lmd" in values:
+        raise ValueError("orundum_lmd 是固定机制常量，项目配置不能覆盖")
     rates = dict(DEFAULT_ECONOMIC_VALUES)
     rates.update(values or {})
     return (
@@ -77,6 +80,7 @@ def product_splits(
     max_orundum_trading_posts: int | None = None,
     max_shard_factories: int | None = None,
     minimum_battle_record_factories: int = 0,
+    max_battle_record_factories: int | None = None,
     allow_zero_orundum: bool = False,
 ) -> list[tuple[int, int, int]]:
     """Return feasible product choices for trading posts and factories.
@@ -99,12 +103,17 @@ def product_splits(
     if max_shard_factories is not None:
         max_f = min(max_f, max(0, int(max_shard_factories)))
     minimum_battle = max(0, int(minimum_battle_record_factories))
+    maximum_battle = factory_count - 1 if max_battle_record_factories is None else max(0, int(max_battle_record_factories))
+    # A positive Orundum trade allocation consumes Originium Shards. Keep at
+    # least one shard factory whenever Orundum is requested; zero is reserved
+    # for explicit allow_zero_orundum runs.
+    shard_start = 1
     splits = [
         (origin_rooms, shard_factories, battle_record_factories)
         for origin_rooms in range(1, max_tp + 1)
-        for shard_factories in range(1, max_f + 1)
+        for shard_factories in range(shard_start, max_f + 1)
         for battle_record_factories in (
-            range(minimum_battle, factory_count - shard_factories)
+            range(minimum_battle, min(maximum_battle, factory_count - shard_factories - 1) + 1)
             if minimum_battle > 0
             else (0,)
         )
@@ -113,7 +122,7 @@ def product_splits(
         splits.extend(
             (0, 0, battle_record_factories)
             for battle_record_factories in (
-                range(minimum_battle, factory_count)
+                range(minimum_battle, min(maximum_battle, factory_count - 1) + 1)
                 if minimum_battle > 0
                 else (0,)
             )
@@ -191,6 +200,7 @@ def build_context(
     minimum_gold_balance: float = 0.0,
     operator_overrides: dict[str, dict[str, Any]] | None = None,
     right_side_schedule: list[dict[str, list[str]]] | None = None,
+    drone_target_products: list[str] | None = None,
 ) -> dict[str, Any]:
     profile = normalize_profile(profile)
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
@@ -225,7 +235,7 @@ def build_context(
             "initial_drone_stock": initial_stock,
             "initial_state_policy": "cyclic_phase_free" if cyclic_phase_free else "account_snapshot",
             "max_drone_use_per_node": float(drone_capacity),
-            "drone_target_products": ["lmd_order", "orundum_order", "pure_gold", "orundum_shard"],
+            "drone_target_products": list(drone_target_products or ["lmd_order", "orundum_order", "pure_gold", "orundum_shard"]),
             "forbid_drone_waste": True,
             "empty_drone_inventory_at_each_node": True,
             "repeat_day_continuity": False,
@@ -417,6 +427,8 @@ def search_layouts(
     max_orundum_trading_posts: int | None = None,
     max_shard_factories: int | None = None,
     minimum_battle_record_factories: int = 0,
+    max_battle_record_factories: int | None = None,
+    allow_zero_orundum: bool = False,
     operator_overrides: dict[str, dict[str, Any]] | None = None,
     right_side_schedule: list[dict[str, list[str]]] | None = None,
     allow_product_switching: bool = False,
@@ -429,6 +441,8 @@ def search_layouts(
     adaptive_rejection_max_operator_pool_size: int | None = None,
     random_order_trials: int = 0,
     random_order_seed: int = 20260730,
+    refine_finalist: bool = False,
+    drone_target_products: list[str] | None = None,
 ) -> dict[str, Any]:
     right = dict(DEFAULT_RIGHT_SIDE_LEVELS)
     right.update(right_side_levels or {})
@@ -442,7 +456,10 @@ def search_layouts(
         max_profiles=max_profiles,
     )
     rows: list[dict[str, Any]] = []
+    screening_records: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+    refinement_attempted = False
+    refinement_succeeded = False
     attempted_configurations = 0
     for profile_id, raw_profile in profile_map.items():
         profile = normalize_profile(raw_profile)
@@ -455,7 +472,8 @@ def search_layouts(
             max_orundum_trading_posts=max_orundum_trading_posts,
             max_shard_factories=max_shard_factories,
             minimum_battle_record_factories=minimum_battle_record_factories,
-            allow_zero_orundum=True,
+            max_battle_record_factories=max_battle_record_factories,
+            allow_zero_orundum=allow_zero_orundum,
         )
         if not splits:
             failures.append({
@@ -503,6 +521,7 @@ def search_layouts(
                 minimum_gold_balance=minimum_gold_balance,
                 operator_overrides=operator_overrides,
                 right_side_schedule=right_side_schedule,
+                drone_target_products=drone_target_products,
             )
             solver_settings = context["objective"]["preferences"]["solver"]
             solver_settings["adaptive_candidate_expansion_rounds"] = max(0, int(adaptive_candidate_expansion_rounds))
@@ -536,25 +555,56 @@ def search_layouts(
                 )
                 solver_settings["minimum_battle_record_factories"] = int(minimum_battle_record_factories)
             try:
-                library = build_library(context, top_k=top_k, operator_pool_size=operator_pool_size, allow_partial=True)
-                result = solve_hybrid(
-                    context,
-                    library=library,
-                    top_k=top_k,
-                    operator_pool_size=operator_pool_size,
-                    top_solutions=1,
-                    time_limit=time_limit,
-                    mip_rel_gap=mip_rel_gap,
-                    max_proxy_attempts=max_proxy_attempts,
+                screening_top_k = min(int(top_k), 6)
+                screening_pool = min(int(operator_pool_size), 8)
+                screening_time_limit = max(1.0, min(float(time_limit), 4.0))
+                screening_context = copy.deepcopy(context)
+                screening_solver = screening_context["objective"]["preferences"]["solver"]
+                screening_solver["adaptive_candidate_expansion_rounds"] = 0
+                screening_solver["adaptive_rejection_expansion_rounds"] = 0
+                library = build_library(
+                    screening_context,
+                    top_k=screening_top_k,
+                    operator_pool_size=screening_pool,
+                    allow_partial=True,
+                    minimum_staffed_slots_by_facility={
+                        "control_center": 1,
+                        "factory": 1,
+                        "trading_post": 1,
+                    },
                 )
-                rows.append(compact_result(
+                result = solve_hybrid(
+                    screening_context,
+                    library=library,
+                    top_k=screening_top_k,
+                    operator_pool_size=screening_pool,
+                    top_solutions=1,
+                    time_limit=screening_time_limit,
+                    mip_rel_gap=max(float(mip_rel_gap), 0.02),
+                    max_proxy_attempts=1,
+                )
+                row = compact_result(
                     profile_id,
                     profile,
                     split,
                     result,
                     right_side_levels=right,
                     economic_values=economic_values,
-                ))
+                )
+                row["search_stage"] = "screening"
+                rows.append(row)
+                screening_records.append({
+                    "row": row,
+                    "context": context,
+                    "profile_id": profile_id,
+                    "profile": profile,
+                    "split": split,
+                    "screening": {
+                        "top_k_per_room": screening_top_k,
+                        "operator_pool_size": screening_pool,
+                        "time_limit_seconds": screening_time_limit,
+                    },
+                })
             except Exception as exc:
                 failure = {
                     "profile_id": profile_id,
@@ -570,6 +620,64 @@ def search_layouts(
                 if isinstance(diagnostics, dict):
                     failure["diagnostics"] = diagnostics
                 failures.append(failure)
+
+    screening_records.sort(key=lambda item: economic_result_sort_key(item["row"]))
+    if screening_records:
+        finalist = screening_records[0]
+        screen = finalist["screening"]
+        needs_refinement = (
+            int(screen["top_k_per_room"]) < int(top_k)
+            or int(screen["operator_pool_size"]) < int(operator_pool_size)
+        )
+        if needs_refinement and refine_finalist:
+            refinement_attempted = True
+            try:
+                refined_library = build_library(
+                    finalist["context"],
+                    top_k=top_k,
+                    operator_pool_size=operator_pool_size,
+                    allow_partial=True,
+                    minimum_staffed_slots_by_facility={
+                        "control_center": 1,
+                        "factory": 1,
+                        "trading_post": 1,
+                    },
+                )
+                refined_result = solve_hybrid(
+                    finalist["context"],
+                    library=refined_library,
+                    top_k=top_k,
+                    operator_pool_size=operator_pool_size,
+                    top_solutions=1,
+                    time_limit=time_limit,
+                    mip_rel_gap=mip_rel_gap,
+                    max_proxy_attempts=max_proxy_attempts,
+                )
+                refined_row = compact_result(
+                    finalist["profile_id"],
+                    finalist["profile"],
+                    finalist["split"],
+                    refined_result,
+                    right_side_levels=right,
+                    economic_values=economic_values,
+                )
+                refined_row["search_stage"] = "finalist_refinement"
+                refined_row["screening_result"] = {
+                    "economic_utility_lmd_per_day": finalist["row"]["economic_utility_lmd_per_day"],
+                    **screen,
+                }
+                finalist["row"] = refined_row
+                refinement_succeeded = True
+            except Exception as exc:
+                finalist["row"]["search_stage"] = "verified_screening_fallback"
+                finalist["row"]["refinement_failure"] = {
+                    "reason": str(exc),
+                    "diagnostics": getattr(exc, "diagnostics", None),
+                    "requested_top_k_per_room": int(top_k),
+                    "requested_operator_pool_size": int(operator_pool_size),
+                    "time_limit_seconds": float(time_limit),
+                }
+        rows = [item["row"] for item in screening_records]
     rows.sort(key=economic_result_sort_key)
     resolved_economic_values = dict(DEFAULT_ECONOMIC_VALUES)
     resolved_economic_values.update(economic_values or {})
@@ -621,6 +729,13 @@ def search_layouts(
             "allow_product_switching": bool(allow_product_switching),
             "random_order_trials": int(random_order_trials),
             "random_order_seed": int(random_order_seed),
+            "two_stage_layout_search": True,
+            "screening_top_k_per_room": min(int(top_k), 6),
+            "screening_operator_pool_size": min(int(operator_pool_size), 8),
+            "screening_time_limit_seconds": max(1.0, min(float(time_limit), 4.0)),
+            "refinement_attempted": refinement_attempted,
+            "refinement_succeeded": refinement_succeeded,
+            "refine_finalist": bool(refine_finalist),
         },
         "results": rows,
         "failures": failures,

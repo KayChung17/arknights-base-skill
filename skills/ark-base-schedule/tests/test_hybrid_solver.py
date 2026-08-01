@@ -4,7 +4,9 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
+from unittest.mock import patch
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
@@ -16,8 +18,10 @@ from build_model import build_milp
 from scipy.optimize import milp
 from simulate_schedule import resource_sustainability, simulate_assignment
 from solve_schedule import (
+    _apply_empty_room_counterfactuals,
     _apply_free_secondary_improvements,
     _apply_opportunity_cost_improvements,
+    _no_incumbent_failure_type,
     _simulation_constraint_violations,
     diagnose_infeasible_model,
     solve_hybrid,
@@ -25,6 +29,61 @@ from solve_schedule import (
 
 
 class HybridSolverTests(unittest.TestCase):
+    def test_timeout_without_incumbent_is_not_reported_as_infeasible(self):
+        result = SimpleNamespace(
+            x=None,
+            status=1,
+            message="Time limit reached. primal_status is None",
+        )
+        self.assertEqual(_no_incumbent_failure_type(result), "time_limit_no_incumbent")
+
+    def test_timeout_uses_reduced_library_feasibility_fallback(self):
+        rooms = {
+            "factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+        }
+        context = self._context(
+            rooms,
+            roster=[
+                {"name": name, "elite": 2, "level": 60, "recruited": True, "morale": 24}
+                for name in ("砾", "斑点", "夜烟")
+            ],
+            solver={"allocate_drones": False, "adaptive_candidate_expansion_rounds": 0},
+        )
+        library = build_library(context, top_k=30, operator_pool_size=12, allow_partial=False)
+        calls = 0
+
+        def timeout_then_solve(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return SimpleNamespace(
+                    x=None,
+                    status=1,
+                    message="Time limit reached. primal_status is None",
+                    success=False,
+                )
+            return milp(*args, **kwargs)
+
+        with patch("solve_schedule.milp", side_effect=timeout_then_solve), patch(
+            "solve_schedule.build_library",
+            side_effect=AssertionError("timeout fallback must prune the existing library"),
+        ):
+            result = solve_hybrid(
+                context,
+                library=library,
+                top_k=30,
+                operator_pool_size=12,
+                top_solutions=1,
+                time_limit=2,
+            )
+        fallback = result["solver"]["feasibility_fallback"]
+        self.assertEqual(fallback["status"], "accepted")
+        self.assertEqual(fallback["fallback_model"]["top_k_per_room"], 3)
+        self.assertEqual(
+            result["solver"]["optimality_claim"],
+            "verified_feasible_reduced_candidate_library_after_full_model_timeout",
+        )
+
     def test_amiya_profession_aliases_use_canonical_skill_record(self):
         index = operator_index()
         self.assertIs(index["阿米娅（医疗）"], index["阿米娅"])
@@ -644,6 +703,55 @@ class HybridSolverTests(unittest.TestCase):
         ]
         self.assertTrue(interactions)
         self.assertGreater(bundle.metadata["cross_facility_interaction_variable_count"], 0)
+
+    def test_control_center_staffing_morale_reduction_enters_milp(self):
+        rooms = {
+            "control_center": {"facility_id": "control_center", "level": 5, "product_id": "base_management"},
+            "factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+        }
+        context = self._context(
+            rooms,
+            roster=[
+                {"name": "阿米娅", "elite": 0, "level": 1, "recruited": True, "morale": 24},
+                {"name": "杰西卡", "elite": 0, "level": 40, "recruited": True, "morale": 24},
+            ],
+            solver={
+                "allocate_drones": False,
+                "require_resource_balance": False,
+                "require_lmd_balance": False,
+                "require_pure_gold_balance": False,
+                "require_dormitory_cycle": True,
+            },
+        )
+        library = build_library(context, top_k=20, operator_pool_size=4, allow_partial=True)
+        bundle = build_milp(context, library)
+        morale_interactions = [
+            item for item in bundle.variable_records
+            if item.get("kind") == "cross_facility_interaction"
+            and any(float(value) < 0 for value in (item.get("morale_cost_rate_delta") or {}).values())
+        ]
+        self.assertTrue(morale_interactions)
+
+    def test_empty_main_room_is_filled_by_non_worse_counterfactual(self):
+        rooms = {"factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"}}
+        context = self._context(
+            rooms,
+            roster=[{"name": "杰西卡", "elite": 0, "level": 40, "recruited": True, "morale": 24}],
+            solver={"allocate_drones": False},
+        )
+        library = build_library(context, top_k=10, operator_pool_size=2, allow_partial=True)
+        empty = next(combo for combo in library["rooms"]["factory_1"]["combinations"] if not combo["operators"])
+        assignments = [{"segment_id": "segment_1", "room_id": "factory_1", "combination_id": empty["combination_id"]}]
+        simulation = simulate_assignment(context, library, assignments)
+        updated, updated_simulation, report = _apply_empty_room_counterfactuals(
+            context, library, assignments, simulation, [], [], [],
+        )
+        self.assertNotEqual(updated[0]["combination_id"], empty["combination_id"])
+        self.assertTrue(report["changes"])
+        self.assertGreater(
+            float((updated_simulation.get("aggregate_metrics") or {}).get("pure_gold", 0.0)),
+            0.0,
+        )
 
 
 if __name__ == "__main__":

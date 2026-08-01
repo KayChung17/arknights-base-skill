@@ -87,6 +87,8 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "max_orundum_trading_posts": objective.get("max_orundum_trading_posts"),
         "max_shard_factories": objective.get("max_shard_factories"),
         "minimum_battle_record_factories": int(objective.get("minimum_battle_record_factories", 0)),
+        "max_battle_record_factories": objective.get("max_battle_record_factories"),
+        "allow_zero_orundum": bool(objective.get("allow_zero_orundum", False)),
         "lmd_proxy_floor_slack": float(search.get("lmd_proxy_floor_slack", 0.0)),
         "proxy_shard_consumption_factor": float(search.get("proxy_shard_consumption_factor", 1.0)),
         "proxy_gold_consumption_factor": float(search.get("proxy_gold_consumption_factor", 1.0)),
@@ -106,6 +108,8 @@ def _layout_kwargs(config: dict[str, Any], roster: Path) -> dict[str, Any]:
         "adaptive_rejection_max_operator_pool_size": search.get("adaptive_rejection_max_operator_pool_size"),
         "random_order_trials": int(search.get("random_order_trials", 0)),
         "random_order_seed": int(search.get("random_order_seed", 20260730)),
+        "refine_finalist": bool(search.get("refine_finalist", False)),
+        "drone_target_products": list(search.get("drone_target_products") or ["lmd_order", "orundum_order", "pure_gold", "orundum_shard"]),
     })
     return kwargs
 

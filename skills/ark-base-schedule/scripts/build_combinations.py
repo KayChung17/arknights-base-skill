@@ -93,7 +93,7 @@ def _compute_efficiency(
     if facility not in {"trading_post", "factory", "power_plant", "control_center"}:
         return {"error": f"calculator_unsupported:{facility}", "warnings": []}
     assigned = [dict(op, assigned_facility=facility) for op in operators]
-    return EfficiencyCalculator(
+    calculator = EfficiencyCalculator(
         facility,
         assigned,
         product,
@@ -106,7 +106,10 @@ def _compute_efficiency(
         dormitory_levels=dormitory_levels,
         global_operators=assigned,
         facility_level_sum=facility_level_sum,
-    ).compute()
+    )
+    result = calculator.compute()
+    result["morale_cost_rates"] = calculator.morale_cost_rates()
+    return result
 
 
 def recompute_combo_with_global_operators(
@@ -131,7 +134,7 @@ def recompute_combo_with_global_operators(
         + sum(int(value or 0) for value in dormitory_levels)
         + sum(int(value or 0) for value in right_levels.values())
     )
-    result = EfficiencyCalculator(
+    calculator = EfficiencyCalculator(
         facility,
         operators,
         product,
@@ -146,12 +149,18 @@ def recompute_combo_with_global_operators(
         dormitory_levels=dormitory_levels,
         global_operators=global_operators,
         facility_level_sum=facility_level_sum,
-    ).compute()
+    )
+    result = calculator.compute()
+    result["morale_cost_rates"] = calculator.morale_cost_rates()
     metrics, fixed = _metrics_per_hour(room, result, operators)
     return {
         **combo,
         "metrics_per_hour": metrics,
         "fixed_metrics": fixed,
+        "morale_cost_rates": {
+            name: float(rate)
+            for name, rate in (result.get("morale_cost_rates") or {}).items()
+        },
         "efficiency_result": result,
     }
 
@@ -301,6 +310,7 @@ def build_room_combinations(
     top_k: int = 60,
     operator_pool_size: int = 14,
     allow_partial: bool = False,
+    minimum_staffed_slots: int = 0,
 ) -> dict[str, Any]:
     roster = context_roster(context)
     facility = room["facility_id"]
@@ -396,7 +406,8 @@ def build_room_combinations(
         # Production and support facilities continue their base function while
         # unstaffed. Keep the zero-staff option so the global model can trade
         # room speed against resource balance and morale.
-        sizes = list(range(0, maximum + 1))
+        minimum = max(0, min(int(minimum_staffed_slots), maximum))
+        sizes = list(range(minimum, maximum + 1))
     elif facility in support_facilities:
         maximum = min(capacity, len(pool))
         sizes = list(range(1, maximum + 1)) if maximum else [0]
@@ -458,7 +469,10 @@ def build_room_combinations(
                     "metrics_per_hour": metrics,
                     "fixed_metrics": fixed,
                     "warehouse_capacity": warehouse_capacity(room, selected),
-                    "morale_cost_per_operator_hour": 1.0,
+                    "morale_cost_rates": {
+                        name: float(rate)
+                        for name, rate in (result.get("morale_cost_rates") or {}).items()
+                    },
                     "efficiency_result": result,
                     "effect_resolution": effect_resolution,
                     "warnings": list(result.get("warnings") or []),
@@ -596,7 +610,9 @@ def build_library(
     top_k: int = 60,
     operator_pool_size: int = 14,
     allow_partial: bool = False,
+    minimum_staffed_slots_by_facility: dict[str, int] | None = None,
 ) -> dict[str, Any]:
+    minimum_staffed_slots_by_facility = minimum_staffed_slots_by_facility or {}
     room_results: dict[str, Any] = {}
     for room_id, room in context_rooms(context).items():
         product_options = list(dict.fromkeys(
@@ -613,6 +629,7 @@ def build_library(
                 top_k=top_k,
                 operator_pool_size=operator_pool_size,
                 allow_partial=allow_partial,
+                minimum_staffed_slots=int(minimum_staffed_slots_by_facility.get(str(room.get("facility_id") or ""), 0)),
             ))
         if len(product_results) == 1:
             room_results[room_id] = product_results[0]
@@ -645,6 +662,7 @@ def build_library(
             "top_k_per_room": top_k,
             "operator_pool_size": operator_pool_size,
             "allow_partial": allow_partial,
+            "minimum_staffed_slots_by_facility": dict(minimum_staffed_slots_by_facility),
         },
         "objective_weights": objective_profile(context),
         "synergy_bundles": load_synergy_bundles(),

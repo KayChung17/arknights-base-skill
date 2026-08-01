@@ -28,11 +28,17 @@ from schedule_generator import normalize_goal
 
 
 class LayoutOptimizerTests(unittest.TestCase):
-    def test_economic_utility_uses_explicit_lmd_exchange_rates(self):
+    def test_economic_utility_uses_fixed_orundum_lmd_rate(self):
         self.assertEqual(normalize_goal("lmd_equivalent"), "lmd_equivalent")
+        constants = load_mechanics()["economy_constants"]
+        self.assertEqual(constants["orundum_lmd_per_unit"], 160)
+        self.assertEqual(constants["orundum_batch_units"], 20)
+        self.assertEqual(constants["orundum_batch_lmd_equivalent"], 3200)
         self.assertEqual(economic_utility_lmd(20, 0, 0, 0), 3200)
         self.assertEqual(economic_utility_lmd(20, 0, -1, 0), 1600)
         self.assertEqual(economic_utility_lmd(20, 0, 0, -2), 2200)
+        with self.assertRaisesRegex(ValueError, "固定机制常量"):
+            economic_utility_lmd(20, 0, 0, 0, {"orundum_lmd": 200})
 
     def test_economic_sort_does_not_make_orundum_absolute_priority(self):
         more_orundum_lower_value = {
@@ -204,6 +210,35 @@ class LayoutOptimizerTests(unittest.TestCase):
         }])
         self.assertAlmostEqual(empty_sim["drone_plan"]["total_recovered"], 240.0)
         self.assertAlmostEqual(staffed_sim["drone_plan"]["total_recovered"], 300.0)
+
+    def test_partial_search_can_require_staffing_for_production_and_control(self):
+        context = self._base_context(
+            {
+                "control_center": {"facility_id": "control_center", "level": 5, "product_id": "base_management"},
+                "factory_1": {"facility_id": "factory", "level": 1, "product_id": "pure_gold"},
+                "trading_post_1": {"facility_id": "trading_post", "level": 1, "product_id": "lmd_order"},
+            },
+            [
+                {"name": "阿米娅", "elite": 0, "level": 1, "recruited": True, "morale": 24},
+                {"name": "杰西卡", "elite": 0, "level": 40, "recruited": True, "morale": 24},
+                {"name": "月见夜", "elite": 1, "level": 15, "recruited": True, "morale": 24},
+            ],
+        )
+        library = build_library(
+            context,
+            top_k=10,
+            operator_pool_size=3,
+            allow_partial=True,
+            minimum_staffed_slots_by_facility={
+                "control_center": 1,
+                "factory": 1,
+                "trading_post": 1,
+            },
+        )
+        for room_id in ("control_center", "factory_1", "trading_post_1"):
+            combos = library["rooms"][room_id]["combinations"]
+            self.assertTrue(combos)
+            self.assertTrue(all(combo["operators"] for combo in combos), room_id)
 
 
 if __name__ == "__main__":

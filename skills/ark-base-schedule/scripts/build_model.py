@@ -40,6 +40,7 @@ from optimizer_common import (
     write_json,
 )
 from right_side_schedule import fixed_work_by_segment
+from dormitory_planner import dormitory_base_recovery
 
 
 @dataclass
@@ -201,7 +202,7 @@ def build_milp(
         for room_id, room_result in rooms.items()
         if (room_result.get("room") or {}).get("facility_id") == "control_center"
     ]
-    if control_rooms:
+    if control_rooms and not settings.get("disable_cross_facility_interactions", False):
         control_room_id, control_room_result = control_rooms[0]
         control_room = dict(control_room_result.get("room") or {})
         control_room.setdefault("room_id", control_room_id)
@@ -214,6 +215,10 @@ def build_milp(
                 room.setdefault("room_id", room_id)
                 for combo in room_result.get("combinations") or []:
                     baseline_metrics = _segment_metrics(combo, segment.hours)
+                    baseline_morale_rates = {
+                        str(name): float(rate)
+                        for name, rate in (combo.get("morale_cost_rates") or {}).items()
+                    }
                     baseline_capacity = int((combo.get("efficiency_result") or {}).get("order_capacity", 10) or 10)
                     baseline_power_bonus = _combo_power_bonus_pct(combo) if facility == "power_plant" else 0.0
                     profiles: dict[tuple[Any, ...], dict[str, Any]] = {}
@@ -229,6 +234,19 @@ def build_milp(
                             context, room, combo, global_operators,
                         )
                         enhanced_metrics = _segment_metrics(enhanced, segment.hours)
+                        enhanced_morale_rates = {
+                            str(name): float(rate)
+                            for name, rate in (enhanced.get("morale_cost_rates") or {}).items()
+                        }
+                        morale_rate_delta = {
+                            name: float(enhanced_morale_rates.get(name, baseline_morale_rates.get(name, 0.0)))
+                            - float(baseline_morale_rates.get(name, 0.0))
+                            for name in sorted(set(baseline_morale_rates) | set(enhanced_morale_rates))
+                            if abs(
+                                float(enhanced_morale_rates.get(name, baseline_morale_rates.get(name, 0.0)))
+                                - float(baseline_morale_rates.get(name, 0.0))
+                            ) > 1e-10
+                        }
                         metric_keys = sorted(set(baseline_metrics) | set(enhanced_metrics))
                         delta = {
                             key: float(enhanced_metrics.get(key, 0.0)) - float(baseline_metrics.get(key, 0.0))
@@ -241,15 +259,17 @@ def build_milp(
                             _combo_power_bonus_pct(enhanced) - baseline_power_bonus
                             if facility == "power_plant" else 0.0
                         )
-                        if not delta and capacity_delta == 0 and abs(power_bonus_delta) <= 1e-10:
+                        if not delta and not morale_rate_delta and capacity_delta == 0 and abs(power_bonus_delta) <= 1e-10:
                             continue
                         signature = (
                             tuple((key, round(value, 10)) for key, value in sorted(delta.items())),
+                            tuple((key, round(value, 10)) for key, value in sorted(morale_rate_delta.items())),
                             capacity_delta,
                             round(power_bonus_delta, 10),
                         )
                         profile = profiles.setdefault(signature, {
                             "metrics_delta": delta,
+                            "morale_cost_rate_delta": morale_rate_delta,
                             "order_capacity_delta": capacity_delta,
                             "power_bonus_pct_delta": power_bonus_delta,
                             "control_indices": [],
@@ -270,6 +290,7 @@ def build_milp(
                             "target_combination_id": combo["combination_id"],
                             "source_combination_ids": profile["control_combination_ids"],
                             "metrics_delta": profile["metrics_delta"],
+                            "morale_cost_rate_delta": profile["morale_cost_rate_delta"],
                             "order_capacity_delta": profile["order_capacity_delta"],
                             "power_bonus_pct_delta": profile["power_bonus_pct_delta"],
                             "objective_coefficient": metric_score(profile["metrics_delta"], weights),
@@ -511,6 +532,58 @@ def build_milp(
                     },
                 )
 
+    # A repeating schedule must leave each worker enough off-duty time to
+    # restore the morale consumed in one day. Use the best available dormitory
+    # recovery rate as a necessary (optimistic) linear condition. The simulator
+    # still assigns finite beds and verifies the exact cyclic trace afterwards.
+    if settings.get("require_dormitory_cycle"):
+        dormitories = (context.get("facility_configuration") or {}).get("dormitories") or []
+        recovery_rates = [
+            dormitory_base_recovery(int(item.get("level", 0) or 0))
+            for item in dormitories
+            if int(item.get("level", 0) or 0) in {1, 2, 3, 4, 5}
+        ]
+        max_dorm_recovery = max(recovery_rates, default=0.0)
+        if max_dorm_recovery > 0.0:
+            for operator in roster_names:
+                coeff: dict[int, float] = {}
+                fixed_burden = 0.0
+                for segment in segments:
+                    hours = float(segment.hours)
+                    if operator in right_side_work.get(segment.segment_id, set()):
+                        fixed_burden += (1.0 + max_dorm_recovery) * hours
+                    for room_id, room_result in rooms.items():
+                        for combo in room_result.get("combinations") or []:
+                            rates = combo.get("morale_cost_rates") or {}
+                            if operator not in rates:
+                                continue
+                            index = x_lookup[(segment.segment_id, room_id, combo["combination_id"])]
+                            coeff[index] = (float(rates[operator]) + max_dorm_recovery) * hours
+                for record_index, record in enumerate(variable_records):
+                    if record.get("kind") != "cross_facility_interaction":
+                        continue
+                    delta = (record.get("morale_cost_rate_delta") or {}).get(operator)
+                    if delta is None:
+                        continue
+                    segment_id = str(record.get("segment_id") or "")
+                    segment_hours = next(
+                        (float(item.hours) for item in segments if item.segment_id == segment_id),
+                        0.0,
+                    )
+                    coeff[record_index] = coeff.get(record_index, 0.0) + float(delta) * segment_hours
+                if coeff or fixed_burden:
+                    add_constraint(
+                        coeff,
+                        -np.inf,
+                        max_dorm_recovery * 24.0 - fixed_burden,
+                        {
+                            "type": "operator_repeating_morale_necessary",
+                            "operator": operator,
+                            "max_dorm_recovery_per_hour": max_dorm_recovery,
+                            "fixed_right_side_burden": fixed_burden,
+                        },
+                    )
+
     # Link drone allocation to the selected combination.
 
     # z = downstream_assignment AND any(control_assignment in this effect profile).
@@ -606,7 +679,7 @@ def build_milp(
                     # Less than one drone is an unusable rounding residue.
                     add_constraint(
                         {**{index: 1.0 for index in use_indices}, current_inventory: -1.0},
-                        -1.0 + 1e-6,
+                        -1.0 + 1e-5,
                         np.inf,
                         {"type": "empty_drone_inventory_at_node", "segment_id": segment.segment_id},
                     )

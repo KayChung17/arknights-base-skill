@@ -1,5 +1,38 @@
 {
-  "schema_version": 6,
+  "schema_version": 8,
+  "default_account_assumptions": {
+    "control_center_level": 5,
+    "drone_capacity": 235,
+    "fully_cleared_base": true,
+    "right_side_levels": {
+      "reception_room": 3,
+      "office": 3,
+      "training_room": 3,
+      "workshop": 3
+    },
+    "right_side_irreversible": true,
+    "right_side_power_consumption": 190,
+    "dormitory_ambience_policy": "maximum_for_selected_level",
+    "dormitory_ambience_cap_by_level": {"1": 1000, "2": 2000, "3": 3000, "4": 4000, "5": 5000},
+    "override_rule": "Explicit account_state.fully_cleared=false disables these defaults and requires account values. Explicit field values always take precedence."
+  },
+  "facility_semantics": {
+    "work_areas": ["control_center", "power_plant", "factory", "trading_post", "active_training_room"],
+    "non_work_areas": ["dormitory"],
+    "special_facilities": ["activity_room"],
+    "workshop_default": "instant_processing_idle",
+    "training_room_default": "inactive_no_morale_cost",
+    "working_state": "An operator in an active work area contributes skills unless distracted at morale zero; UI labels 工作中/空闲中/休息中 describe morale rate and are not equivalent to working state.",
+    "seat_assignment": "Assignments are seat based. Moving an operator to another seat is re-entry and resets warm-up; retaining the same operator in the same seat preserves warm-up.",
+    "dormitory_target_lock": "Single-target dorm recovery follows seat/order lock semantics until the target is full.",
+    "fiammetta_ordering": "患难之交 targets the previously entered operator according to assignment order."
+  },
+  "economy_constants": {
+    "orundum_lmd_per_unit": 160,
+    "orundum_batch_units": 20,
+    "orundum_batch_lmd_equivalent": 3200,
+    "derivation": "制造2份源石碎片的固定龙门币成本为3200，贸易站交付2份源石碎片获得20合成玉。"
+  },
   "facilities": {
     "trading_post": {
       "display_name": "贸易站",
@@ -297,7 +330,7 @@
         "orundum_order",
         "lmd_order"
       ],
-      "selection_rule": "Value orundum, net LMD and resource shortfalls with explicit economic_values, then rank simulated candidates by LMD-equivalent utility."
+      "selection_rule": "Value orundum at the fixed mechanics rate of 160 LMD per unit, then combine net LMD and configurable resource-shortfall penalties to rank simulated candidates by LMD-equivalent utility."
     }
   },
   "shift_templates": {

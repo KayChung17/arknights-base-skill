@@ -125,8 +125,21 @@ def validate() -> list[str]:
 
     if operator_data.get("schema_version") != 1:
         errors.append("operator-skills.json schema_version 必须为 1")
-    if mechanics.get("schema_version") not in (2, 3, 4, 5, 6):
-        errors.append("mechanics.json schema_version 必须为 2 至 6")
+    if mechanics.get("schema_version") not in (2, 3, 4, 5, 6, 7, 8):
+        errors.append("mechanics.json schema_version 必须为 2 至 8")
+
+    if mechanics.get("schema_version") >= 7:
+        economy = mechanics.get("economy_constants") or {}
+        try:
+            unit_value = float(economy.get("orundum_lmd_per_unit", 0) or 0)
+            batch_units = float(economy.get("orundum_batch_units", 0) or 0)
+            batch_value = float(economy.get("orundum_batch_lmd_equivalent", 0) or 0)
+        except (TypeError, ValueError):
+            unit_value = batch_units = batch_value = 0.0
+        if unit_value != 160 or batch_units != 20 or batch_value != 3200:
+            errors.append("mechanics.json 合成玉固定折算必须为 1:160，且 20 合成玉等价 3200 龙门币")
+        if abs(unit_value * batch_units - batch_value) > 1e-9:
+            errors.append("mechanics.json 合成玉单价与批量折算不一致")
 
     power_model = mechanics.get("power_model") or {}
     if power_model.get("right_side_facilities_irreversible") is not True:
