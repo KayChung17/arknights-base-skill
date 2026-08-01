@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "data_version": "2026-07-30-full-skills-parsed-421-v12",
+  "data_version": "2026-08-01-full-skills-parsed-424-v13",
   "source": "Full operator base-skill table with structured-rule overlay",
   "operators": [
     {
@@ -807,6 +807,44 @@
           "tags": [],
           "products": [],
           "source_line": 450
+        }
+      ]
+    },
+    {
+      "id": "op_c4781ab5dfe6",
+      "name": "予愿安洁莉娜",
+      "groups": [
+        "alternate",
+        "siracusa"
+      ],
+      "skills": [
+        {
+          "facility": "reception_room",
+          "elite": 0,
+          "required_level": 1,
+          "skill_name": "资深信使",
+          "variant_group": "reception_room:skill:资深信使",
+          "description": "进驻会客室时，更容易获得线索板上尚未拥有的线索",
+          "base_bonus_pct": 0.0,
+          "model_status": "description_only",
+          "tags": [],
+          "products": [],
+          "source_line": 910
+        },
+        {
+          "facility": "reception_room",
+          "elite": 2,
+          "required_level": 1,
+          "skill_name": "我自己的愿望",
+          "variant_group": "reception_room:skill:我自己的愿望",
+          "description": "进驻会客室时，如果会客室内只有自身处于工作状态时，线索搜集速度提升50%，心情每小时消耗+2",
+          "base_bonus_pct": 0.0,
+          "model_status": "structured",
+          "tags": [
+            "morale_cost_plus_2"
+          ],
+          "products": [],
+          "source_line": 911
         }
       ]
     },
@@ -6509,6 +6547,41 @@
       ]
     },
     {
+      "id": "op_fb01563a33f9",
+      "name": "时隙",
+      "groups": [],
+      "skills": [
+        {
+          "facility": "workshop",
+          "elite": 0,
+          "required_level": 1,
+          "skill_name": "被忽视的天赋",
+          "variant_group": "workshop:skill:被忽视的天赋",
+          "description": "进驻加工站加工芯片时，副产品的产出概率提升70%",
+          "base_bonus_pct": 0.0,
+          "model_status": "description_only",
+          "tags": [],
+          "products": [],
+          "source_line": 908
+        },
+        {
+          "facility": "power_plant",
+          "elite": 2,
+          "required_level": 1,
+          "skill_name": "迟到前六分钟",
+          "variant_group": "power_plant:skill:迟到前六分钟",
+          "description": "进驻发电站时，无人机充能速度+20%",
+          "base_bonus_pct": 20.0,
+          "model_status": "structured",
+          "tags": [],
+          "products": [
+            "drone_recovery"
+          ],
+          "source_line": 909
+        }
+      ]
+    },
+    {
       "id": "op_6aa4337944ab",
       "name": "明椒",
       "groups": [],
@@ -10695,6 +10768,43 @@
           "tags": [],
           "products": [],
           "source_line": 312
+        }
+      ]
+    },
+    {
+      "id": "op_289ec71a4acf",
+      "name": "珊比",
+      "groups": [],
+      "skills": [
+        {
+          "facility": "dormitory",
+          "elite": 0,
+          "required_level": 1,
+          "skill_name": "哪里都是兔子洞",
+          "variant_group": "dormitory:skill:哪里都是兔子洞",
+          "description": "进驻宿舍时，自身心情每小时恢复+0.7",
+          "base_bonus_pct": 0.0,
+          "model_status": "description_only",
+          "tags": [],
+          "products": [
+            "morale_recovery"
+          ],
+          "source_line": 906
+        },
+        {
+          "facility": "office",
+          "elite": 2,
+          "required_level": 1,
+          "skill_name": "前任金牌接线员",
+          "variant_group": "office:skill:前任金牌接线员",
+          "description": "进驻人力办公室时，人脉资源的联络速度+45%",
+          "base_bonus_pct": 45.0,
+          "model_status": "structured",
+          "tags": [],
+          "products": [
+            "hr_network"
+          ],
+          "source_line": 907
         }
       ]
     },
@@ -17449,8 +17559,8 @@
   "import_summary": {
     "source_operator_count": 421,
     "source_skill_count": 905,
-    "canonical_operator_count": 421,
-    "canonical_skill_count": 905,
+    "canonical_operator_count": 424,
+    "canonical_skill_count": 911,
     "warning_count": 0
   }
 }

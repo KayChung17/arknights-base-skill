@@ -2,10 +2,10 @@
   "schema_version": 1,
   "source_type": "full_operator_skill_table_with_structured_overlay",
   "source_file": "skills_parsed.txt",
-  "retrieved_at": "2026-07-30",
-  "data_version": "2026-07-30-full-skills-parsed-421-v12",
-  "canonical_operator_count": 421,
-  "canonical_skill_count": 905,
+  "retrieved_at": "2026-08-01",
+  "data_version": "2026-08-01-full-skills-parsed-424-v13",
+  "canonical_operator_count": 424,
+  "canonical_skill_count": 911,
   "personal_roster_state_removed": true,
   "sources": [
     {
@@ -61,6 +61,18 @@
       "url": "https://prts.wiki/w/%E5%90%8E%E5%8B%A4%E6%8A%80%E8%83%BD%E4%B8%AD%E9%97%B4%E4%BA%A7%E7%89%A9%E4%B8%80%E8%A7%88",
       "retrieved_at": "2026-07-30",
       "scope": "感知信息的非消耗转换、无声共鸣来源与消费，以及折光、贝洛内、黑键的当前后勤技能数据"
+    },
+    {
+      "name": "PRTS 予愿安洁莉娜",
+      "url": "https://prts.wiki/w/%E4%BA%88%E6%84%BF%E5%AE%89%E6%B4%81%E8%8E%89%E5%A8%9C",
+      "retrieved_at": "2026-08-01",
+      "scope": "资深信使与我自己的愿望的解锁阶段、会客室条件与叙拉古阵营归属"
+    },
+    {
+      "name": "PRTS 珊比、时隙",
+      "url": "https://prts.wiki/w/%E7%8F%8A%E6%AF%94",
+      "retrieved_at": "2026-08-01",
+      "scope": "哪里都是兔子洞、前任金牌接线员、被忽视的天赋、迟到前六分钟的解锁阶段与设施"
     }
   ],
   "notes": "The canonical catalog is built from the full skills_parsed.txt table. Personal roster ownership and progression remain separate inputs. Structured overlays preserve explicit effects, variant groups and special rules for complex mechanics."

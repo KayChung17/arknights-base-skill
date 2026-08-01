@@ -11,7 +11,11 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from build_combinations import build_library, build_room_combinations
+from build_combinations import (
+    _known_dominated_lmd_crew,
+    build_library,
+    build_room_combinations,
+)
 from data_loader import load_mechanics
 from optimizer_common import context_rooms
 from layout_profiles import facility_configuration_power_summary, fixed_right_power_consumption
@@ -28,6 +32,18 @@ from schedule_generator import normalize_goal
 
 
 class LayoutOptimizerTests(unittest.TestCase):
+    def test_known_dominated_special_order_crews_are_rejected(self):
+        self.assertEqual(
+            _known_dominated_lmd_crew({"U-Official", "但书"}),
+            "u_official_overrides_proviso",
+        )
+        self.assertEqual(
+            _known_dominated_lmd_crew({"但书", "龙舌兰"}),
+            "proviso_orders_do_not_trigger_tequila",
+        )
+        self.assertIsNone(_known_dominated_lmd_crew({"巫恋", "龙舌兰", "折光"}))
+        self.assertIsNone(_known_dominated_lmd_crew({"伺夜", "贝洛内", "但书"}))
+
     def test_economic_utility_uses_fixed_orundum_lmd_rate(self):
         self.assertEqual(normalize_goal("lmd_equivalent"), "lmd_equivalent")
         constants = load_mechanics()["economy_constants"]

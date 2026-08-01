@@ -282,6 +282,16 @@ def _effect_resolution(
     }
 
 
+def _known_dominated_lmd_crew(operator_names: set[str]) -> str | None:
+    """Reject trade crews whose special-order skills overwrite or fail to chain."""
+
+    if "U-Official" in operator_names and "但书" in operator_names:
+        return "u_official_overrides_proviso"
+    if "但书" in operator_names and "龙舌兰" in operator_names:
+        return "proviso_orders_do_not_trigger_tequila"
+    return None
+
+
 def _cross_facility_proxy_score(context: dict[str, Any], result: dict[str, Any]) -> float:
     """Value structured control-center effects against downstream base rates."""
     effects = result.get("resolved_effect_values") or {}
@@ -420,6 +430,13 @@ def build_room_combinations(
         for selected_tuple in itertools.combinations(pool, size):
             enumerated += 1
             selected = [dict(op) for op in selected_tuple]
+            selected_names = {str(op.get("name") or "") for op in selected}
+            if (
+                facility == "trading_post"
+                and product == "lmd_order"
+                and _known_dominated_lmd_crew(selected_names) is not None
+            ):
+                continue
             result = _compute_efficiency(
                 facility, product, selected, trading_count, power_count, drone_capacity,
                 int(room.get("level", 1)), dormitory_levels,
