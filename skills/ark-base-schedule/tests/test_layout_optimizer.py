@@ -41,7 +41,12 @@ class LayoutOptimizerTests(unittest.TestCase):
             _known_dominated_lmd_crew({"但书", "龙舌兰"}),
             "proviso_orders_do_not_trigger_tequila",
         )
+        self.assertEqual(
+            _known_dominated_lmd_crew({"可露希尔", "龙舌兰"}),
+            "closure_fixed_order_disables_tequila",
+        )
         self.assertIsNone(_known_dominated_lmd_crew({"巫恋", "龙舌兰", "折光"}))
+        self.assertIsNone(_known_dominated_lmd_crew({"可露希尔", "黑键", "吉星"}))
         self.assertIsNone(_known_dominated_lmd_crew({"伺夜", "贝洛内", "但书"}))
 
     def test_economic_utility_uses_fixed_orundum_lmd_rate(self):

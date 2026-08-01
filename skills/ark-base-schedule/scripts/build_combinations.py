@@ -287,6 +287,8 @@ def _known_dominated_lmd_crew(operator_names: set[str]) -> str | None:
 
     if "U-Official" in operator_names and "但书" in operator_names:
         return "u_official_overrides_proviso"
+    if "可露希尔" in operator_names and "龙舌兰" in operator_names:
+        return "closure_fixed_order_disables_tequila"
     if "但书" in operator_names and "龙舌兰" in operator_names:
         return "proviso_orders_do_not_trigger_tequila"
     return None
