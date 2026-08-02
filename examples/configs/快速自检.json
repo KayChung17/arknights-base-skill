@@ -8,7 +8,11 @@
     "online_times": ["08:00", "14:00", "20:00"],
     "minimum_net_lmd_per_day": -10000,
     "minimum_originium_shard_balance": 0,
-    "minimum_pure_gold_balance": 0
+    "minimum_pure_gold_balance": 0,
+    "balance_policy": {
+      "originium_shard": {"mode": "soft", "shortfall_penalty": 1600, "hard_minimum": null},
+      "pure_gold": {"mode": "soft", "shortfall_penalty": 500, "hard_minimum": null}
+    }
   },
   "base_state": {
     "drone_capacity": 235,
@@ -23,14 +27,19 @@
     "right_side_levels_confirmed": true
   },
   "horizon": {"mode": "steady_state"},
+  "right_side_schedule": [
+    {"meeting": ["但书", "龙舌兰"], "hire": ["巫恋"]},
+    {"meeting": ["鸿雪", "图耶"], "hire": ["绮良"]},
+    {"meeting": ["可露希尔", "月见夜"], "hire": ["空爆"]}
+  ],
   "profiles": {
     "mode": "representative",
     "ids": ["252-output"]
   },
   "search": {
-    "top_k": 8,
-    "operator_pool_size": 6,
-    "time_limit_seconds": 1,
+    "top_k": 2,
+    "operator_pool_size": 14,
+    "time_limit_seconds": 30,
     "max_proxy_attempts": 1
   },
   "verification": {

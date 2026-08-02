@@ -54,8 +54,10 @@
         "minimum_pure_gold_balance": {"type": "number", "default": 0},
         "economic_values": {"$ref": "#/$defs/economicValues"},
         "max_orundum_trading_posts": {"type": "integer", "minimum": 1},
-        "max_shard_factories": {"type": "integer", "minimum": 1},
-        "minimum_battle_record_factories": {"type": "integer", "minimum": 0}
+        "max_shard_factories": {"type": "integer", "minimum": 0},
+        "minimum_battle_record_factories": {"type": "integer", "minimum": 0},
+        "max_battle_record_factories": {"type": "integer", "minimum": 0},
+        "allow_zero_orundum": {"type": "boolean"}
         ,"balance_policy": {
           "type": "object",
           "properties": {
@@ -93,7 +95,9 @@
           "additionalProperties": false
         },
         "dormitory_levels": {
-          "type": "array", "minItems": 4, "maxItems": 4,
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
           "items": {"type": "integer", "minimum": 1, "maximum": 5}
         },
         "dormitory_ambience": {
@@ -160,11 +164,14 @@
         ,"adaptive_rejection_max_operator_pool_size": {"type": "integer", "minimum": 1}
         ,"random_order_trials": {"type": "integer", "minimum": 0, "maximum": 10000}
         ,"random_order_seed": {"type": "integer"}
+        ,"drone_target_products": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["lmd_order", "orundum_order", "pure_gold", "orundum_shard", "battle_record"]}}
       }
     },
     "upgrades": {
       "type": "object",
-      "properties": {"marginal_limit": {"type": "integer", "minimum": 0}}
+      "properties": {
+        "marginal_limit": {"type": "integer", "minimum": 0}
+      }
     },
     "preferences": {"type": "object"},
     "right_side_schedule": {
