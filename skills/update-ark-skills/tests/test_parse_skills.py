@@ -12,9 +12,20 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from parse_skills import parse_delimited
+from import_owned_skill_table import EXTRA_GROUPS, KNOWN_TAGS
 
 
 class ParseTests(unittest.TestCase):
+    def test_mantra_elite_operator_group_and_skill_tag_are_persistent(self):
+        self.assertEqual(
+            EXTRA_GROUPS["elite_operator"],
+            {"电弧", "煌", "机械师", "逻各斯", "迷迭香", "真言", "烛煌"},
+        )
+        self.assertEqual(
+            KNOWN_TAGS[("真言", "精英小队")],
+            ["trade_per_elite_operator_facility_2_cap_20"],
+        )
+
     def test_pipe_input(self):
         records = parse_delimited([
             "干员名|精等级|设施|技能名|技能描述",

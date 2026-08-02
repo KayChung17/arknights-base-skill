@@ -20,6 +20,7 @@ class TagRegistration:
 
 
 _EFFICIENCY_TAGS = {
+    "trade_per_elite_operator_facility_2_cap_20",
     "all_factory_bonus_2", "all_trading_bonus_7", "amplifier_equal_additive",
     "automation_virtual_power_plant_1", "automation_virtual_power_plant_2_if_lancet",
     "ave_dorm_heat_1", "ave_gold_base_1_per_20_heat_1", "ave_heat_10", "ave_heat_20",

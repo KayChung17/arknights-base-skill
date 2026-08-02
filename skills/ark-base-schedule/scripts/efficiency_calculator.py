@@ -888,6 +888,20 @@ class EfficiencyCalculator:
                         f"进驻岁干员的有效设施 {occupied} 间，计入 {counted} 间 ×4% = +{value}%"
                     )
                     continue
+                if "trade_per_elite_operator_facility_2_cap_20" in tags:
+                    occupied = self.count_global_group_facilities(
+                        "elite_operator",
+                        excluded_facilities={"assistant", "activity_room"},
+                    )
+                    counted = min(10, occupied)
+                    value = counted * 2.0
+                    op_direct += bonus
+                    op_global += value
+                    detail["notes"].append(
+                        f"基础 +{bonus:g}%；进驻精英小队干员的有效设施 {occupied} 间，"
+                        f"计入 {counted} 间 ×2% = +{value:g}%"
+                    )
+                    continue
                 if "trade_per_human_fireworks_1" in tags:
                     value = self._global_human_fireworks()
                     op_global += value

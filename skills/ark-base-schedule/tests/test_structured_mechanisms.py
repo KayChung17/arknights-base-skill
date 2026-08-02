@@ -53,6 +53,44 @@ class StructuredMechanismTests(unittest.TestCase):
         self.assertEqual(unregistered_tags(tags), [])
         self.assertIsNone(registration_for("unreviewed_magic_tag"))
 
+    def test_mantra_counts_elite_operator_faction_facilities(self) -> None:
+        mantra = {
+            "name": "真言", "elite": 2, "level": 90,
+            "assigned_facility": "trading_post", "assigned_room_id": "trading_post_1",
+        }
+        operators = [
+            mantra,
+            {"name": "煌", "elite": 0, "level": 1, "assigned_facility": "factory", "assigned_room_id": "factory_1"},
+            {"name": "逻各斯", "elite": 2, "level": 90, "assigned_facility": "factory", "assigned_room_id": "factory_1"},
+            {"name": "迷迭香", "elite": 0, "level": 1, "assigned_facility": "dormitory", "assigned_room_id": "dormitory_1"},
+            {"name": "但书", "elite": 2, "level": 80, "assigned_facility": "factory", "assigned_room_id": "factory_2"},
+            {"name": "烛煌", "elite": 2, "level": 90, "assigned_facility": "activity_room", "assigned_room_id": "activity_room"},
+        ]
+        result = EfficiencyCalculator(
+            "trading_post", [mantra], "lmd_order", global_operators=operators,
+        ).compute()
+        self.assertEqual(result["paper_bonus_pct"], 51)
+        detail = result["operator_details"][0]
+        self.assertIn("有效设施 3 间", "；".join(detail["notes"]))
+
+    def test_mantra_elite_operator_facility_bonus_caps_at_ten(self) -> None:
+        mantra = {
+            "name": "真言", "elite": 2, "level": 90,
+            "assigned_facility": "trading_post", "assigned_room_id": "trading_post_1",
+        }
+        members = ["电弧", "煌", "机械师", "逻各斯", "迷迭香", "烛煌"]
+        operators = [mantra] + [
+            {
+                "name": members[index % len(members)], "elite": index % 3, "level": 90,
+                "assigned_facility": "factory", "assigned_room_id": f"room_{index}",
+            }
+            for index in range(12)
+        ]
+        result = EfficiencyCalculator(
+            "trading_post", [mantra], "lmd_order", global_operators=operators,
+        ).compute()
+        self.assertEqual(result["paper_bonus_pct"], 65)
+
     def test_automation_uses_skill_stage_and_eunectes_virtual_plants(self) -> None:
         cases = (("异客", 2, 5), ("森蚺", 0, 5), ("森蚺", 2, 10), ("温蒂", 0, 10), ("温蒂", 2, 15))
         for name, elite, per_plant in cases:

@@ -7168,7 +7168,9 @@
     {
       "id": "op_540a89a4ba2e",
       "name": "机械师",
-      "groups": [],
+      "groups": [
+        "elite_operator"
+      ],
       "skills": [
         {
           "facility": "factory",
@@ -10149,7 +10151,8 @@
       "id": "op_df37e5004a1d",
       "name": "烛煌",
       "groups": [
-        "alternate"
+        "alternate",
+        "elite_operator"
       ],
       "skills": [
         {
@@ -10326,7 +10329,9 @@
     {
       "id": "op_a986c4a9c4b8",
       "name": "煌",
-      "groups": [],
+      "groups": [
+        "elite_operator"
+      ],
       "skills": [
         {
           "facility": "workshop",
@@ -10969,7 +10974,9 @@
     {
       "id": "op_c0936ee87f72",
       "name": "电弧",
-      "groups": [],
+      "groups": [
+        "elite_operator"
+      ],
       "skills": [
         {
           "facility": "control_center",
@@ -11239,7 +11246,9 @@
     {
       "id": "op_ba7589632498",
       "name": "真言",
-      "groups": [],
+      "groups": [
+        "elite_operator"
+      ],
       "skills": [
         {
           "facility": "trading_post",
@@ -11250,7 +11259,9 @@
           "description": "进驻贸易站时，订单获取效率+25%，基建内（不包含副手及活动室）每有一间进驻精英干员的设施，订单获取效率额外+2%（最多10间）",
           "base_bonus_pct": 25.0,
           "model_status": "structured",
-          "tags": [],
+          "tags": [
+            "trade_per_elite_operator_facility_2_cap_20"
+          ],
           "products": [
             "lmd_order",
             "orundum_order"
@@ -15208,7 +15219,9 @@
     {
       "id": "op_694e36b14ad8",
       "name": "迷迭香",
-      "groups": [],
+      "groups": [
+        "elite_operator"
+      ],
       "skills": [
         {
           "facility": "factory",
@@ -15310,7 +15323,9 @@
     {
       "id": "op_724e2132f770",
       "name": "逻各斯",
-      "groups": [],
+      "groups": [
+        "elite_operator"
+      ],
       "skills": [
         {
           "facility": "training_room",

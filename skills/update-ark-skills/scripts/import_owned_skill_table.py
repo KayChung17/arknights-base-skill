@@ -45,6 +45,7 @@ MORALE_DELTA_RE = re.compile(r"心情每小时消耗([+-])([0-9]+(?:\.[0-9]+)?)"
 # Group membership needed by structured room-local/global rules. The list is
 # intentionally explicit and can be expanded without changing the importer.
 EXTRA_GROUPS = {
+    "elite_operator": {"电弧", "煌", "机械师", "逻各斯", "迷迭香", "真言", "烛煌"},
     "laterano": {
         "新约能天使", "蕾缪安", "安比尔", "能天使", "菲亚梅塔", "莫斯提马",
         "送葬人", "圣约送葬人", "见行者", "空弦", "炎狱炎熔", "安德切尔",
@@ -78,6 +79,7 @@ EXTRA_GROUPS = {
 }
 
 KNOWN_TAGS: dict[tuple[str, str], list[str]] = {
+    ("真言", "精英小队"): ["trade_per_elite_operator_facility_2_cap_20"],
     ("巫恋", "低语"): ["shamare_whisper_per_other_worker_45", "room_morale_cost_plus_0.25"],
     ("龙舌兰", "投资·α"): ["tequila_investment_order"],
     ("龙舌兰", "投资·β"): ["tequila_investment_order"],
