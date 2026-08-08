@@ -69,7 +69,7 @@ class StructuredMechanismTests(unittest.TestCase):
         result = EfficiencyCalculator(
             "trading_post", [mantra], "lmd_order", global_operators=operators,
         ).compute()
-        self.assertEqual(result["paper_bonus_pct"], 51)
+        self.assertEqual(result["paper_bonus_pct"], 31)
         detail = result["operator_details"][0]
         self.assertIn("有效设施 3 间", "；".join(detail["notes"]))
 
@@ -89,7 +89,14 @@ class StructuredMechanismTests(unittest.TestCase):
         result = EfficiencyCalculator(
             "trading_post", [mantra], "lmd_order", global_operators=operators,
         ).compute()
-        self.assertEqual(result["paper_bonus_pct"], 65)
+        self.assertEqual(result["paper_bonus_pct"], 45)
+
+    def test_mantra_e2_skill_replaces_e0_order_distribution(self) -> None:
+        mantra = operator_index()["真言"]
+        e0 = select_available_skills(mantra, "trading_post", 0, "lmd_order", 1)
+        e2 = select_available_skills(mantra, "trading_post", 2, "lmd_order", 90)
+        self.assertEqual([skill["skill_name"] for skill in e0], ["订单分发·α"])
+        self.assertEqual([skill["skill_name"] for skill in e2], ["精英小队"])
 
     def test_automation_uses_skill_stage_and_eunectes_virtual_plants(self) -> None:
         cases = (("异客", 2, 5), ("森蚺", 0, 5), ("森蚺", 2, 10), ("温蒂", 0, 10), ("温蒂", 2, 15))

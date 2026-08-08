@@ -254,6 +254,7 @@ OBSOLETE_TAGS_BY_SKILL: dict[tuple[str, str], set[str]] = {
 
 
 KNOWN_VARIANT_GROUPS: dict[str, list[set[str]]] = {
+    "真言": [{"精英小队", "订单分发·α"}],
     "蕾缪安": [{"相伴", "订单分发·α"}],
     "圣聆初雪": [{"雪境归心", "圣女声望"}],
     "深靛": [{"灯塔供能模块", "光能充能·α"}],

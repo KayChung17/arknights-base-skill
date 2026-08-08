@@ -12,7 +12,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from parse_skills import parse_delimited
-from import_owned_skill_table import EXTRA_GROUPS, KNOWN_TAGS
+from import_owned_skill_table import EXTRA_GROUPS, KNOWN_TAGS, variant_group
 
 
 class ParseTests(unittest.TestCase):
@@ -24,6 +24,10 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(
             KNOWN_TAGS[("真言", "精英小队")],
             ["trade_per_elite_operator_facility_2_cap_20"],
+        )
+        self.assertEqual(
+            variant_group("真言", "trading_post", "精英小队"),
+            variant_group("真言", "trading_post", "订单分发·α"),
         )
 
     def test_pipe_input(self):
